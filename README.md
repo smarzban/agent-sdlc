@@ -12,6 +12,7 @@ in `~/.claude/skills/` and surfaces them by their `description`.
 | Skill | What it does |
 |---|---|
 | [`writing-repo-docs`](writing-repo-docs/SKILL.md) | Write/overhaul documentation for any codebase — an adaptive, source-grounded doc guide (landing index + quickstart + install + usage + technical), shaped to the repo's type, with every claim verified against the actual code. |
+| [`writing-readmes`](writing-readmes/SKILL.md) | Write/overhaul a project's front-door README — leads with what/why, keeps a lean quickstart distinct from full install, links out to deeper docs instead of inlining them, and adapts its section set to the repo type. |
 
 ## Installing a skill (make it live)
 
