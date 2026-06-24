@@ -76,7 +76,9 @@ a hard test, that is a red flag (see below).
    criterion -> review axis. Every criterion appears exactly once.
 9. **Settle and write** present the criteria in sections scaled to count, get approval, write the
    artifact.
-10. **Hand off** tell the user it is ready for the design stage. Do not start design yourself.
+10. **Hand off** tell the user it is ready for the design stage. Do not start design yourself. If
+    Linear sync is enabled in `.coderight/config.json`, also perform this stage's action via the
+    `linear-sync` skill.
 
 ## Principles
 

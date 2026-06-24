@@ -49,7 +49,8 @@ step.
    `constitution.md` and `CONTEXT.md`. Either way, keep it out of the repo's product `docs/`.
 9. **Hand off** for a **feature**, tell the user it is ready for the acceptance-criteria step. For
    a **project**, hand back the feature list and offer to shape the first feature next (its own
-   `specs/<feature>/<feature>.md` pass). Do not start the next step yourself.
+   `specs/<feature>/<feature>.md` pass). Do not start the next step yourself. If Linear sync is
+   enabled in `.coderight/config.json`, also perform this stage's action via the `linear-sync` skill.
 
 ## Principles
 

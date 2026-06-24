@@ -78,7 +78,8 @@ doubt, state the kind and defer the product.
 10. **Present in chunks and settle** show the shape in pieces small enough to actually review, get
     approval, write the artifact(s).
 11. **Hand off** tell the user it is ready for the techstack stage. Do not choose the stack
-    yourself.
+    yourself. If Linear sync is enabled in `.coderight/config.json`, also perform this stage's
+    action via the `linear-sync` skill.
 
 ## Principles
 

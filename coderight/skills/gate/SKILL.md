@@ -45,7 +45,8 @@ a verdict: ready to build, or not.
 5. **Route each finding** name the owning stage that should fix it (criteria, design, techstack, or
    plan) and a suggested next action.
 6. **State the verdict** ready to build only if there are no Critical or High findings.
-7. **Write `gate-report.md`** and stop. Do not fix anything.
+7. **Write `gate-report.md`** and stop. Do not fix anything. If Linear sync is enabled in
+   `.coderight/config.json`, also post the gate's status update + report via the `linear-sync` skill.
 
 ## Principles
 
