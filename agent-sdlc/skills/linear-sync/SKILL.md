@@ -44,9 +44,9 @@ Enable/disable is just flipping `linear.enabled`. Nothing else in Agent SDLC cha
   carries the project-tier artifacts directly: `## Overview` as its `description` + `summary`, and
   `## Architecture` / `## Tech Stack` as documents attached to it (`save_document` with an
   `initiative` parent).
-- **Project = a Agent SDLC feature.** Milestones and issues hang under it.
+- **Project = an Agent SDLC feature.** Milestones and issues hang under it.
 - **Milestone = a build phase**; **Issue = a task (`T-N`)**.
-- **Version = a label** `version:v1` (point releases `version:v1.2`); labels are `type:*` + `area:*`.
+- **Version = a label** `version:v1` (point releases `version:v1.2`); labels are `type:*` + `area:*`. Version is **decoupled from structure** — a project is a feature, never a version; the number is a release-time call: PATCH = fixes · MINOR = additive features · MAJOR = a breaking change or a deliberate flagship feature.
 
 ## Idempotency — mandatory; re-running a stage must never duplicate
 
@@ -77,6 +77,13 @@ The `linear-ids.json` shape is in [reference/mapping.md](reference/mapping.md).
    `links:[{url,title}]` attaches PRs. On UPDATE pass `id`, NOT `team`.
 6. **`save_document`:** `title` + exactly ONE parent (`project`).
 7. **Graceful absence:** if disabled or the MCP is missing, skip with a notice; never fail the run.
+8. **GitHub-synced issues sync on CONTENT, both ways.** If a repo↔team GitHub Issues Sync exists,
+   editing a synced (e.g. Triage-imported) issue's **title or description** propagates back to the
+   public GitHub issue — independent of the one-way/two-way *creation* setting. When **promoting**
+   such an issue, change only `project` / `labels` / `milestone` / `state` — do NOT rewrite its
+   title/description (keep SDLC notes in the feature docs or a comment); `delete_attachment` to unlink
+   the GitHub link first if you must restructure it. (Incident on record: promoting a Triage issue
+   silently overwrote the external reporter's public issue.)
 
 ## What each stage does
 

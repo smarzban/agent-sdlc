@@ -91,7 +91,7 @@ Agent SDLC can mirror each stage into [Linear](https://linear.app) as you go —
 → project (feature) → milestone (build phase) → issue (task) — driven by the `linear-sync` skill.
 It's **off by default**; enable it by setting `linear.enabled: true` in `.agent-sdlc/config.json`
 (with the product's `initiative` and `team`). When the Linear MCP isn't connected, the steps are
-skipped, so a Agent SDLC run never depends on it.
+skipped, so an Agent SDLC run never depends on it.
 
 ## Install
 

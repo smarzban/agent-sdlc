@@ -14,7 +14,9 @@ Initiative: "<product>"        ← product; ties all features; resolved-or-creat
 - **Issue** = a plan task (`T-N`). Sub-issues only when a task genuinely needs splitting; the
   red-green-refactor steps are the issue's checklist, not a level.
 - **Labels:** `type:*` (feature/bug/tech-debt/enhancement/docs/test/perf/chore) + `area:*` (one per
-  component) + `version:v1` (point releases `version:v1.2`). Issue bodies REFERENCE ACs
+  component) + `version:vN` (point releases `version:vN.M`). **Version lives on the label, never in a
+  project name** — the number is a release-time call: PATCH = fixes · MINOR = additive features ·
+  MAJOR = a breaking change or a deliberate flagship feature. Issue bodies REFERENCE ACs
   ("Advances: AC-3, AC-7") — never paste full AC text; the contract lives in the Acceptance-Criteria
   document.
 
@@ -65,8 +67,14 @@ Ongoing or unplanned work mirrors Linear's native model rather than being forced
   with no project**, labelled `type:bug` / `type:enhancement` / `type:tech-debt` (+ `area:*`),
   entering through **Triage**. Never create a project per bug.
 - To ship one, **promote** it: attach it to the relevant feature project + a release-milestone —
-  don't duplicate it.
+  don't duplicate it. **When promoting a GitHub-synced issue, change only project / labels /
+  milestone / state — never its title or description** (see the sync warning below).
 - A point release becomes a **release-milestone in the relevant feature project**, not a new project.
 
 Wiring GitHub↔Linear (so issues/PRs flow into Triage and PR magic-words like "Fixes SMA-123"
 auto-transition the linked issue) is a one-time Linear/GitHub workspace setup — outside these skills.
+**Beware the content sync it creates:** for a repo↔team Issues Sync, editing a synced issue's title
+or description in Linear **propagates back to the public GitHub issue** (independent of the
+one-way/two-way *creation* setting). Promote by moving/labelling only; keep rewrites out of the
+title/description, or `delete_attachment` to unlink first. (Incident on record: promoting a
+Triage-imported issue silently overwrote the external reporter's public GitHub issue.)
