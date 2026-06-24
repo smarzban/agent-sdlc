@@ -1,6 +1,6 @@
 ---
 name: acceptance-criteria
-description: "Turn a settled idea (problem + scope) into a checkable contract: a set of acceptance criteria that are each testable by a test AND checkable by a reviewer, plus a verification map. Use AFTER idea and BEFORE design. Triggers: 'acceptance criteria', 'define done', 'what does done mean', 'write the criteria', or any time you have a settled brief.md and need the contract the build will be held to. Stays tech-agnostic: WHAT and WHY, never HOW."
+description: "Turn a settled idea (problem + scope) into a checkable contract: a set of acceptance criteria that are each testable by a test AND checkable by a reviewer, plus a verification map. Use AFTER idea and BEFORE design. Triggers: 'acceptance criteria', 'define done', 'what does done mean', 'write the criteria', or any time you have a settled brief and need the contract the build will be held to. Stays tech-agnostic: WHAT and WHY, never HOW."
 ---
 
 # Acceptance criteria: turn settled intent into a checkable contract
@@ -11,8 +11,8 @@ criterion to the thing that proves it. This phase makes "done" unambiguous. It d
 choose a stack, plan, or build.
 
 <HARD-GATE>
-Input is `specs/<feature>/brief.md` (settled intent + scope). Output is
-`specs/<feature>/acceptance-criteria.md` and nothing else. Stay tech-agnostic: criteria state
+Input is the `## Brief` section of `specs/<feature>/<feature>.md` (settled intent + scope). Output
+is the `## Acceptance Criteria` section of the same file and nothing else. Stay tech-agnostic: criteria state
 WHAT must be true and WHY, never HOW (no architecture, no stack, no API names, no code). Do NOT
 write design, techstack, plan, tasks, or code. If drafting criteria exposes a fuzzy or unsettled
 problem, STOP and loop back to idea rather than papering over it. The terminal action is an
@@ -52,8 +52,8 @@ a hard test, that is a red flag (see below).
 
 ## Checklist (do in order)
 
-1. **Load the inputs** read `specs/<feature>/brief.md`, the root `CONTEXT.md` glossary, and
-   `constitution.md`. Confirm intent and scope are actually settled. If they are fuzzy, loop back
+1. **Load the inputs** read the `## Brief` section of `specs/<feature>/<feature>.md`, the root
+   `CONTEXT.md` glossary, and `constitution.md`. Confirm intent and scope are actually settled. If they are fuzzy, loop back
    to idea; do not invent intent here.
 2. **Derive candidates** turn each distinct observable outcome implied by intent + scope into one
    candidate criterion. Prefer the codebase over guessing: if existing behavior answers a
@@ -123,7 +123,7 @@ a hard test, that is a red flag (see below).
 
 ## The artifact (output)
 
-`specs/<feature>/acceptance-criteria.md`, containing only:
+The `## Acceptance Criteria` section of `specs/<feature>/<feature>.md`, containing only:
 - **Criteria** each with: ID (`AC-1`, `AC-2`, ...), the statement, verification type
   (test-backed + oracle-kind, or reviewer-checked + axis + pass/fail question + justification).
 - **Negative criteria** the non-goals restated as out-of-bounds checks.
@@ -135,11 +135,11 @@ No design, no stack, no tasks. Those are later stages.
 
 ## Conventions
 
-- Lives at `specs/<feature>/acceptance-criteria.md`, between `brief.md` and the design
-  artifacts, kept out of the repo's product `docs/`.
+- Lives as the `## Acceptance Criteria` section of `specs/<feature>/<feature>.md`, between
+  `## Brief` and `## Design`, kept out of the repo's product `docs/`.
 - Criterion IDs (`AC-N`) are stable handles the design, plan, tasks, and verify gate all
   reference. Do not renumber; deprecate instead.
-- Reads `brief.md` from the same folder; resolves terms against root `CONTEXT.md` (or the
+- Reads the `## Brief` section of the same file; resolves terms against root `CONTEXT.md` (or the
   right context if a `CONTEXT-MAP.md` exists).
 - Downstream consumers: the design stage (built against these criteria), the verify gate (checks
   every criterion maps to a task), and the review panel (test-backed -> spec-to-test coverage;
