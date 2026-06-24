@@ -1,0 +1,71 @@
+# Linear sync — full mapping
+
+## Hierarchy
+
+```
+Initiative: "<product>"        ← product; ties all features; hand-created once (MCP can't create initiatives)
+ ├─ Project: "<product> — foundation"   → docs: Overview, Architecture, Tech Stack + gate status updates
+ ├─ Project: <feature-a>   → milestones (build phases) + T-issues + feature docs   [label version:v1]
+ └─ Project: <feature-b>   → …                                                       [label version:v1]
+```
+
+- **Milestone** = a build phase (a dependency-ordered cluster of the feature's plan tasks).
+- **Issue** = a plan task (`T-N`). Sub-issues only when a task genuinely needs splitting; the
+  red-green-refactor steps are the issue's checklist, not a level.
+- **Labels:** `type:*` (feature/bug/tech-debt/enhancement/docs/test/perf/chore) + `area:*` (one per
+  component) + `version:v1` (point releases `version:v1.2`). Issue bodies REFERENCE ACs
+  ("Advances: AC-3, AC-7") — never paste full AC text; the contract lives in the Acceptance-Criteria
+  document.
+
+## Stage → Linear action
+
+Each stage runs its action AFTER writing its `##` section; the document content IS that section.
+
+| Stage (tier) | Linear action |
+| --- | --- |
+| `idea` (project) | resolve the Initiative; create/update the `<product> — foundation` project; `save_document` "Overview" (content = `## Overview`). |
+| `idea` (feature) | `save_project` for the feature (under the initiative, label `version:v1`, lead, summary, state "Backlog"/"Planned"); `save_document` "Brief — <feature>" (content = `## Brief`). |
+| `acceptance-criteria` | `save_document` "Acceptance Criteria — <feature>" (content = `## Acceptance Criteria`), parent = feature project. |
+| `architecture-design` (feature) | `save_document` "Design — <feature>" (content = `## Design`); `create_issue_label` `area:<component>` per component. |
+| `architecture-design` (project) | `save_document` "Architecture" (content = `## Architecture`), parent = foundation project. |
+| `techstack` (feature) | `save_document` "Tech Stack — <feature>" (content = `## Tech Stack`), parent = feature project. |
+| `techstack` (project) | `save_document` "Tech Stack" (content = `## Tech Stack`), parent = foundation project. |
+| `plan` | per build phase: `save_milestone` (feature project, name, description). Per task `T-N`: `save_issue` (team, title "T-N — …", project = feature, milestone, labels = [area + type], state "Backlog"/"Todo", body = "Advances: AC-x · Component: … · Files: … · Test-first: …"). Set the feature project state to "In Progress". |
+| `gate` | `save_status_update` (type "project", feature project, health onTrack/atRisk/offTrack, body = the go/no-go verdict); `save_document` "Gate report — <feature>" (content = the gate report). |
+
+Build-stage per-task issue transitions (Backlog → In Progress → In Review → Done, plus PR
+attachment via `links`) are DEFERRED to the future build-process skills.
+
+## `linear-ids.json` shape
+
+Persisted at `linear.idsFile` (default `.coderight/linear-ids.json`) so later stages and re-runs
+reference existing entities instead of re-creating them.
+
+```json
+{
+  "initiative": "<uuid>",
+  "foundationProject": "<id>",
+  "features": {
+    "<feature>": {
+      "project": "<id>",
+      "docs": { "brief": "<id>", "criteria": "<id>", "design": "<id>", "techstack": "<id>", "gate": "<id>" },
+      "milestones": { "Foundation": "<id>", "Core services": "<id>" },
+      "issues": { "T-1": "<id>", "T-2": "<id>" }
+    }
+  }
+}
+```
+
+## Run-side (bugs / enhancements / incoming) — NOT projects
+
+Ongoing or unplanned work mirrors Linear's native model rather than being forced into a project:
+
+- A bug, small enhancement, cross-cutting tech-debt, or incoming request is a **team-level issue
+  with no project**, labelled `type:bug` / `type:enhancement` / `type:tech-debt` (+ `area:*`),
+  entering through **Triage**. Never create a project per bug.
+- To ship one, **promote** it: attach it to the relevant feature project + a release-milestone —
+  don't duplicate it.
+- A point release becomes a **release-milestone in the relevant feature project**, not a new project.
+
+Wiring GitHub↔Linear (so issues/PRs flow into Triage and PR magic-words like "Fixes SMA-123"
+auto-transition the linked issue) is a one-time Linear/GitHub workspace setup — outside these skills.
