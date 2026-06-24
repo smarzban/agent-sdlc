@@ -1,11 +1,11 @@
 ---
 name: linear-sync
-description: "Optional layer that mirrors each CodeRight stage's output into Linear — initiative (product) -> project (feature) -> milestone (build phase) -> issue (task) — idempotently. Invoked by each pipeline stage at its hand-off when Linear sync is enabled in .coderight/config.json. Use when mirroring CodeRight specs to Linear, creating/updating a feature's Linear project, or performing a stage's Linear action. Skips silently when disabled or the Linear MCP is absent."
+description: "Optional layer that mirrors each Agent SDLC stage's output into Linear — initiative (product) -> project (feature) -> milestone (build phase) -> issue (task) — idempotently. Invoked by each pipeline stage at its hand-off when Linear sync is enabled in .agent-sdlc/config.json. Use when mirroring Agent SDLC specs to Linear, creating/updating a feature's Linear project, or performing a stage's Linear action. Skips silently when disabled or the Linear MCP is absent."
 ---
 
-# Linear sync: mirror CodeRight into Linear
+# Linear sync: mirror Agent SDLC into Linear
 
-Optional engine that mirrors the CodeRight pipeline into Linear as you move through the stages. It
+Optional engine that mirrors the Agent SDLC pipeline into Linear as you move through the stages. It
 is **not** a pipeline stage and **not** on the `criterion -> component -> product -> task` spine —
 each stage calls it at its hand-off. All the mechanics (config, the stage->entity mapping, ID
 persistence, idempotency, and the Linear API gotchas) live here, stated once, so the stage skills
@@ -19,11 +19,11 @@ ToolSearch when deferred, e.g. `select:mcp__plugin_linear_linear__save_project`)
 If either fails, skip all Linear work and say so in one line. **Never fail or block the pipeline
 because Linear is unavailable.**
 
-1. **Enabled?** `.coderight/config.json` has `linear.enabled: true`. If absent or false, skip.
+1. **Enabled?** `.agent-sdlc/config.json` has `linear.enabled: true`. If absent or false, skip.
 2. **MCP available?** The `mcp__plugin_linear_linear__*` tools resolve (they will not in a
    headless/cron run). If not, skip.
 
-## Config — `.coderight/config.json`
+## Config — `.agent-sdlc/config.json`
 
 ```json
 {
@@ -31,12 +31,12 @@ because Linear is unavailable.**
     "enabled": false,
     "initiative": "<exact initiative name or UUID>",
     "team": "<team name or id>",
-    "idsFile": ".coderight/linear-ids.json"
+    "idsFile": ".agent-sdlc/linear-ids.json"
   }
 }
 ```
 
-Enable/disable is just flipping `linear.enabled`. Nothing else in CodeRight changes.
+Enable/disable is just flipping `linear.enabled`. Nothing else in Agent SDLC changes.
 
 ## Hierarchy (summary; full mapping in [reference/mapping.md](reference/mapping.md))
 
@@ -44,7 +44,7 @@ Enable/disable is just flipping `linear.enabled`. Nothing else in CodeRight chan
   carries the project-tier artifacts directly: `## Overview` as its `description` + `summary`, and
   `## Architecture` / `## Tech Stack` as documents attached to it (`save_document` with an
   `initiative` parent).
-- **Project = a CodeRight feature.** Milestones and issues hang under it.
+- **Project = a Agent SDLC feature.** Milestones and issues hang under it.
 - **Milestone = a build phase**; **Issue = a task (`T-N`)**.
 - **Version = a label** `version:v1` (point releases `version:v1.2`); labels are `type:*` + `area:*`.
 

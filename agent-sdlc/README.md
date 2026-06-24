@@ -1,6 +1,6 @@
-# CodeRight
+# Agent SDLC
 
-A planning pipeline for AI coding agents. CodeRight takes an idea to the point where an agent can
+A planning pipeline for AI coding agents. Agent SDLC takes an idea to the point where an agent can
 build it autonomously and well: settled intent, a checkable contract, a sound architecture, a
 grounded stack, and an atomic task plan, with a read-only gate that confirms it all hangs together
 before a line of code is written.
@@ -28,22 +28,22 @@ code rather than during it.
 
 | Skill | Invoke explicitly | Owner | Output |
 | --- | --- | --- | --- |
-| `idea` | `/coderight:idea` | you | `## Brief` (problem + scope) |
-| `acceptance-criteria` | `/coderight:acceptance-criteria` | you review | `## Acceptance Criteria` (the contract) |
-| `architecture-design` | `/coderight:architecture-design` | you, agent proposes | `## Design` (`## Architecture` at project level) |
-| `techstack` | `/coderight:techstack` | you, agent proposes | `## Tech Stack` |
-| `plan` | `/coderight:plan` | agent | `## Plan` (atomic tasks) |
-| `gate` | `/coderight:gate` | automated (read-only) | `gate-report.md` |
-| `using-coderight` | auto / `/coderight:using-coderight` | router | this is the entry point |
+| `idea` | `/agent-sdlc:idea` | you | `## Brief` (problem + scope) |
+| `acceptance-criteria` | `/agent-sdlc:acceptance-criteria` | you review | `## Acceptance Criteria` (the contract) |
+| `architecture-design` | `/agent-sdlc:architecture-design` | you, agent proposes | `## Design` (`## Architecture` at project level) |
+| `techstack` | `/agent-sdlc:techstack` | you, agent proposes | `## Tech Stack` |
+| `plan` | `/agent-sdlc:plan` | agent | `## Plan` (atomic tasks) |
+| `gate` | `/agent-sdlc:gate` | automated (read-only) | `gate-report.md` |
+| `getting-started` | auto / `/agent-sdlc:getting-started` | router | this is the entry point |
 
-Start with `using-coderight`; it routes you to the right stage and states the shared rules.
+Start with `getting-started`; it routes you to the right stage and states the shared rules.
 
 > **Invocation.** Installed as a plugin, every skill auto-activates when your request matches its
 > `description` — that's the primary path, and you rarely type a command. To invoke one explicitly,
-> use the **mandatory** plugin namespace, e.g. `/coderight:idea`. Bare names like `/idea` resolve
-> only to *personal* skills (`~/.claude/skills/`), never to plugin skills — the `coderight:` prefix
-> can't be dropped. Want shorter explicit names (e.g. `/coderight:criteria`)? Add a
-> `commands/<name>.md` file to the plugin; it's still namespaced as `/coderight:<name>`.
+> use the **mandatory** plugin namespace, e.g. `/agent-sdlc:idea`. Bare names like `/idea` resolve
+> only to *personal* skills (`~/.claude/skills/`), never to plugin skills — the `agent-sdlc:` prefix
+> can't be dropped. Want shorter explicit names (e.g. `/agent-sdlc:criteria`)? Add a
+> `commands/<name>.md` file to the plugin; it's still namespaced as `/agent-sdlc:<name>`.
 
 ## Documentation skills
 
@@ -58,7 +58,7 @@ concrete claim is checked against the actual code) and adapt their structure to 
 ## Layout
 
 ```
-coderight/
+agent-sdlc/
 ├── README.md
 ├── .claude-plugin/plugin.json   ← Claude Code manifest
 ├── .cursor-plugin/plugin.json   ← Cursor manifest
@@ -69,7 +69,7 @@ coderight/
     ├── techstack/SKILL.md
     ├── plan/SKILL.md
     ├── gate/SKILL.md
-    ├── using-coderight/SKILL.md
+    ├── getting-started/SKILL.md
     ├── writing-readmes/SKILL.md       ← documentation skill
     └── writing-repo-docs/SKILL.md     ← documentation skill
 ```
@@ -87,11 +87,11 @@ and `specs/adr/` for decision records, and root-level `constitution.md` + `CONTE
 
 ## Linear sync (optional)
 
-CodeRight can mirror each stage into [Linear](https://linear.app) as you go — initiative (product)
+Agent SDLC can mirror each stage into [Linear](https://linear.app) as you go — initiative (product)
 → project (feature) → milestone (build phase) → issue (task) — driven by the `linear-sync` skill.
-It's **off by default**; enable it by setting `linear.enabled: true` in `.coderight/config.json`
+It's **off by default**; enable it by setting `linear.enabled: true` in `.agent-sdlc/config.json`
 (with the product's `initiative` and `team`). When the Linear MCP isn't connected, the steps are
-skipped, so a CodeRight run never depends on it.
+skipped, so a Agent SDLC run never depends on it.
 
 ## Install
 
@@ -99,10 +99,10 @@ This bundle ships from the [`smarzban-skills`](../README.md) marketplace at the 
 is installable in both Claude Code and Cursor. See that README for one-time setup, then:
 
 ```text
-/plugin install coderight@smarzban-skills      # Claude Code
+/plugin install agent-sdlc@smarzban-skills      # Claude Code
 ```
 
 In Cursor, import the repo as a team marketplace (Settings → Plugins → Import) and enable
-`coderight`. The skills are plain Markdown to the open `SKILL.md` standard, so they also work with
+`agent-sdlc`. The skills are plain Markdown to the open `SKILL.md` standard, so they also work with
 any other agent that reads instruction files — drop the `skills/<name>` dirs where that harness
 discovers skills.

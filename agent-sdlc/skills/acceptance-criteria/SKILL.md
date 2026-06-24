@@ -77,7 +77,7 @@ a hard test, that is a red flag (see below).
 9. **Settle and write** present the criteria in sections scaled to count, get approval, write the
    artifact.
 10. **Hand off** tell the user it is ready for the design stage. Do not start design yourself. If
-    Linear sync is enabled in `.coderight/config.json`, also perform this stage's action via the
+    Linear sync is enabled in `.agent-sdlc/config.json`, also perform this stage's action via the
     `linear-sync` skill.
 
 ## Principles

@@ -46,7 +46,7 @@ a verdict: ready to build, or not.
    plan) and a suggested next action.
 6. **State the verdict** ready to build only if there are no Critical or High findings.
 7. **Write `gate-report.md`** and stop. Do not fix anything. If Linear sync is enabled in
-   `.coderight/config.json`, also post the gate's status update + report via the `linear-sync` skill.
+   `.agent-sdlc/config.json`, also post the gate's status update + report via the `linear-sync` skill.
 
 ## Principles
 

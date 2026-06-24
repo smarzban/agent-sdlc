@@ -50,7 +50,7 @@ step.
 9. **Hand off** for a **feature**, tell the user it is ready for the acceptance-criteria step. For
    a **project**, hand back the feature list and offer to shape the first feature next (its own
    `specs/<feature>/<feature>.md` pass). Do not start the next step yourself. If Linear sync is
-   enabled in `.coderight/config.json`, also perform this stage's action via the `linear-sync` skill.
+   enabled in `.agent-sdlc/config.json`, also perform this stage's action via the `linear-sync` skill.
 
 ## Principles
 
@@ -125,4 +125,4 @@ Layout:
 - If a `CONTEXT-MAP.md` exists at the root, the repo has multiple contexts; resolve terms in the
   context they belong to.
 - Keep the trigger distinct from any `brainstorming` skill you may also have installed, so this
-  one fires when you mean to run the CodeRight pipeline.
+  one fires when you mean to run the Agent SDLC pipeline.

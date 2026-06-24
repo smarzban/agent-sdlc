@@ -39,7 +39,7 @@ attachment via `links`) are DEFERRED to the future build-process skills.
 
 ## `linear-ids.json` shape
 
-Persisted at `linear.idsFile` (default `.coderight/linear-ids.json`) so later stages and re-runs
+Persisted at `linear.idsFile` (default `.agent-sdlc/linear-ids.json`) so later stages and re-runs
 reference existing entities instead of re-creating them.
 
 ```json

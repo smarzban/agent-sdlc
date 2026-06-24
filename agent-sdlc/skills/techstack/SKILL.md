@@ -62,7 +62,7 @@ A choice is done only when:
 8. **Flag the unverified** list anything you could not confirm.
 9. **Settle and write** present the choices, get approval, write the artifact.
 10. **Hand off** tell the user it is ready for the plan stage. If Linear sync is enabled in
-    `.coderight/config.json`, also perform this stage's action via the `linear-sync` skill.
+    `.agent-sdlc/config.json`, also perform this stage's action via the `linear-sync` skill.
 
 ## Principles
 

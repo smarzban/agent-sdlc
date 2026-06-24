@@ -9,8 +9,8 @@
   },
   "plugins": [
     {
-      "name": "coderight",
-      "source": "coderight",
+      "name": "agent-sdlc",
+      "source": "agent-sdlc",
       "description": "Planning pipeline for AI coding agents (idea -> acceptance criteria -> architecture -> techstack -> atomic task plan, with a read-only readiness gate), plus skills for writing the project README and full repository documentation."
     }
   ]

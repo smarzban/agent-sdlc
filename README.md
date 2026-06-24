@@ -11,15 +11,15 @@ frontmatter) and optional supporting files. The `description` is what the agent
 matches on to trigger the skill. Skills are an open standard, so the `SKILL.md`
 content is portable across agents even where the packaging differs.
 
-## Plugin: `coderight`
+## Plugin: `agent-sdlc`
 
 A planning pipeline that takes an idea to build-ready, plus skills for writing the
-project's docs. See [`coderight/README.md`](coderight/README.md) for the full
+project's docs. See [`agent-sdlc/README.md`](agent-sdlc/README.md) for the full
 pipeline and the traceability spine that runs through it.
 
 | Skill | What it does |
 |---|---|
-| `using-coderight` | Entry point and operating rules — routes you to the right stage. |
+| `getting-started` | Entry point and operating rules — routes you to the right stage. |
 | `idea` | Turn a fuzzy idea or feature request into a settled problem + scope. |
 | `acceptance-criteria` | Turn the idea into a checkable contract. |
 | `architecture-design` | Turn criteria into a logical architecture shape. |
@@ -39,11 +39,11 @@ and a Cursor marketplace (`.cursor-plugin/marketplace.json`), named
 
 ```text
 /plugin marketplace add smarzban/skills
-/plugin install coderight@smarzban-skills
+/plugin install agent-sdlc@smarzban-skills
 ```
 
 Skills then trigger on their `description`, or invoke explicitly with the plugin
-namespace, e.g. `/coderight:idea` or `/coderight:writing-readmes`.
+namespace, e.g. `/agent-sdlc:idea` or `/agent-sdlc:writing-readmes`.
 
 ### Cursor
 
@@ -57,7 +57,7 @@ added plugins.** Skills auto-activate by context, or invoke them by name via
 
 The skills are plain Markdown to the open `SKILL.md` standard, so they work with
 any agent that reads instruction files (e.g. Codex reads `SKILL.md` from
-`.codex/skills/`). Copy or symlink the individual `coderight/skills/<name>`
+`.codex/skills/`). Copy or symlink the individual `agent-sdlc/skills/<name>`
 directories into wherever your harness discovers skills; the `.claude-plugin/`
 and `.cursor-plugin/` wrappers are simply ignored elsewhere.
 
@@ -67,7 +67,7 @@ and `.cursor-plugin/` wrappers are simply ignored elsewhere.
 skills/                              ← repo root = a marketplace for two tools
 ├── .claude-plugin/marketplace.json  ← Claude Code install index
 ├── .cursor-plugin/marketplace.json  ← Cursor install index
-└── coderight/                       ← the plugin
+└── agent-sdlc/                       ← the plugin
     ├── .claude-plugin/plugin.json
     ├── .cursor-plugin/plugin.json
     ├── README.md
@@ -77,7 +77,7 @@ skills/                              ← repo root = a marketplace for two tools
 ## Adding a skill
 
 Skills live inside the plugin's `skills/` directory. To add one, create
-`coderight/skills/<skill-name>/SKILL.md`:
+`agent-sdlc/skills/<skill-name>/SKILL.md`:
 
 ```markdown
 ---

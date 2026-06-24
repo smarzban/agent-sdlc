@@ -1,11 +1,11 @@
 ---
-name: using-coderight
-description: "Entry point and operating rules for CodeRight, the pipeline that takes an idea to build-ready. Use at the start of any project or feature to pick the right stage, understand the hand-offs, and follow the shared rules every stage obeys. Triggers: 'where do I start', 'what stage am I in', starting a new project or feature, 'use coderight', or deciding which CodeRight skill applies. Read this first; it routes to the others."
+name: getting-started
+description: "Entry point and operating rules for Agent SDLC, the pipeline that takes an idea to build-ready. Use at the start of any project or feature to pick the right stage, understand the hand-offs, and follow the shared rules every stage obeys. Triggers: 'where do I start', 'what stage am I in', starting a new project or feature, 'use agent-sdlc', or deciding which Agent SDLC skill applies. Read this first; it routes to the others."
 ---
 
-# Using CodeRight: idea to build-ready
+# Using Agent SDLC: idea to build-ready
 
-CodeRight is a front-half methodology: take an idea to the point where an agent can build it
+Agent SDLC is a front-half methodology: take an idea to the point where an agent can build it
 autonomously and well. It is five stages plus two cross-cutting pieces. You own the thinking
 (intent, scope, criteria, shape, stack); the agent owns the breakdown (plan); a read-only gate
 confirms it all hangs together before any code is written. (Build, test, and deploy are later
@@ -15,28 +15,28 @@ additions to the same chain.)
 
 | # | Skill | Invoke | Owner | Reads | Writes (a section of the tier file) |
 | --- | --- | --- | --- | --- | --- |
-| 1 | `idea` | `/coderight:idea` | you | the idea | `## Brief` (feature) — or `## Overview` + feature list (project) |
-| 2 | `acceptance-criteria` | `/coderight:acceptance-criteria` | you review | `## Brief` | `## Acceptance Criteria` — the contract (`AC-N`) |
-| 3 | `architecture-design` | `/coderight:architecture-design` | you (agent proposes) | `## Brief`, `## Acceptance Criteria` | `## Design` (`C-N`) — feature; `## Architecture` — project |
-| 4 | `techstack` | `/coderight:techstack` | you (agent proposes) | `## Design`, `## Acceptance Criteria` | `## Tech Stack` (products per kind) |
-| 5 | `plan` | `/coderight:plan` | agent | `## Acceptance Criteria`, `## Design`, `## Tech Stack` | `## Plan` — atomic tasks (`T-N`) |
+| 1 | `idea` | `/agent-sdlc:idea` | you | the idea | `## Brief` (feature) — or `## Overview` + feature list (project) |
+| 2 | `acceptance-criteria` | `/agent-sdlc:acceptance-criteria` | you review | `## Brief` | `## Acceptance Criteria` — the contract (`AC-N`) |
+| 3 | `architecture-design` | `/agent-sdlc:architecture-design` | you (agent proposes) | `## Brief`, `## Acceptance Criteria` | `## Design` (`C-N`) — feature; `## Architecture` — project |
+| 4 | `techstack` | `/agent-sdlc:techstack` | you (agent proposes) | `## Design`, `## Acceptance Criteria` | `## Tech Stack` (products per kind) |
+| 5 | `plan` | `/agent-sdlc:plan` | agent | `## Acceptance Criteria`, `## Design`, `## Tech Stack` | `## Plan` — atomic tasks (`T-N`) |
 
 Feature-tier sections live in `specs/<feature>/<feature>.md`; project-tier sections (`## Overview`,
 `## Architecture`, `## Tech Stack`) live in `specs/overview.md`. Each stage owns and edits only its
 own section.
 
 Cross-cutting: **`constitution.md`** (standing guardrails, seeded by `idea`, checked at design and
-plan) and the **`gate`** (`/coderight:gate`; read-only; walks the chain and writes
+plan) and the **`gate`** (`/agent-sdlc:gate`; read-only; walks the chain and writes
 `gate-report.md` before build).
 
 The flow: `idea -> acceptance-criteria -> architecture-design -> techstack -> plan -> gate -> build`.
 
 ## Optional: Linear sync
 
-If enabled in `.coderight/config.json` (`linear.enabled: true`), each stage mirrors its output into
+If enabled in `.agent-sdlc/config.json` (`linear.enabled: true`), each stage mirrors its output into
 Linear at its hand-off — initiative (product) → project (feature) → milestone (build phase) → issue
 (task). The mechanics live in the `linear-sync` skill; with the Linear MCP absent (e.g. headless
-runs) the steps are skipped. Off by default — CodeRight runs identically without it.
+runs) the steps are skipped. Off by default — Agent SDLC runs identically without it.
 
 ## Shared operating rules (every stage obeys these)
 

@@ -1,5 +1,5 @@
 {
-  "name": "coderight",
+  "name": "agent-sdlc",
   "description": "A planning pipeline for AI coding agents (idea -> acceptance criteria -> architecture -> techstack -> atomic task plan, with a read-only readiness gate) that takes an idea to build-ready, plus skills for writing the project README and full repository documentation.",
   "version": "0.1.0",
   "author": {

@@ -52,7 +52,7 @@ A task is done being written only when:
 6. **Constitution Check** confirm no task implies a violation of a MUST principle.
 7. **Write the `## Plan` section** the ordered task list plus the task-to-criterion coverage map.
 8. **Hand off** the plan goes to the gate, then build. A human "go" is optional;
-   the gate is the real checkpoint. If Linear sync is enabled in `.coderight/config.json`, also
+   the gate is the real checkpoint. If Linear sync is enabled in `.agent-sdlc/config.json`, also
    perform this stage's action via the `linear-sync` skill.
 
 ## Principles
