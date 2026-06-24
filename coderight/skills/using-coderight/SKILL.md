@@ -13,17 +13,21 @@ additions to the same chain.)
 
 ## The stages
 
-| # | Skill | Invoke | Owner | Reads | Writes |
+| # | Skill | Invoke | Owner | Reads | Writes (a section of the tier file) |
 | --- | --- | --- | --- | --- | --- |
-| 1 | `idea` | `/coderight:idea` | you | the idea | `brief.md` (intent + scope) |
-| 2 | `acceptance-criteria` | `/coderight:acceptance-criteria` | you review | `brief.md` | `acceptance-criteria.md` (the contract) |
-| 3 | `architecture-design` | `/coderight:architecture-design` | you (agent proposes) | criteria | `design.md` / `architecture.md` (logical shape) |
-| 4 | `techstack` | `/coderight:techstack` | you (agent proposes) | design + criteria | `techstack.md` (products per kind) |
-| 5 | `plan` | `/coderight:plan` | agent | criteria + design + techstack | `plan.md` (atomic tasks) |
+| 1 | `idea` | `/coderight:idea` | you | the idea | `## Brief` (feature) — or `## Overview` + feature list (project) |
+| 2 | `acceptance-criteria` | `/coderight:acceptance-criteria` | you review | `## Brief` | `## Acceptance Criteria` — the contract (`AC-N`) |
+| 3 | `architecture-design` | `/coderight:architecture-design` | you (agent proposes) | `## Brief`, `## Acceptance Criteria` | `## Design` (`C-N`) — feature; `## Architecture` — project |
+| 4 | `techstack` | `/coderight:techstack` | you (agent proposes) | `## Design`, `## Acceptance Criteria` | `## Tech Stack` (products per kind) |
+| 5 | `plan` | `/coderight:plan` | agent | `## Acceptance Criteria`, `## Design`, `## Tech Stack` | `## Plan` — atomic tasks (`T-N`) |
+
+Feature-tier sections live in `specs/<feature>/<feature>.md`; project-tier sections (`## Overview`,
+`## Architecture`, `## Tech Stack`) live in `specs/overview.md`. Each stage owns and edits only its
+own section.
 
 Cross-cutting: **`constitution.md`** (standing guardrails, seeded by `idea`, checked at design and
 plan) and the **`gate`** (`/coderight:gate`; read-only; walks the chain and writes
-`verify-report.md` before build).
+`gate-report.md` before build).
 
 The flow: `idea -> acceptance-criteria -> architecture-design -> techstack -> plan -> gate -> build`.
 
@@ -51,30 +55,27 @@ Stated once here; the stage skills reference them by name rather than restating.
 
 Decide the level the way `idea` does, and carry it through.
 
-- **Project** (clean repo, building a whole app): `idea` writes `specs/overview.md` and seeds
-  `constitution.md` and `CONTEXT.md`, then decomposes into a feature list. `architecture-design`
-  writes the north-star `specs/architecture.md`; `techstack` picks the whole stack. Each
-  feature then runs the full chain in its own `specs/<feature>/`.
-- **Feature** (existing project, adding a piece): run the chain in `specs/<feature>/`, fitting the
-  existing architecture and stack, justifying any deviation with an ADR.
+- **Project** (clean repo, building a whole app): `idea` writes `specs/overview.md` `## Overview`
+  (incl. the feature list) and seeds `constitution.md` and `CONTEXT.md`. `architecture-design`
+  writes the north-star `## Architecture`, and `techstack` the cross-cutting `## Tech Stack`, both
+  in `overview.md`. Each feature then runs the full chain in its own `specs/<feature>/<feature>.md`.
+- **Feature** (existing project, adding a piece): run the chain in `specs/<feature>/<feature>.md`,
+  fitting the existing `overview.md` architecture and stack, justifying any deviation with an ADR
+  in `specs/adr/`.
 
 ## File layout
 
 ```
 /
-├── CONTEXT.md            ← glossary, project-wide
-├── constitution.md       ← standing principles
-├── docs/adr/             ← decision records
+├── constitution.md          ← standing principles (project-wide)
+├── CONTEXT.md               ← glossary (project-wide)
 └── specs/
-    ├── overview.md       ← project-level idea output
-    ├── architecture.md   ← project-level design output (north-star shape)
+    ├── overview.md          ← project tier: ## Overview · ## Architecture · ## Tech Stack
+    ├── adr/                 ← decision records
+    │   └── ADR-NNNN-<slug>.md
     └── <feature>/
-        ├── brief.md
-        ├── acceptance-criteria.md
-        ├── design.md
-        ├── techstack.md
-        ├── plan.md
-        └── verify-report.md
+        ├── <feature>.md     ← feature tier: ## Brief · ## Acceptance Criteria · ## Design · ## Tech Stack · ## Plan
+        └── gate-report.md   ← gate output (read-only)
 ```
 
 ## Where to start
@@ -83,7 +84,7 @@ Decide the level the way `idea` does, and carry it through.
 - A new feature on an existing app: start at **`idea`**, feature level (often a light pass).
 - You already have a settled problem and scope: start at **`acceptance-criteria`**.
 - You have approved criteria: **`architecture-design`**, then **`techstack`**, then **`plan`**.
-- A `plan.md` exists: run **`gate`**, then build.
+- A `## Plan` section exists in `<feature>.md`: run **`gate`**, then build.
 
 If you are unsure which stage you are in, you are probably one stage earlier than you think. The
 cheapest fix is always upstream.
