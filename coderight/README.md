@@ -85,6 +85,14 @@ specs/<feature>/
 plus, at project level, `specs/overview.md` (`## Overview` · `## Architecture` · `## Tech Stack`)
 and `specs/adr/` for decision records, and root-level `constitution.md` + `CONTEXT.md` (glossary).
 
+## Linear sync (optional)
+
+CodeRight can mirror each stage into [Linear](https://linear.app) as you go — initiative (product)
+→ project (feature) → milestone (build phase) → issue (task) — driven by the `linear-sync` skill.
+It's **off by default**; enable it by setting `linear.enabled: true` in `.coderight/config.json`
+(with the product's `initiative` and `team`). When the Linear MCP isn't connected, the steps are
+skipped, so a CodeRight run never depends on it.
+
 ## Install
 
 This bundle ships from the [`smarzban-skills`](../README.md) marketplace at the repo root, which

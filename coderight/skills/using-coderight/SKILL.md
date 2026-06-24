@@ -31,6 +31,13 @@ plan) and the **`gate`** (`/coderight:gate`; read-only; walks the chain and writ
 
 The flow: `idea -> acceptance-criteria -> architecture-design -> techstack -> plan -> gate -> build`.
 
+## Optional: Linear sync
+
+If enabled in `.coderight/config.json` (`linear.enabled: true`), each stage mirrors its output into
+Linear at its hand-off — initiative (product) → project (feature) → milestone (build phase) → issue
+(task). The mechanics live in the `linear-sync` skill; with the Linear MCP absent (e.g. headless
+runs) the steps are skipped. Off by default — CodeRight runs identically without it.
+
 ## Shared operating rules (every stage obeys these)
 
 Stated once here; the stage skills reference them by name rather than restating.
