@@ -40,10 +40,11 @@ Enable/disable is just flipping `linear.enabled`. Nothing else in CodeRight chan
 
 ## Hierarchy (summary; full mapping in [reference/mapping.md](reference/mapping.md))
 
-- **Initiative = the product** — one, created BY HAND in the Linear UI (the MCP cannot create
-  initiatives). Everything hangs under it.
-- **Project = a CodeRight feature**, plus one `<product> — foundation` project for the project-tier
-  docs (Overview, Architecture, Tech Stack) and the gate status updates.
+- **Initiative = the product** — one, resolved by name (or created) via `save_initiative`. It
+  carries the project-tier artifacts directly: `## Overview` as its `description` + `summary`, and
+  `## Architecture` / `## Tech Stack` as documents attached to it (`save_document` with an
+  `initiative` parent).
+- **Project = a CodeRight feature.** Milestones and issues hang under it.
 - **Milestone = a build phase**; **Issue = a task (`T-N`)**.
 - **Version = a label** `version:v1` (point releases `version:v1.2`); labels are `type:*` + `area:*`.
 
@@ -63,9 +64,10 @@ The `linear-ids.json` shape is in [reference/mapping.md](reference/mapping.md).
 
 1. **Never HTML-escape.** Send literal `&`, `<`, quotes, and real newlines — not `&amp;` or a
    backslash-n. The MCP stores exactly what you send; escaped text shows up literally.
-2. **Initiatives can't be created or listed/got via MCP.** Resolve by EXACT name or full UUID; read
-   a UUID off an already-linked project (`get_project` -> `.initiatives[].id`) or ask the user. A
-   wrong name fails silently — verify the link with `get_project`.
+2. **Resolve the initiative, don't guess.** `list_initiatives` / `get_initiative` find it by name,
+   and `save_initiative` creates or updates it (pass `id` to update) — the MCP fully supports
+   initiatives. When LINKING a feature-project to it, pass the resolved id and VERIFY with
+   `get_project`: a `save_project` link by name can silently no-op (returns `initiatives: []`).
 3. **No delete tools exist.** Never design a flow that needs to delete a project or milestone;
    prefer list/get-then-update, and don't over-create.
 4. **Idempotency is mandatory** (procedure above).

@@ -3,8 +3,9 @@
 ## Hierarchy
 
 ```
-Initiative: "<product>"        ← product; ties all features; hand-created once (MCP can't create initiatives)
- ├─ Project: "<product> — foundation"   → docs: Overview, Architecture, Tech Stack + gate status updates
+Initiative: "<product>"        ← product; ties all features; resolved-or-created via save_initiative
+   · description + summary = ## Overview
+   · documents             = ## Architecture, ## Tech Stack   (save_document, parent = initiative)
  ├─ Project: <feature-a>   → milestones (build phases) + T-issues + feature docs   [label version:v1]
  └─ Project: <feature-b>   → …                                                       [label version:v1]
 ```
@@ -23,13 +24,13 @@ Each stage runs its action AFTER writing its `##` section; the document content 
 
 | Stage (tier) | Linear action |
 | --- | --- |
-| `idea` (project) | resolve the Initiative; create/update the `<product> — foundation` project; `save_document` "Overview" (content = `## Overview`). |
+| `idea` (project) | resolve-or-create the Initiative via `save_initiative`; set its `description` = `## Overview` plus a one-line `summary`. |
 | `idea` (feature) | `save_project` for the feature (under the initiative, label `version:v1`, lead, summary, state "Backlog"/"Planned"); `save_document` "Brief — <feature>" (content = `## Brief`). |
 | `acceptance-criteria` | `save_document` "Acceptance Criteria — <feature>" (content = `## Acceptance Criteria`), parent = feature project. |
 | `architecture-design` (feature) | `save_document` "Design — <feature>" (content = `## Design`); `create_issue_label` `area:<component>` per component. |
-| `architecture-design` (project) | `save_document` "Architecture" (content = `## Architecture`), parent = foundation project. |
+| `architecture-design` (project) | `save_document` "Architecture" (content = `## Architecture`), parent = initiative. |
 | `techstack` (feature) | `save_document` "Tech Stack — <feature>" (content = `## Tech Stack`), parent = feature project. |
-| `techstack` (project) | `save_document` "Tech Stack" (content = `## Tech Stack`), parent = foundation project. |
+| `techstack` (project) | `save_document` "Tech Stack" (content = `## Tech Stack`), parent = initiative. |
 | `plan` | per build phase: `save_milestone` (feature project, name, description). Per task `T-N`: `save_issue` (team, title "T-N — …", project = feature, milestone, labels = [area + type], state "Backlog"/"Todo", body = "Advances: AC-x · Component: … · Files: … · Test-first: …"). Set the feature project state to "In Progress". |
 | `gate` | `save_status_update` (type "project", feature project, health onTrack/atRisk/offTrack, body = the go/no-go verdict); `save_document` "Gate report — <feature>" (content = the gate report). |
 
@@ -44,7 +45,7 @@ reference existing entities instead of re-creating them.
 ```json
 {
   "initiative": "<uuid>",
-  "foundationProject": "<id>",
+  "initiativeDocs": { "architecture": "<id>", "techstack": "<id>" },
   "features": {
     "<feature>": {
       "project": "<id>",
