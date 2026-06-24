@@ -28,12 +28,12 @@ code rather than during it.
 
 | Skill | Invoke explicitly | Owner | Output |
 | --- | --- | --- | --- |
-| `idea` | `/coderight:idea` | you | `brief.md` (problem + scope) |
-| `acceptance-criteria` | `/coderight:acceptance-criteria` | you review | `acceptance-criteria.md` (the contract) |
-| `architecture-design` | `/coderight:architecture-design` | you, agent proposes | `design.md` / `architecture.md` |
-| `techstack` | `/coderight:techstack` | you, agent proposes | `techstack.md` |
-| `plan` | `/coderight:plan` | agent | `plan.md` (atomic tasks) |
-| `gate` | `/coderight:gate` | automated (read-only) | `verify-report.md` |
+| `idea` | `/coderight:idea` | you | `## Brief` (problem + scope) |
+| `acceptance-criteria` | `/coderight:acceptance-criteria` | you review | `## Acceptance Criteria` (the contract) |
+| `architecture-design` | `/coderight:architecture-design` | you, agent proposes | `## Design` (`## Architecture` at project level) |
+| `techstack` | `/coderight:techstack` | you, agent proposes | `## Tech Stack` |
+| `plan` | `/coderight:plan` | agent | `## Plan` (atomic tasks) |
+| `gate` | `/coderight:gate` | automated (read-only) | `gate-report.md` |
 | `using-coderight` | auto / `/coderight:using-coderight` | router | this is the entry point |
 
 Start with `using-coderight`; it routes you to the right stage and states the shared rules.
