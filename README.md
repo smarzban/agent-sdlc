@@ -1,36 +1,83 @@
 # skills
 
-A personal collection of reusable [Claude Code](https://claude.com/claude-code)
-skills — versioned here so they can be shared and used with any agent on any repo.
+A personal collection of reusable agent skills, packaged as an installable
+**plugin** for both [Claude Code](https://claude.com/claude-code) and
+[Cursor](https://cursor.com). One source of truth, dual-wrapped: the skills live
+in a standard `skills/<name>/SKILL.md` layout, and a thin manifest per tool makes
+the repo installable natively in each.
 
 A *skill* is a directory containing a `SKILL.md` (with `name` + `description`
-frontmatter) and optional supporting files. Claude Code discovers skills placed
-in `~/.claude/skills/` and surfaces them by their `description`.
+frontmatter) and optional supporting files. The `description` is what the agent
+matches on to trigger the skill. Skills are an open standard, so the `SKILL.md`
+content is portable across agents even where the packaging differs.
 
-## Skills
+## Plugin: `coderight`
+
+A planning pipeline that takes an idea to build-ready, plus skills for writing the
+project's docs. See [`coderight/README.md`](coderight/README.md) for the full
+pipeline and the traceability spine that runs through it.
 
 | Skill | What it does |
 |---|---|
-| [`writing-repo-docs`](writing-repo-docs/SKILL.md) | Write/overhaul documentation for any codebase — an adaptive, source-grounded doc guide (landing index + quickstart + install + usage + technical), shaped to the repo's type, with every claim verified against the actual code. |
-| [`writing-readmes`](writing-readmes/SKILL.md) | Write/overhaul a project's front-door README — leads with what/why, keeps a lean quickstart distinct from full install, links out to deeper docs instead of inlining them, and adapts its section set to the repo type. |
+| `using-coderight` | Entry point and operating rules — routes you to the right stage. |
+| `idea` | Turn a fuzzy idea or feature request into a settled problem + scope. |
+| `acceptance-criteria` | Turn the idea into a checkable contract. |
+| `architecture-design` | Turn criteria into a logical architecture shape. |
+| `techstack` | Turn the design into concrete product/library choices. |
+| `plan` | Turn it all into an atomic, agent-executable task plan. |
+| `gate` | Read-only: walk the whole chain before any code. |
+| `writing-readmes` | Write/overhaul a project's front-door `README.md`. |
+| `writing-repo-docs` | Write/overhaul full source-grounded repository documentation. |
 
-## Installing a skill (make it live)
+## Install
 
-Claude Code loads skills from `~/.claude/skills/`. Symlink a skill from this repo
-into that directory so it stays a single source of truth and updates with `git pull`:
+The repo is both a Claude Code marketplace (`.claude-plugin/marketplace.json`)
+and a Cursor marketplace (`.cursor-plugin/marketplace.json`), named
+`smarzban-skills`.
 
-```bash
-git clone git@github.com:smarzban/skills.git ~/src/skills      # once
-ln -s ~/src/skills/writing-repo-docs ~/.claude/skills/writing-repo-docs
+### Claude Code
+
+```text
+/plugin marketplace add smarzban/skills
+/plugin install coderight@smarzban-skills
 ```
 
-(Or copy the directory in if you'd rather not symlink.) After it's in place,
-either describe the task in plain language — the skill's `description` triggers it
-— or invoke it explicitly as `/writing-repo-docs`.
+Skills then trigger on their `description`, or invoke explicitly with the plugin
+namespace, e.g. `/coderight:idea` or `/coderight:writing-readmes`.
+
+### Cursor
+
+Settings → Plugins → **Import** under Team Marketplaces, paste the repo URL
+(`https://github.com/smarzban/skills`), review the parsed plugin, and enable it.
+Cursor tracks the default branch automatically; **re-import to pick up newly
+added plugins.** Skills auto-activate by context, or invoke them by name via
+`@` / slash.
+
+### Any other agent
+
+The skills are plain Markdown to the open `SKILL.md` standard, so they work with
+any agent that reads instruction files (e.g. Codex reads `SKILL.md` from
+`.codex/skills/`). Copy or symlink the individual `coderight/skills/<name>`
+directories into wherever your harness discovers skills; the `.claude-plugin/`
+and `.cursor-plugin/` wrappers are simply ignored elsewhere.
+
+## Layout
+
+```
+skills/                              ← repo root = a marketplace for two tools
+├── .claude-plugin/marketplace.json  ← Claude Code install index
+├── .cursor-plugin/marketplace.json  ← Cursor install index
+└── coderight/                       ← the plugin
+    ├── .claude-plugin/plugin.json
+    ├── .cursor-plugin/plugin.json
+    ├── README.md
+    └── skills/<name>/SKILL.md        ← 9 skills
+```
 
 ## Adding a skill
 
-Create `<skill-name>/SKILL.md` with frontmatter:
+Skills live inside the plugin's `skills/` directory. To add one, create
+`coderight/skills/<skill-name>/SKILL.md`:
 
 ```markdown
 ---
@@ -44,5 +91,13 @@ description: Use when … — a precise trigger so the right tasks pick it up.
 ```
 
 Keep `SKILL.md` focused; put long templates/checklists in a `reference/` subdir
-that the skill points to on demand. Commit, push, and symlink it into
-`~/.claude/skills/`.
+the skill points to on demand. Both Claude Code and Cursor auto-discover any
+subdirectory of `skills/` that contains a `SKILL.md`, so no manifest edit is
+needed for a new skill.
+
+### Adding a new plugin
+
+Create `<plugin-name>/` with a `skills/` dir plus two manifests
+(`.claude-plugin/plugin.json` and `.cursor-plugin/plugin.json`), then add an
+entry to both root marketplace files. Commit and push. (In Cursor, re-import the
+repo to pick up the new plugin.)

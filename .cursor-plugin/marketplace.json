@@ -1,0 +1,17 @@
+{
+  "name": "smarzban-skills",
+  "owner": {
+    "name": "Saeed Marzban",
+    "email": "git@smarzban.com"
+  },
+  "metadata": {
+    "description": "A personal collection of reusable agent skills, packaged as installable plugins."
+  },
+  "plugins": [
+    {
+      "name": "coderight",
+      "source": "coderight",
+      "description": "Planning pipeline for AI coding agents (idea -> acceptance criteria -> architecture -> techstack -> atomic task plan, with a read-only readiness gate), plus skills for writing the project README and full repository documentation."
+    }
+  ]
+}
