@@ -1,6 +1,6 @@
 ---
 name: architecture-design
-description: "Turn settled acceptance criteria into a logical architecture shape an agent can build against: components and responsibilities, the contracts between them, data flow and key state, trust and failure boundaries, and ADRs for hard-to-reverse decisions, with every criterion traced to the component responsible for it. Use AFTER acceptance-criteria and BEFORE techstack. Triggers: 'design', 'architecture', 'how should this be structured', 'shape the system', or any time you have a settled acceptance-criteria.md and need the intended shape. Names the KIND of thing, never the concrete product (no Postgres, no React) - that is the techstack stage."
+description: "Turn settled acceptance criteria into a logical architecture shape an agent can build against: components and responsibilities, the contracts between them, data flow and key state, trust and failure boundaries, and ADRs for hard-to-reverse decisions, with every criterion traced to the component responsible for it. Use AFTER acceptance-criteria and BEFORE techstack. Triggers: 'design', 'architecture', 'how should this be structured', 'shape the system', or any time you have settled acceptance criteria and need the intended shape. Names the KIND of thing, never the concrete product (no Postgres, no React) - that is the techstack stage."
 ---
 
 # Design: shape the system, not the stack
@@ -12,8 +12,9 @@ thing only. Choosing concrete products and libraries is the next stage. Human-ow
 agent-proposed: lead with a recommended shape and the alternatives, the user decides.
 
 <HARD-GATE>
-Input is `specs/<feature>/brief.md` and `specs/<feature>/acceptance-criteria.md`. Output is
-`specs/<feature>/design.md` (and, at project level, `specs/architecture.md`). Name the KIND of
+Input is the `## Brief` and `## Acceptance Criteria` sections of `specs/<feature>/<feature>.md`.
+Output is the `## Design` section of the same file (and, at project level, the `## Architecture`
+section of `specs/overview.md`). Name the KIND of
 thing (relational store, message queue, single-page app), NEVER the concrete product (Postgres,
 SQS, React) - that is the techstack stage. Do NOT choose a stack, write a plan, break down tasks,
 or write code. If the criteria are unsettled or a criterion has no home in any sensible shape,
@@ -51,10 +52,11 @@ doubt, state the kind and defer the product.
 
 ## Checklist (do in order)
 
-1. **Load inputs** read `brief.md`, `acceptance-criteria.md`, root `CONTEXT.md`, and
-   `constitution.md`. Confirm the criteria are settled; if not, loop back. At feature level, also
-   read the existing architecture: the code, `specs/architecture.md`, and existing ADRs.
-2. **Set level** project (clean repo, no `architecture.md`, shaping the whole system) or feature
+1. **Load inputs** read the `## Brief` and `## Acceptance Criteria` sections of
+   `specs/<feature>/<feature>.md`, root `CONTEXT.md`, and `constitution.md`. Confirm the criteria
+   are settled; if not, loop back. At feature level, also read the existing architecture: the code,
+   the `## Architecture` section of `specs/overview.md`, and existing ADRs in `specs/adr/`.
+2. **Set level** project (clean repo, no `## Architecture` in `overview.md`, shaping the whole system) or feature
    (existing project, fitting one piece in). This routes what you produce (see Two levels).
 3. **Propose the component decomposition** lead with a recommended set of components and their
    single responsibilities, plus the alternatives and tradeoffs, per the recommend-and-alternatives
@@ -67,7 +69,7 @@ doubt, state the kind and defer the product.
 6. **Name trust and failure boundaries** where untrusted input enters, and the failure mode of
    each component.
 7. **Record ADRs** for each decision that is hard-to-reverse AND surprising-without-context AND a
-   real tradeoff, in `docs/adr/`. At feature level, any deviation from an existing pattern is
+   real tradeoff, in `specs/adr/`. At feature level, any deviation from an existing pattern is
    exactly such a decision.
 8. **Build the criterion-to-component map** one row per `AC-N` -> responsible component(s). Every
    criterion appears; no orphans, no components unjustified by a criterion.
@@ -126,13 +128,13 @@ doubt, state the kind and defer the product.
 
 ## The artifact (output)
 
-`specs/<feature>/design.md`, containing only:
+The `## Design` section of `specs/<feature>/<feature>.md`, containing only:
 - **Components** each with: name, single responsibility, the kind of thing it is (logical), and
   its contracts (inputs, outputs, error semantics) with neighbors.
 - **Data flow and key state** logical, product-free.
 - **Trust and failure boundaries.**
 - **Criterion-to-component map** `AC-N` -> component(s), one row each.
-- **ADRs created** links into `docs/adr/`.
+- **ADRs created** links into `specs/adr/`.
 - **Glossary terms touched** mirrored into `CONTEXT.md`.
 
 No concrete stack, no plan, no tasks. Those are later stages.
@@ -141,23 +143,24 @@ No concrete stack, no plan, no tasks. Those are later stages.
 
 Same skill, two scopes, decided in step 2.
 
-**Project** (clean repo, shaping the whole system): write `specs/architecture.md`, the north-star
-shape the whole repo shares (top-level components, their contracts, cross-cutting concerns like
-auth and error handling and observability as logical shapes). The first feature's `design.md` then
-references it.
+**Project** (clean repo, shaping the whole system): write the `## Architecture` section of
+`specs/overview.md`, the north-star shape the whole repo shares (top-level components, their
+contracts, cross-cutting concerns like auth and error handling and observability as logical
+shapes). The first feature's `## Design` then references it.
 
-**Feature** (existing project, fitting one piece in): write `specs/<feature>/design.md` only. Fit
+**Feature** (existing project, fitting one piece in): write the `## Design` section of
+`specs/<feature>/<feature>.md` only. Fit
 the existing architecture, name which existing components change and which are new, and log any
 deviation from existing patterns as an ADR.
 
 ## Conventions
 
-- Lives at `specs/<feature>/design.md`; the project-wide shape lives at `specs/architecture.md`.
-  Kept out of the repo's product `docs/`.
-- Reads `brief.md` and `acceptance-criteria.md` from the same folder; references `AC-N` IDs
+- Lives as the `## Design` section of `specs/<feature>/<feature>.md`; the project-wide shape lives
+  in the `## Architecture` section of `specs/overview.md`. Kept out of the repo's product `docs/`.
+- Reads the `## Brief` and `## Acceptance Criteria` sections of the same file; references `AC-N` IDs
   in the criterion-to-component map.
 - Stops at logical shape. Concrete products and libraries are the techstack stage.
-- ADRs in `docs/adr/`, created via the three-part test (hard-to-reverse AND surprising AND a real
+- ADRs in `specs/adr/`, created via the three-part test (hard-to-reverse AND surprising AND a real
   tradeoff).
 - Downstream consumers: the techstack stage (picks a product per component), the plan stage (built
   against this shape), the verify gate (checks the criterion -> component -> task chain), and the
