@@ -1,6 +1,6 @@
 ---
 name: techstack
-description: "Turn the design's logical shape into concrete product and library choices, one per component kind, each grounded in CURRENT official docs and pinned to a version. Use AFTER design and BEFORE plan. Triggers: 'techstack', 'what should we build this with', 'pick the stack', 'which library/framework/database', or any time you have a settled design.md and need the products that realize it. Names the PRODUCT for each kind the design named; never silently changes the shape."
+description: "Turn the design's logical shape into concrete product and library choices, one per component kind, each grounded in CURRENT official docs and pinned to a version. Use AFTER design and BEFORE plan. Triggers: 'techstack', 'what should we build this with', 'pick the stack', 'which library/framework/database', or any time you have a settled design and need the products that realize it. Names the PRODUCT for each kind the design named; never silently changes the shape."
 ---
 
 # Techstack: choose the products that realize the shape
@@ -11,9 +11,10 @@ memory, and pin a version. Human-owned, agent-proposed: lead with a recommended 
 alternatives with tradeoffs, the user decides.
 
 <HARD-GATE>
-Input is `specs/<feature>/design.md` (and `specs/architecture.md` at project level),
-`specs/<feature>/acceptance-criteria.md`, and `constitution.md`. Output is
-`specs/<feature>/techstack.md`. Choose concrete products per component; do NOT change the design
+Input is the `## Design` and `## Acceptance Criteria` sections of `specs/<feature>/<feature>.md`
+(and the `## Architecture` section of `specs/overview.md` at project level), plus `constitution.md`.
+Output is the `## Tech Stack` section of `specs/<feature>/<feature>.md` (the `## Tech Stack` section
+of `specs/overview.md` at project level). Choose concrete products per component; do NOT change the design
 shape (if a product would force a shape change, STOP and loop back to design), and do NOT write a
 plan, break down tasks, or write code. Ground every choice in CURRENT official docs via search,
 record the version and the date checked, and flag anything you could not verify. The terminal
@@ -40,9 +41,10 @@ A choice is done only when:
 
 ## Checklist (do in order)
 
-1. **Load inputs** read `design.md`, `acceptance-criteria.md`, root `CONTEXT.md`, and
-   `constitution.md`. At feature level, read the existing stack (manifests, lockfiles, existing
-   `techstack.md`). Confirm the design is settled; if not, loop back.
+1. **Load inputs** read the `## Design` and `## Acceptance Criteria` sections of
+   `specs/<feature>/<feature>.md`, root `CONTEXT.md`, and `constitution.md`. At feature level, read
+   the existing stack (manifests, lockfiles, the `## Tech Stack` already recorded in `overview.md`).
+   Confirm the design is settled; if not, loop back.
 2. **Set level** project (choosing the whole stack, including cross-cutting choices like language,
    build, and test framework) or feature (respecting the existing stack, choosing only what is new
    or changed).
@@ -102,7 +104,8 @@ A choice is done only when:
 
 ## The artifact (output)
 
-`specs/<feature>/techstack.md`, containing only:
+The `## Tech Stack` section of `specs/<feature>/<feature>.md` (or of `specs/overview.md` at project
+level), containing only:
 - **Choices** per component: the design kind -> chosen product, version, the date checked and a
   doc link, and why over the alternatives.
 - **Cross-cutting choices** (project level): language, build tooling, test framework, named as
@@ -118,17 +121,18 @@ No plan, no tasks, no code. Those are later stages.
 Same skill, two scopes, decided in step 2.
 
 **Project** (choosing the whole stack): pick products for every component kind plus the
-cross-cutting choices (language, build, test framework), and record them so feature-level choices
-inherit them.
+cross-cutting choices (language, build, test framework), and record them in `overview.md`'s
+`## Tech Stack` so feature-level choices inherit them.
 
 **Feature** (existing project): respect the existing stack. Choose only what is new or changed,
 reuse existing capabilities, and justify any addition.
 
 ## Conventions
 
-- Lives at `specs/<feature>/techstack.md`. Kept out of the repo's product `docs/`.
-- Reads `design.md` and `acceptance-criteria.md` from the same folder; references the design's
-  component kinds and the `AC-N` IDs of any criterion that drives a choice.
+- Lives as the `## Tech Stack` section of `specs/<feature>/<feature>.md` (project-level
+  cross-cutting choices in `specs/overview.md`). Kept out of the repo's product `docs/`.
+- Reads the `## Design` and `## Acceptance Criteria` sections of the same file; references the
+  design's component kinds and the `AC-N` IDs of any criterion that drives a choice.
 - Stops at product selection. How those products are wired up, task by task, is the plan stage.
 - Grounding is non-negotiable: choices are verified against current official docs via search, with
   versions and dates recorded.
