@@ -89,6 +89,7 @@ The `linear-ids.json` shape is in [reference/mapping.md](reference/mapping.md).
 
 At its hand-off, each pipeline stage performs its Linear action AFTER writing its `##` section — the
 document content IS that section. The full stage -> Linear action table (`idea`,
-`acceptance-criteria`, `architecture-design`, `techstack`, `plan`, `gate`) is in
-[reference/mapping.md](reference/mapping.md). Build-stage issue transitions are deferred to the
-future build-process skills.
+`acceptance-criteria`, `architecture-design`, `techstack`, `plan`, `gate`, `build`, `ship`) is in
+[reference/mapping.md](reference/mapping.md). `build` and `ship` only **transition** the milestones
+and `T-N` issues that `plan` already created (Backlog → In Progress → In Review → Done, plus PR
+attachment) — they never create entities.

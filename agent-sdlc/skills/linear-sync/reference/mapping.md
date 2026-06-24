@@ -35,9 +35,12 @@ Each stage runs its action AFTER writing its `##` section; the document content 
 | `techstack` (project) | `save_document` "Tech Stack" (content = `## Tech Stack`), parent = initiative. |
 | `plan` | per build phase: `save_milestone` (feature project, name, description). Per task `T-N`: `save_issue` (team, title "T-N — …", project = feature, milestone, labels = [area + type], state "Backlog"/"Todo", body = "Advances: AC-x · Component: … · Files: … · Test-first: …"). Set the feature project state to "In Progress". |
 | `gate` | `save_status_update` (type "project", feature project, health onTrack/atRisk/offTrack, body = the go/no-go verdict); `save_document` "Gate report — <feature>" (content = the gate report). |
+| `build` | per task `T-N`, transition the existing issue (do NOT create): `save_issue` BY id (from `linear-ids.json`), `state` → "In Progress" (implementer starts) → "In Review" (reviewer runs) → "Done" (reviewed, green, committed). Pass `id` on update, never `team`. A blocked task: `save_comment` on the issue with the blocker (no "Blocked" status is assumed to exist). When a milestone's last task reaches Done, `save_status_update` (project) noting the milestone complete. |
+| `ship` | attach the PR: `save_issue` BY id with `links:[{url:"<pr-url>",title:"PR"}]` on the feature's issues; `save_status_update` (project, body "PR open: <pr-url>"); set the feature project state to "In Review". No merge transition — merge is out of scope for ship. |
 
-Build-stage per-task issue transitions (Backlog → In Progress → In Review → Done, plus PR
-attachment via `links`) are DEFERRED to the future build-process skills.
+build and ship only **transition** entities the `plan` stage already created (milestones + `T-N`
+issues, recorded in `linear-ids.json`); they never create. The build-stage transitions previously
+deferred here now live in the `build` and `ship` skills.
 
 ## `linear-ids.json` shape
 
