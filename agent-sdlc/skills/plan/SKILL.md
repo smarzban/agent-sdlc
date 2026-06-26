@@ -25,8 +25,10 @@ gate.
 
 A task is done being written only when:
 
-1. **Atomic.** It is the smallest change that leaves the repo green. If it cannot finish green in
-   one go, split it.
+1. **Atomic.** It is the smallest change that leaves the repo green — including the *compile fallout*
+   of the change. A change with non-local compile consequences (a new enum variant against an
+   exhaustive match; a new required interface/trait method; a new non-optional field or parameter)
+   must satisfy those consequences in the same task. If it cannot finish green in one go, split it.
 2. **Exact files.** It names the precise files to create or change. No "update the relevant
    module".
 3. **Test-first.** It states the failing test to write first (the red of red-green), or the
@@ -61,7 +63,9 @@ A task is done being written only when:
   testing: the plan must leave nothing to their discretion.
 - **Test-first, always.** Every task names its failing test before any code. Tasks written without
   a test get the test added or get cut.
-- **Atomic and green between tasks.** The repo compiles and passes after every task.
+- **Atomic and green between tasks.** The repo compiles and passes after every task — including the
+  compile fallout of each change (match arms, interface impls, call sites updated in the same task,
+  not deferred to a later one).
 - **Traceability is the spine.** Task -> criterion -> component. The gate walks it;
   keep it intact.
 - **YAGNI and DRY.** Build only what a criterion needs; do not repeat what a prior task built.
@@ -83,6 +87,9 @@ A task is done being written only when:
 - A task with no test or verification named.
 - A task that traces to no criterion, or a criterion advanced by no task.
 - Tasks out of dependency order, or a task depending on a later one.
+- A task that compiles or passes only after a *later* task lands — a test needing a not-yet-built
+  consumer, or an exhaustive match broken by a half-added variant. Fold the consequence into this
+  task, or declare the missing piece as an earlier dependency.
 - A task too large to finish green in a single pass.
 
 ## Done when
