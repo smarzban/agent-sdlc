@@ -10,8 +10,9 @@ the disciplines the subagents follow are in the sibling reference files.
    branch, use it. Never nest isolation.
 2. **Native tool, then fallback.** Use the platform's worktree/branch tool if there is one; else
    `git worktree add` under `.worktrees/<feature>` from the base branch.
-3. **Baseline green.** Run the full suite once before any task. If the baseline is red, stop — you
-   cannot tell your regressions from pre-existing ones. Report "baseline N passing" and proceed.
+3. **Baseline green.** Run the full green bar once before any task — the commands `## Tech Stack`
+   declares (compile, test, lint, format-check). If the baseline is red, stop — you cannot tell your
+   regressions from pre-existing ones. Report "baseline N passing" and proceed.
 4. **Provenance for cleanup.** Note whether you created the worktree (`.worktrees/`) or inherited it.
    ship preserves the worktree on the PR path; only an explicitly created, finished one is cleaned.
 
@@ -33,8 +34,11 @@ tasks into the prompt — that is the context bloat subagent-driven development 
 - Which disciplines to follow: `tdd.md` (red-green-refactor), `source-driven.md` (verify framework
   APIs against official docs before using them), `simplicity.md` (one vertical slice, Rule-0).
 
-**Returns:** an uncommitted diff plus a one-line statement of which test now passes. The implementer
-does **not** commit — the conductor commits after review, so the commit reflects reviewed code.
+**Returns:** an uncommitted diff plus a one-line statement of which test now passes. Before
+returning, the implementer runs the project's formatter and linter so the diff is already
+format-clean and lint-clean — the conductor's green-bar check is the authoritative gate, not a
+surprise. The implementer does **not** commit — the conductor commits after review, so the commit
+reflects reviewed code.
 
 ### Reviewer
 
@@ -58,8 +62,9 @@ grind.
 
 ## Commit (conductor, after the reviewer passes)
 
-The conductor — not a subagent — verifies the suite green (runs it, reads the output) and makes one
-atomic commit per task. One task = one commit. The message states the task and the `AC-N`
+The conductor — not a subagent — verifies the green bar green (runs the full declared set — compile,
+test, lint, format-check — and reads the output itself, never trusting a subagent's reported test
+counts or pass/fail claim) and makes one atomic commit per task. One task = one commit. The message states the task and the `AC-N`
 (e.g. `feat(T-3): root resolver — advances AC-1`). Then updates the ledger.
 
 ## Model selection (optional, platform-dependent)

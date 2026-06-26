@@ -30,7 +30,9 @@ a verdict: ready to build, or not.
 3. **Constitution.** Nothing across the spec violates a MUST principle.
 4. **Verification integrity.** Each test-backed criterion has a kind-of-oracle and a task;
    each reviewer-checked criterion has a named review axis; the design's criterion-to-component map
-   and the plan stage's task-to-criterion map are both complete.
+   and the plan stage's task-to-criterion map are both complete. The project's **green bar** — the
+   runnable commands that define a passing build (compile, test, lint, format-check) — is declared
+   and concrete (no placeholders), so build inherits one definition of "green".
 5. **Hygiene.** No unresolved TBDs, placeholders, or "decide later" markers remain.
 
 ## Checklist (do in order)
@@ -72,6 +74,7 @@ a verdict: ready to build, or not.
 - The gate edited any artifact other than the report.
 - A criterion with no task passed as acceptable.
 - A "ready to build" verdict issued with a Critical or High finding open.
+- A "ready to build" verdict with no green bar declared — build then has no shared definition of "green".
 - Findings stated as impressions rather than located in a specific artifact.
 
 ## Done when

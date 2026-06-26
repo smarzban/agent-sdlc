@@ -24,14 +24,17 @@ branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
 
 1. **Precondition** confirm the gate verdict is ready to build. Else stop.
 2. **Isolate** set up an isolated workspace (detect existing isolation → native worktree tool → `git
-   worktree` fallback). Run the suite once: the baseline MUST be green before touching anything.
+   worktree` fallback). Run the **green bar** once — the commands `## Tech Stack` declares (compile,
+   test, lint, format-check): the baseline MUST be green before touching anything.
 3. **Ledger** open `build-report.md`. If it already exists, resume from it plus `git log` — never
    re-run a task already marked done. Re-doing completed work is the most expensive failure here.
 4. **For each task `T-N`, in dependency order:**
    a. Dispatch the **implementer** subagent with a file brief for `T-N` only.
    b. Dispatch the **reviewer** subagent on the resulting diff.
    c. If the reviewer finds Critical/Important issues, dispatch a **fixer** and re-review (bounded).
-   d. Verify the suite is green — run it, read the output (verification-before-completion).
+   d. Verify the **green bar** is green — run the full declared set (compile, test, lint,
+      format-check), read the output (verification-before-completion). Not just tests: lint or
+      format drift caught now is a clean commit; caught later is a reactive scramble.
    e. Commit: one atomic commit for the task, reflecting the reviewed code.
    f. Update `build-report.md`: `T-N` done, the commit SHA, the `AC-N` it advanced.
    g. If Linear sync is enabled in `.agent-sdlc/config.json`, transition `T-N`'s issue via the
@@ -47,8 +50,9 @@ The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and le
 
 - **Conduct, do not perform.** The conductor never writes product code. Every change comes from a
   subagent with a one-task brief. If you find yourself editing source directly, stop and dispatch.
-- **One task, one green commit.** The repo compiles and passes after every task. A task that cannot
-  finish green was mis-sized in planning — loop back, do not force it through.
+- **One task, one green commit.** The repo compiles, passes, lints, and is formatted after every
+  task — the whole green bar, not just the suite. A task that cannot finish green was mis-sized in
+  planning — loop back, do not force it through.
 - **Test-first is the subagent's contract.** The plan named the failing test; the implementer writes
   it and watches it fail before any code. Tests-after is a violation, not a shortcut.
 - **Context hygiene.** A brief describes one task, never the session history or the whole plan. Hand
@@ -74,7 +78,8 @@ The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and le
 ## Red flags (stop and fix)
 
 - The conductor edited product code itself instead of dispatching a subagent.
-- A commit with a red or unrun suite, or more than one task in a single commit.
+- A commit with a red or unrun green bar (tests, lint, or format-check failing or never run), or
+  more than one task in a single commit.
 - An implementer that wrote code before a failing test, or whose brief carried the whole plan.
 - A reviewer prompt told what *not* to flag (pre-judging disqualifies the review).
 - A task marked done with no commit SHA, or work re-run because the ledger was not consulted.
@@ -82,8 +87,8 @@ The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and le
 
 ## Done when
 
-- Every `T-N` is implemented test-first, reviewed, and committed atomically, the suite green between
-  each.
+- Every `T-N` is implemented test-first, reviewed, and committed atomically, the green bar green
+  (tests, lint, format-check) between each.
 - `build-report.md` records every task done with its SHA and `AC-N`; no task left in-progress.
 - The branch is green end to end.
 - Linear issues are transitioned to Done where sync is enabled (or skipped cleanly where it is not).
@@ -98,8 +103,9 @@ The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and le
 
 ## Conventions
 
-- Reads the `## Plan` section of `specs/<feature>/<feature>.md` and `gate-report.md`; references
-  `T-N` and `AC-N` IDs.
+- Reads the `## Plan` and `## Tech Stack` sections of `specs/<feature>/<feature>.md` (the latter for
+  the green bar — the commands that define a passing build) and `gate-report.md`; references `T-N`
+  and `AC-N` IDs.
 - Writes only product code + `build-report.md`. Does not edit the spec sections (the front half owns
   those) and does not open the PR (ship owns that).
 - Runs after a clean gate verdict; re-run is safe and resumes from the ledger.

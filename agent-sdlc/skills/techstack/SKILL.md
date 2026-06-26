@@ -38,6 +38,9 @@ A choice is done only when:
    where it can; a new dependency that duplicates an existing capability is rejected or justified.
 6. **Unverified is flagged.** Anything you could not confirm against current docs is marked, not
    quietly assumed.
+7. **Green bar declared** (project level). The exact runnable commands that constitute a passing
+   build — compile/build, test, lint, format-check, typecheck (whichever the stack has) — are
+   recorded, so the gate, build, and review share one definition of "green".
 
 ## Checklist (do in order)
 
@@ -93,6 +96,8 @@ A choice is done only when:
 - A new dependency that duplicates something already in the stack.
 - A non-functional criterion with no product decision behind it.
 - "Latest" or an unpinned version standing in for a real choice.
+- A build or test framework chosen but no runnable green-bar commands recorded — build then inherits
+  no shared definition of "green".
 
 ## Done when
 
@@ -101,6 +106,7 @@ A choice is done only when:
 - Every criterion that depends on a choice is satisfiable by it.
 - Nothing violates `constitution.md`.
 - The component-to-product map is complete; unverified items are flagged.
+- The green bar — the runnable compile/test/lint/format-check commands — is recorded at project level.
 - The user has approved the techstack.
 
 ## The artifact (output)
@@ -111,6 +117,9 @@ level), containing only:
   doc link, and why over the alternatives.
 - **Cross-cutting choices** (project level): language, build tooling, test framework, named as
   products with versions.
+- **Green bar** (project level): the exact commands that define a passing build — compile/build,
+  test, lint, format-check, typecheck (whichever the stack has) — each runnable as written, so the
+  gate, build, and review share one definition of "green".
 - **Component-to-product map** kind -> product, one row each.
 - **Unverified / flagged** anything not confirmed against current docs.
 - **Glossary terms touched** mirrored into `CONTEXT.md`.
@@ -122,8 +131,9 @@ No plan, no tasks, no code. Those are later stages.
 Same skill, two scopes, decided in step 2.
 
 **Project** (choosing the whole stack): pick products for every component kind plus the
-cross-cutting choices (language, build, test framework), and record them in `overview.md`'s
-`## Tech Stack` so feature-level choices inherit them.
+cross-cutting choices (language, build, test framework) and the green bar (the runnable commands
+that define a passing build), and record them in `overview.md`'s `## Tech Stack` so feature-level
+choices inherit them.
 
 **Feature** (existing project): respect the existing stack. Choose only what is new or changed,
 reuse existing capabilities, and justify any addition.
