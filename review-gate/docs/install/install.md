@@ -1,25 +1,25 @@
 # Install
 
-review-gate is a Claude Code plugin distributed as its **own single-plugin marketplace** (the repo is
-both the marketplace and the plugin).
+review-gate is a Claude Code plugin in the **`smarzban-skills`** marketplace — the `smarzban/skills`
+repo holds the marketplace index and both plugins.
 
 ## Install the plugin
 
 Inside Claude Code:
 
 ```
-/plugin marketplace add smarzban/review-gate
-/plugin install review-gate@smarzban
+/plugin marketplace add smarzban/skills
+/plugin install review-gate@smarzban-skills
 ```
 
 Non-interactive equivalent:
 
 ```bash
-claude plugin marketplace add smarzban/review-gate
-claude plugin install review-gate@smarzban         # add --scope project to share with a repo's team
+claude plugin marketplace add smarzban/skills
+claude plugin install review-gate@smarzban-skills   # add --scope project to share with a repo's team
 ```
 
-The repo is **private**, so the marketplace add uses your own GitHub access (it clones via SSH/HTTPS).
+The marketplace repo (`smarzban/skills`) is **public**, so the marketplace add clones it over HTTPS.
 
 Once installed, the **review-gate** skill triggers when you ask Claude to review / sign off on a PR,
 and **repo-audit** when you ask for a whole-repo health audit. Updating and the release model are

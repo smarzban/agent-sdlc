@@ -46,11 +46,11 @@ verdict and the trust boundary. Why this is safe even with untrusted reviewers:
 
 ## Quickstart
 
-Install the plugin (it's its own single-plugin marketplace), then ask Claude to review a PR:
+Install the plugin from the `smarzban-skills` marketplace, then ask Claude to review a PR:
 
 ```
-/plugin marketplace add smarzban/review-gate
-/plugin install review-gate@smarzban
+/plugin marketplace add smarzban/skills
+/plugin install review-gate@smarzban-skills
 ```
 
 > *"Review this PR and decide whether it can merge: #123."* → triggers the **review-gate** skill.
@@ -61,8 +61,8 @@ You also need `git`, `gh`, and **at least one** model backend (`ollama` with `:c
 ## Install
 
 ```bash
-claude plugin marketplace add smarzban/review-gate
-claude plugin install review-gate@smarzban       # add --scope project to share with a repo's team
+claude plugin marketplace add smarzban/skills
+claude plugin install review-gate@smarzban-skills   # add --scope project to share with a repo's team
 ```
 
 No install-time build: the spine is committed under `dist/` with **no runtime dependencies**, so plain
@@ -96,15 +96,17 @@ reference (12 variables) is in [docs/install/configuration.md](docs/install/conf
 
 ## Releasing & updates
 
-This plugin uses **git-SHA versioning**: the manifests carry no `version` field, so **a release is just
-a push to `main`** (every commit is a new version). To update an installed copy:
+This plugin uses **pinned semver** (its `plugin.json` carries a `version`), the same release model as
+the other plugin in the marketplace. **Cutting a release = bump the `version`, refresh the description,
+commit, push** — installed copies only update when the version string changes. To update an installed
+copy:
 
 ```bash
-claude plugin marketplace update smarzban
-claude plugin update review-gate@smarzban         # use the @marketplace-qualified name; restart to activate
+claude plugin marketplace update smarzban-skills
+claude plugin update review-gate@smarzban-skills   # use the @marketplace-qualified name; restart to activate
 ```
 
-`smarzban` is a third-party marketplace, so auto-update is **off by default** (updates are manual).
+`smarzban-skills` is a third-party marketplace, so auto-update is **off by default** (updates are manual).
 Details: [docs/technical/plugin-and-releases.md](docs/technical/plugin-and-releases.md).
 
 ## Documentation
@@ -123,7 +125,7 @@ Full docs live in [`docs/`](docs/README.md), routed by audience:
 ## Layout
 
 ```
-.claude-plugin/   plugin.json + marketplace.json (this repo is its own marketplace)
+.claude-plugin/   plugin.json (manifest; the marketplace index lives in the smarzban-skills repo root)
 skills/           review-gate/ (the gate) · repo-audit/ (the whole-repo audit)
 src/              the spine: runner · scan · consolidate · decide · proc · prompts · cli · types
 dist/             the committed compiled spine the installed plugin runs

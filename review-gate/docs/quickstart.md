@@ -4,15 +4,15 @@ Get from nothing to a gated PR.
 
 ## 1. Install the plugin
 
-review-gate is its own single-plugin marketplace. Inside Claude Code:
+review-gate is a plugin in the `smarzban-skills` marketplace. Inside Claude Code:
 
 ```
-/plugin marketplace add smarzban/review-gate
-/plugin install review-gate@smarzban
+/plugin marketplace add smarzban/skills
+/plugin install review-gate@smarzban-skills
 ```
 
-Non-interactive equivalent: `claude plugin marketplace add smarzban/review-gate` then
-`claude plugin install review-gate@smarzban`. See [install/install.md](install/install.md) for
+Non-interactive equivalent: `claude plugin marketplace add smarzban/skills` then
+`claude plugin install review-gate@smarzban-skills`. See [install/install.md](install/install.md) for
 prerequisites and details.
 
 ## 2. Have at least one model backend

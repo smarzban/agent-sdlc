@@ -37,5 +37,5 @@ Both drive the same `review-gate` CLI spine, which also serves its own reviewer 
   - [trust-boundary.md](technical/trust-boundary.md) — untrusted reviewers vs. the trusted spine; no-silent-dismissal.
   - [consolidate-and-decide.md](technical/consolidate-and-decide.md) — clustering, agreement, the cluster-key contract, the verdict.
   - [reviewers-and-scanners.md](technical/reviewers-and-scanners.md) — the model runner and the deterministic scan tier.
-  - [plugin-and-releases.md](technical/plugin-and-releases.md) — git-SHA versioning, the `bin` launcher, install/update.
+  - [plugin-and-releases.md](technical/plugin-and-releases.md) — semver versioning, the `bin` launcher, install/update.
   - [extending.md](technical/extending.md) — add a lens or an audit pass; the test discipline.
