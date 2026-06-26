@@ -1,0 +1,37 @@
+# Illustrative GitHub Action: run the review gate as a REQUIRED check.
+# The agent orchestrates the reviews (per skills/review-gate/SKILL.md); the deterministic spine's verdict drives
+# the merge block. This is the trust boundary in CI form: a model can't approve its own PR —
+# the required check fails on `verdict == "block"`, which only the spine can clear.
+name: review-gate
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }   # need the base for `git diff -M <base>...<head>`
+
+      - name: Install gate
+        run: npm --prefix review-gate ci
+
+      # The agent (e.g. Claude Code headless) follows skills/review-gate/SKILL.md end to end:
+      # build changeset -> run reviewers across models -> consolidate -> adjudicate -> decide.
+      # It writes the decision to /tmp/rg-decision.json and posts ONE PR comment.
+      # (Model creds: omp auth / OPENAI etc. provided via repo secrets.)
+      - name: Run review gate
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          # <your headless agent invocation here, e.g.>
+          # claude -p "Run the review-gate skill on this PR" --skill review-gate
+          test -f /tmp/rg-decision.json   # produced by the agent run
+
+      - name: Enforce verdict (this is the gate)
+        run: |
+          verdict=$(jq -r .verdict /tmp/rg-decision.json)
+          echo "verdict=$verdict"
+          [ "$verdict" = "block" ] && { echo "::error::review gate blocked"; exit 1; } || exit 0

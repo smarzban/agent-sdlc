@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# review-gate launcher. Resolves the compiled spine relative to THIS script, so it works on PATH from
+# any working directory — Claude Code adds a plugin's bin/ to the Bash PATH, so once the plugin is
+# installed the skill can call `review-gate <verb>` with no path to the plugin. The spine has zero
+# runtime deps, so plain `node` on the committed dist/ build runs it (no install-time build needed).
+set -euo pipefail
+# Resolve through symlinks so the launcher works whether the plugin adds bin/ to PATH or symlinks
+# this script into a PATH dir, then locate the committed dist/ build relative to the REAL script.
+src="${BASH_SOURCE[0]:-$0}"
+while [ -h "$src" ]; do
+  dir="$(cd -P "$(dirname "$src")" && pwd)"
+  src="$(readlink "$src")"
+  case "$src" in /*) ;; *) src="$dir/$src" ;; esac
+done
+here="$(cd -P "$(dirname "$src")" && pwd)"
+exec node "$here/../dist/cli.js" "$@"
