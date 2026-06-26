@@ -89,7 +89,7 @@ stops and asks before changing anything — a PR is an outward artifact.
 ## Conventions
 
 - Reads `build-report.md` and the spec; references `AC-N` and the feature branch.
-- Invokes `/review-gate:review-gate` (separate plugin) for the whole-PR review, with a portable
-  reviewer-subagent fallback when it is absent.
+- Invokes `/review-gate:review-gate` (a sibling plugin in this marketplace) for the whole-PR review,
+  with a portable reviewer-subagent fallback when it is absent.
 - Does not merge and does not clean the worktree on the PR path.
 - Downstream consumer: a human or review-gate merges; a later `deploy` stage owns promotion.
