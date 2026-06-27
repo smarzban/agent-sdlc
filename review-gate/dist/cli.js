@@ -8,6 +8,14 @@ import { consolidate } from "./consolidate.js";
 import { decide } from "./decide.js";
 import { assemblePrompt } from "./prompts.js";
 const readJson = (p) => JSON.parse(readFileSync(p, "utf8"));
+// Accept a small INLINE JSON literal (e.g. `[]`) as well as a file path for the optional, often-empty
+// args (adjudications / previous), so a caller with none isn't forced to write an empty file just to
+// pass `[]` — which otherwise hit `ENOENT: open '[]'`. A value starting with `[` or `{` is parsed
+// inline; anything else is read from disk.
+const readJsonArg = (arg) => {
+    const t = arg.trim();
+    return t.startsWith("[") || t.startsWith("{") ? JSON.parse(t) : readJson(arg);
+};
 const print = (o) => process.stdout.write(JSON.stringify(o, null, 2) + "\n");
 // prompts/ ships beside this binary — resolve relative to THIS file, not the cwd, so the CLI serves
 // its bundled prompts from wherever the plugin is installed. (src/cli.ts in dev and dist/cli.js in a
@@ -63,8 +71,8 @@ async function main() {
                 process.stderr.write("usage: review-gate decide <clusters.json> <adjudications.json> <meta.json> [previous.json]\n");
                 process.exit(2);
             }
-            const previous = args[3] ? readJson(args[3]) : undefined;
-            print(decide(readJson(args[0]), readJson(args[1]), readJson(args[2]), previous));
+            const previous = args[3] ? readJsonArg(args[3]) : undefined;
+            print(decide(readJson(args[0]), readJsonArg(args[1]), readJson(args[2]), previous));
             break;
         }
         default:

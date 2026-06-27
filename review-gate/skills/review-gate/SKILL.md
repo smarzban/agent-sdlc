@@ -15,7 +15,8 @@ it is to be certain a **gold-standard** PR is landing. "Probably fine" is not si
 
 **Non-negotiable obligations:**
 - Run the **full panel** — all four models on the holistic pass. If a model fails, surface the
-  warning AND name the coverage you lost; never let a failure pass silently.
+  warning AND name the coverage you lost — record it in `meta.missing` so the spine prints a loud
+  **Coverage** line; never let a failure pass silently.
 - **Read the code behind every gating cluster yourself** (critical/high/medium) before it informs the
   verdict. Open the file, trace the change — do not adjudicate from a finding's title.
 - **Dismiss a gating finding only after you have verified in the code that it is not real.** The spine
@@ -132,7 +133,7 @@ blocking. The spine computes the verdict from what you collect — honest collec
      | lens | fire when |
      |---|---|
      | `lens-tests` | tests are thin/weak, or behavior changed with little/no test change |
-     | `lens-spec` | a spec / acceptance criteria / ticket exists — **append it to the prompt** (returns `[]` without one) |
+     | `lens-spec` | a spec / acceptance criteria / ticket exists — **append it to the prompt** (it returns `[]` without one). If you can't supply the spec, do **not** count conformance as checked — record the pass in `meta.missing` so the Coverage line shows it |
      | `lens-security` | a sensitive surface — auth, input handling, crypto, deserialization, **shelling out to a subprocess, or parsing untrusted input** (its adversarial framing catches argument/option injection holistic misses) |
      | `lens-privacy` | the change stores, logs, or transmits personal/sensitive data |
      | `lens-contracts` | a public HTTP API, or an async event/message schema, changed |
@@ -152,8 +153,9 @@ blocking. The spine computes the verdict from what you collect — honest collec
      adversarial "assume the attacker controls every input" framing finds what "review this change"
      skims. **Silently skipping the lens evaluation is a sign-off failure, not a shortcut.**
    - Run reviewers as parallel background subprocesses (modest concurrency — a few at a time). Collect
-     each call's `output` (skip `null`s) into `/tmp/rg-outputs.json`. **Surface every `warning`** — a
-     skipped/failed model means a thinner panel; don't hide it.
+     each call's `output` (skip `null`s) into `/tmp/rg-outputs.json`, and record each `null`/`warning`
+     pass in `meta.missing` (step 6). **Surface every `warning`** — a skipped/failed model means a
+     thinner panel; don't hide it.
 
 4. **Consolidate:** `review-gate consolidate /tmp/rg-outputs.json > /tmp/rg-clusters.json` — clusters by location
    across models, with an agreement count and a `contested` flag.
@@ -188,11 +190,14 @@ blocking. The spine computes the verdict from what you collect — honest collec
      scanner's config/allowlist** so it stops firing. An attempted override is surfaced loudly in the
      comment as **"⚠️ Deterministic findings — override NOT honored"** but the finding stays blocking.
 
-6. **Decide.** Assemble `/tmp/rg-meta.json` = `{reviewers, round}` — `reviewers` is **every**
-   reviewer×model pass that actually ran this round (including clean votes, which never reach a
-   cluster); `round` is the 1-based round number (it numbers the comment heading). For round **N>1**,
-   also save the **previous round's blocking findings** — last round's decision `blocking` array — to
-   `/tmp/rg-prev.json`.
+6. **Decide.** Assemble `/tmp/rg-meta.json` = `{reviewers, missing, round}` — `reviewers` is
+   **every** reviewer×model pass that actually **voted** this round (including clean votes, which never
+   reach a cluster); **`missing` is every pass you *planned* but lost** — a backend/auth failure, an
+   unparseable non-vote, or a lens fired without its input (e.g. `lens-spec` with no spec):
+   `[{reviewer, model, reason}]`. The spine renders a loud **Coverage** line from `missing`, so a
+   thinned panel shows in the *deterministic* comment, not only your prose. `round` is the 1-based
+   round number (it numbers the comment heading). For round **N>1**, also save the **previous round's
+   blocking findings** — last round's decision `blocking` array — to `/tmp/rg-prev.json`.
 
    Run: `review-gate decide /tmp/rg-clusters.json /tmp/rg-adjudications.json /tmp/rg-meta.json [/tmp/rg-prev.json] > /tmp/rg-decision.json`
    → `{verdict, blocking, dismissed, prComment}`, all deterministic. With `previous` supplied,
@@ -229,7 +234,7 @@ blocking. The spine computes the verdict from what you collect — honest collec
 ## Done when (the gold-standard gate)
 You have signed off ONLY when all of these hold — otherwise you are not finished:
 - [ ] The deterministic `scan` ran and its findings are in the pool.
-- [ ] **Round 1 ran the full panel** (all four holistic + warranted lenses), OR every missing model is surfaced with the coverage lost named. **Rounds 2+ were single-model verification of the prior findings + fixes — not a fresh discovery panel.**
+- [ ] **Round 1 ran the full panel** (all four holistic + warranted lenses), OR every missing model is surfaced with the coverage lost named (recorded in `meta.missing` → the **Coverage** line). **Rounds 2+ were single-model verification of the prior findings + fixes — not a fresh discovery panel.**
 - [ ] Round 1's panel is not thin (≥3 models), OR a thin panel is flagged and the verdict marked low-confidence.
 - [ ] Every gating cluster was read **in the code**, not just by title.
 - [ ] Every dismissal carries a code-checked justification — you confirmed the finding is not real.

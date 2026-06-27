@@ -89,3 +89,28 @@ describe("cli `decide` verb — run metadata is required, the comment carries it
     expect(decision.prComment).not.toContain("Progress since");
   });
 });
+
+// Item 6 (Episode 2): the `adjudications` (and `previous`) args used to be file-path-only, so a caller
+// with none had to write an empty `[]` file or hit `ENOENT: open '[]'`. Accept an inline literal too.
+describe("cli `decide` verb — inline adjudications/previous (no empty-file dance) (committed dist/)", () => {
+  const dir = mkdtempSync(join(tmpdir(), "rg-cli-inline-"));
+  const clusters = join(dir, "clusters.json");
+  const meta = join(dir, "meta.json");
+  writeFileSync(clusters, JSON.stringify([{
+    key: "a.ts::1", severity: "low", contested: false, members: [], agreement: { count: 1, total: 4 },
+    representative: { title: "minor nit", severity: "low", file: "a.ts", line: 1, rationale: "r", suggestion: "s" },
+  }]));
+  writeFileSync(meta, JSON.stringify({ reviewers: [{ reviewer: "holistic", model: "kimi" }] }));
+
+  it("accepts an inline `[]` for adjudications instead of requiring a file path", () => {
+    const decision = JSON.parse(run(["decide", clusters, "[]", meta]));
+    expect(decision.verdict).toBe("pass");
+  });
+
+  it("accepts an inline `[]` for the previous-round arg too", () => {
+    const metaR2 = join(dir, "meta-r2.json");
+    writeFileSync(metaR2, JSON.stringify({ reviewers: [{ reviewer: "holistic", model: "kimi" }], round: 2 }));
+    const decision = JSON.parse(run(["decide", clusters, "[]", metaR2, "[]"]));
+    expect(decision.prComment).toContain("## Review Gate — Round 2");
+  });
+});

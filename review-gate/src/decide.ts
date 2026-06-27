@@ -28,6 +28,16 @@ export function decide(clusters: FindingCluster[], adjudications: Adjudication[]
     }
     if (meta.round !== undefined && (!Number.isInteger(meta.round) || meta.round <= 0))
       throw new Error("decide: meta.round must be a positive integer when provided.");
+    if (meta.missing !== undefined) {
+      if (!Array.isArray(meta.missing))
+        throw new Error("decide: meta.missing must be an array of lost reviewer/lens passes when provided.");
+      for (const r of meta.missing) {
+        if (!r || typeof r.reviewer !== "string" || !r.reviewer.trim() || typeof r.model !== "string" || !r.model.trim())
+          throw new Error("decide: each meta.missing entry must name a non-empty reviewer and model.");
+        if (r.reason !== undefined && typeof r.reason !== "string")
+          throw new Error("decide: meta.missing reason must be a string when provided.");
+      }
+    }
   }
   if (previous !== undefined) {
     if (!Array.isArray(previous))
@@ -37,6 +47,20 @@ export function decide(clusters: FindingCluster[], adjudications: Adjudication[]
           !(c as { representative?: { title?: unknown } }).representative || typeof (c as { representative: { title?: unknown } }).representative.title !== "string")
         throw new Error("decide: each previous entry must be a cluster with a non-empty key and a representative.title.");
     }
+  }
+  // An adjudication is the ONE place model judgment enters the verdict, so a malformed one must fail
+  // LOUD, not be silently dropped: a typo'd verb ("dismiss" for "dismissed") used to fall through and
+  // leave the finding blocking with no explanation. Reject unknown verbs / missing keys here.
+  if (!Array.isArray(adjudications))
+    throw new Error("decide: adjudications must be an array (use [] for none).");
+  for (const raw of adjudications) {
+    const a = raw as { key?: unknown; decision?: unknown; justification?: unknown };
+    if (!a || typeof a !== "object" || typeof a.key !== "string" || !a.key.trim())
+      throw new Error("decide: each adjudication needs a non-empty string key.");
+    if (a.decision !== "confirmed" && a.decision !== "dismissed")
+      throw new Error(`decide: adjudication decision must be "confirmed" or "dismissed" (got ${JSON.stringify(a.decision)} for key "${a.key}").`);
+    if (a.justification !== undefined && typeof a.justification !== "string")
+      throw new Error(`decide: adjudication justification must be a string when provided (key "${a.key}").`);
   }
   const adj = new Map(adjudications.map((a) => [a.key, a]));
   const blocking: FindingCluster[] = [];
@@ -133,6 +157,19 @@ function reviewedBy(meta: RunMeta): string {
   return `_Reviewed by:_ ${passes.join(" + ")} · models: ${models.join(", ")}`;
 }
 
+// Coverage line: the passes PLANNED but with no usable vote this round (a backend/auth failure, an
+// unparseable non-vote, or a lens fired without its input — e.g. lens-spec with no spec). Built from
+// orchestrator-supplied `meta.missing`; display only, never alters the verdict — so a thinned panel is
+// LOUD in the deterministic comment, not left to the orchestrator's prose. Sanitized (a reason can
+// carry a model's stderr).
+function coverageLine(meta: RunMeta): string {
+  const miss = meta.missing ?? [];
+  const voted = meta.reviewers.length;
+  const total = voted + miss.length;
+  const lost = miss.map((m) => `${sanitize(m.reviewer)}/${sanitize(m.model)}${m.reason ? ` (${sanitize(m.reason)})` : ""}`).join("; ");
+  return `⚠️ **Coverage:** ${voted}/${total} planned reviewer passes voted — lost: ${lost}`;
+}
+
 // The round-over-round delta for the multi-round loop. `previous` is the PRIOR round's blocking
 // clusters (decide's own `blocking` output, fed back in). Compared by cluster key: a finding absent
 // at the re-reviewed HEAD is resolved, one still present persists, and a gating cluster not in the
@@ -178,6 +215,7 @@ export function renderComment(verdict: Verdict, clusters: FindingCluster[], bloc
   const heading = meta?.round ? `## Review Gate — Round ${meta.round}` : "## Review Gate";
   const parts = [heading, head, `\nFindings: ${clusters.length} total — ${tally}.`];
   if (meta) parts.push(reviewedBy(meta));
+  if (meta?.missing?.length) parts.push(coverageLine(meta));
   if (previous) parts.push(renderProgress(progressSince(previous, clusters, blocking), meta?.round));
 
   const blk = bySeverity(blocking);

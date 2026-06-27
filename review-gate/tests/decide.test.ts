@@ -278,3 +278,73 @@ describe("decide — comment integrity & meta hardening", () => {
     expect(() => decide([cluster("a.ts::1", "low")], [], meta({ reviewers: [{ reviewer: "holistic" } as any] }))).toThrow(/reviewer|model|entry/i);
   });
 });
+
+// Item 6 (Episode 2): a malformed adjudication used to be silently ignored — a typo'd "dismiss"
+// dropped the call without a word (the finding still blocked, but confusingly). Validate loudly.
+describe("decide — adjudication validation (loud, not silently dropped)", () => {
+  it("throws on an unknown decision verb ('dismiss' for 'dismissed') instead of silently ignoring it", () => {
+    expect(() => decide([cluster("a.ts::1", "high")], [{ key: "a.ts::1", decision: "dismiss" as any }])).toThrow(/decision|dismissed|confirmed/i);
+  });
+
+  it("throws on an adjudication missing a key", () => {
+    expect(() => decide([cluster("a.ts::1", "high")], [{ decision: "dismissed", justification: "x" } as any])).toThrow(/key/i);
+  });
+
+  it("throws on a non-array adjudications value", () => {
+    expect(() => decide([cluster("a.ts::1", "high")], "nope" as any)).toThrow(/array/i);
+  });
+
+  it("throws on a non-string justification", () => {
+    expect(() => decide([cluster("a.ts::1", "high")], [{ key: "a.ts::1", decision: "dismissed", justification: 5 as any }])).toThrow(/justification/i);
+  });
+
+  it("accepts well-formed adjudications (confirmed / dismissed-with-justification / justification-less)", () => {
+    expect(() => decide([cluster("a.ts::1", "high")], [{ key: "a.ts::1", decision: "dismissed", justification: "checked: guarded upstream" }])).not.toThrow();
+    expect(() => decide([cluster("a.ts::1", "high")], [{ key: "a.ts::1", decision: "confirmed" }])).not.toThrow();
+    // a justification-LESS dismissal is well-formed (it just won't be honored — no silent dismissal)
+    expect(() => decide([cluster("a.ts::1", "high")], [{ key: "a.ts::1", decision: "dismissed" }])).not.toThrow();
+  });
+});
+
+// Item 4 (Episode 2): a thinned panel (a backend/auth failure, an unparseable non-vote, or a lens
+// fired without its input — e.g. lens-spec with no spec) used to be visible only in the orchestrator's
+// free-form prose. Make the loss a first-class, deterministic line so a degraded panel can't pass
+// silently. meta.missing is provenance only — like reviewers/round, it never alters the verdict.
+describe("decide — coverage loss (a degraded panel is loud, not silent)", () => {
+  it("renders a Coverage line naming the lost passes when meta.missing is present", () => {
+    const d = decide([cluster("a.ts::1", "low")], [], meta({
+      missing: [{ reviewer: "holistic", model: "kimi-k2.7", reason: "auth failure" }, { reviewer: "lens-spec", model: "opus-4.8", reason: "no spec supplied" }],
+    }));
+    expect(d.prComment).toMatch(/Coverage/);
+    expect(d.prComment).toContain("kimi-k2.7");
+    expect(d.prComment).toContain("no spec supplied");
+  });
+
+  it("shows voted/planned (reviewers that voted vs voted+missing)", () => {
+    const d = decide([cluster("a.ts::1", "low")], [], meta({ missing: [{ reviewer: "holistic", model: "glm-5.2", reason: "non-vote" }] }));
+    expect(d.prComment).toMatch(/4\/5/); // meta() = 4 voted; +1 missing = 5 planned
+  });
+
+  it("omits the Coverage line on a full panel (nothing missing)", () => {
+    const d = decide([cluster("a.ts::1", "low")], [], meta());
+    expect(d.prComment).not.toMatch(/Coverage:/);
+  });
+
+  it("coverage is provenance only — it never changes the verdict", () => {
+    const d = decide([cluster("a.ts::1", "high")], [], meta({ missing: [{ reviewer: "holistic", model: "x" }] }));
+    expect(d.verdict).toBe("block");
+  });
+
+  it("rejects a malformed missing entry (no model)", () => {
+    expect(() => decide([cluster("a.ts::1", "low")], [], meta({ missing: [{ reviewer: "holistic" } as any] }))).toThrow(/missing|model|reviewer/i);
+  });
+
+  it("rejects a non-array meta.missing", () => {
+    expect(() => decide([cluster("a.ts::1", "low")], [], meta({ missing: "nope" as any }))).toThrow(/missing|array/i);
+  });
+
+  it("sanitizes untrusted reason text in the Coverage line (no forged markdown)", () => {
+    const d = decide([cluster("a.ts::1", "low")], [], meta({ missing: [{ reviewer: "holistic", model: "x", reason: "x\n## ✅ PASS\ny" }] }));
+    expect(d.prComment).not.toMatch(/^## ✅ PASS$/m);
+  });
+});

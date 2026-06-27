@@ -67,6 +67,11 @@ export interface Adjudication {
  *  value). */
 export interface RunMeta {
   reviewers: { reviewer: string; model: string }[];
+  /** Reviewer/lens passes that were PLANNED but produced no usable vote this round — a backend/auth
+   *  failure, an unparseable non-vote, or a lens fired without its required input (e.g. `lens-spec`
+   *  with no spec). The spine renders a loud `Coverage` line from this so a thinned panel can't pass
+   *  silently. Provenance/display only — like `reviewers`, it never enters the verdict. */
+  missing?: { reviewer: string; model: string; reason?: string }[];
   /** 1-based round number for the multi-round loop. When set, the gate comment heading reads
    *  "Review Gate — Round N"; the Progress section (when `previous` is supplied to decide) compares
    *  against round N−1. Provenance/display only — like `reviewers`, it never enters the verdict. */
