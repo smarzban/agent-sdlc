@@ -67,10 +67,18 @@ grind.
 
 The conductor — not a subagent — verifies the green bar green (runs the full declared set — compile,
 test, lint, format-check — and reads the output itself, never trusting a subagent's reported test
-counts or pass/fail claim) and makes one atomic commit per task. One task = one commit. The message states the task and the `AC-N`
-(e.g. `feat(T-3): root resolver — advances AC-1`). Then updates the ledger — including any
-`SHORTCUT(T-N)` markers the diff introduced, so deferred ceilings are recorded beside the task in
-`build-report.md` rather than buried in the code.
+counts or pass/fail claim) and makes one atomic commit per task. One task = one commit.
+
+**Verify the staged snapshot, not just the working tree.** The green bar runs against the working
+tree, which can hold files the commit will omit — so a green check can still produce a commit that
+fails to compile in isolation (a needed file left unstaged). Before committing: stage the task's
+changes, then run the bar against exactly what will be committed — `git stash --keep-index
+--include-untracked`, run the bar, `git stash pop` — or, after committing, build a clean checkout of
+HEAD. An under-staged commit is a broken commit even when the working tree is green.
+
+The message states the task and the `AC-N` (e.g. `feat(T-3): root resolver — advances AC-1`). Then
+updates the ledger — including any `SHORTCUT(T-N)` markers the diff introduced, so deferred ceilings
+are recorded beside the task in `build-report.md` rather than buried in the code.
 
 ## Model selection (optional, platform-dependent)
 

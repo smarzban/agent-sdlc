@@ -35,7 +35,10 @@ branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
    d. Verify the **green bar** is green — run the full declared set (compile, test, lint,
       format-check), read the output (verification-before-completion). Not just tests: lint or
       format drift caught now is a clean commit; caught later is a reactive scramble.
-   e. Commit: one atomic commit for the task, reflecting the reviewed code.
+   e. Commit: one atomic commit for the task, reflecting the reviewed code. Verify it compiles **in
+      isolation** — run the bar against the staged snapshot (`git stash --keep-index
+      --include-untracked` → bar → pop), not just the working tree: an under-staged commit can pass a
+      working-tree check yet fail to build on checkout.
    f. Update `build-report.md`: `T-N` done, the commit SHA, the `AC-N` it advanced.
    g. If Linear sync is enabled in `.agent-sdlc/config.json`, transition `T-N`'s issue via the
       `linear-sync` skill.
@@ -80,6 +83,8 @@ The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and le
 - The conductor edited product code itself instead of dispatching a subagent.
 - A commit with a red or unrun green bar (tests, lint, or format-check failing or never run), or
   more than one task in a single commit.
+- A commit that is green against the working tree but not in isolation — a needed file left unstaged
+  (the green bar ran; the `git add` did not).
 - An implementer that wrote code before a failing test, or whose brief carried the whole plan.
 - A reviewer prompt told what *not* to flag (pre-judging disqualifies the review).
 - A task marked done with no commit SHA, or work re-run because the ledger was not consulted.
@@ -88,7 +93,7 @@ The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and le
 ## Done when
 
 - Every `T-N` is implemented test-first, reviewed, and committed atomically, the green bar green
-  (tests, lint, format-check) between each.
+  (tests, lint, format-check) between each, and each commit verified to compile in isolation.
 - `build-report.md` records every task done with its SHA and `AC-N`; no task left in-progress.
 - The branch is green end to end.
 - Linear issues are transitioned to Done where sync is enabled (or skipped cleanly where it is not).
