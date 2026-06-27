@@ -1,7 +1,7 @@
 {
   "name": "agent-sdlc",
   "description": "A full-SDLC pipeline for AI coding agents: idea -> acceptance criteria -> architecture -> techstack -> atomic task plan -> readiness gate -> test-first subagent-driven build -> reviewed PR, plus skills for writing the project README and full repository documentation.",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "author": {
     "name": "Saeed Marzban",
     "email": "git@smarzban.com"
