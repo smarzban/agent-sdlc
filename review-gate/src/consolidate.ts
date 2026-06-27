@@ -60,17 +60,19 @@ const isToolOutput = (o: ReviewerOutput) =>
 
 export function consolidate(outputs: ReviewerOutput[]): FindingCluster[] {
   const total = new Set(outputs.filter((o) => !isToolOutput(o)).map((o) => o.model)).size; // MODEL panel size
-  const byFile = new Map<string, { model: string; finding: Finding }[]>();
+  const byFile = new Map<string, { reviewer: string; model: string; finding: Finding }[]>();
   for (const o of outputs) {
     for (const f of o.findings) {
       const list = byFile.get(f.file) ?? [];
-      list.push({ model: o.model, finding: f });
+      // Carry `reviewer` (the role) alongside `model` for attribution. Agreement below still counts
+      // distinct MODELS, so one model in several roles is one vote — provenance, not extra weight.
+      list.push({ reviewer: o.reviewer, model: o.model, finding: f });
       byFile.set(f.file, list);
     }
   }
 
   const clusters: FindingCluster[] = [];
-  type Item = { model: string; finding: Finding };
+  type Item = { reviewer: string; model: string; finding: Finding };
   // The FULL normalized title is part of the lined key: the topical split can emit two clusters at the
   // SAME line, and decide.ts looks up adjudications by key — without the title both would share one key
   // and dismissing one would silently clear the other (a distinct gating finding). No hash, no

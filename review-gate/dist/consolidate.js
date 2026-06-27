@@ -57,7 +57,9 @@ export function consolidate(outputs) {
     for (const o of outputs) {
         for (const f of o.findings) {
             const list = byFile.get(f.file) ?? [];
-            list.push({ model: o.model, finding: f });
+            // Carry `reviewer` (the role) alongside `model` for attribution. Agreement below still counts
+            // distinct MODELS, so one model in several roles is one vote — provenance, not extra weight.
+            list.push({ reviewer: o.reviewer, model: o.model, finding: f });
             byFile.set(f.file, list);
         }
     }

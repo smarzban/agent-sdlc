@@ -102,11 +102,20 @@ const ICON = { critical: "🔴", high: "🔴", medium: "🟠", low: "⚪", info:
 // So untrusted text can't forge a header, a bold verdict line, a table, break out of a code span, or
 // inject HTML/links into the posted comment.
 const sanitize = (s) => s.replace(/\s+/g, " ").replace(/[`<>\[\]\\#*_|~]/g, "\\$&").trim();
+// The reviewer ROLES that raised this cluster (holistic, lens-simplify, …) — distinct + sorted,
+// carried through consolidate so one model run in several roles is attributable. This is display only:
+// agreement (above) still counts distinct MODELS, so a model in three roles is one vote, not three.
+// A tool member shows "tools". Empty (e.g. a previous-round cluster fed back in) → no label.
+function raisedBy(c) {
+    return [...new Set(c.members.map((m) => m.reviewer))].filter(Boolean).sort().map(sanitize).join(", ");
+}
 function line(c) {
     const f = c.representative;
     const ag = agreementLabel(c);
     const area = f.area ? ` _(${sanitize(f.area)})_` : "";
-    return `- ${ICON[c.severity]} **[${c.severity.toUpperCase()}]** ${sanitize(f.title)} — \`${sanitize(f.file)}:${f.line}\` · ${ag}${area}\n` +
+    const by = raisedBy(c);
+    const byLabel = by ? ` · _by:_ ${by}` : "";
+    return `- ${ICON[c.severity]} **[${c.severity.toUpperCase()}]** ${sanitize(f.title)} — \`${sanitize(f.file)}:${f.line}\` · ${ag}${byLabel}${area}\n` +
         `  ${sanitize(f.rationale)}\n  _Fix:_ ${sanitize(f.suggestion)}`;
 }
 function bySeverity(clusters) {

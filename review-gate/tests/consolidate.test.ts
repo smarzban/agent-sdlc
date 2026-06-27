@@ -119,6 +119,36 @@ describe("consolidate — topical split of co-located findings (the adjacent-mer
   });
 });
 
+// Episode 4 (#4): carry the REVIEWER role through to members so one model in several roles is
+// attributable — while agreement stays by distinct MODEL (a model in N roles is ONE vote, never inflated).
+describe("consolidate — reviewer provenance (one model, several roles)", () => {
+  const outR = (reviewer: string, model: string, findings: Finding[]): ReviewerOutput => ({ reviewer, model, findings });
+
+  it("carries the reviewer role + model into cluster members", () => {
+    const clusters = consolidate([outR("holistic", "opus", [f("a.ts", 10, "high")])]);
+    expect(clusters[0].members[0].reviewer).toBe("holistic");
+    expect(clusters[0].members[0].model).toBe("opus");
+  });
+
+  it("the SAME model in two roles is ONE vote (no agreement inflation), but both roles stay attributable", () => {
+    const clusters = consolidate([
+      outR("holistic", "opus", [f("a.ts", 10, "high")]),
+      outR("lens-simplify", "opus", [f("a.ts", 11, "high")]), // same model, different role, co-located same issue
+    ]);
+    expect(clusters).toHaveLength(1);
+    expect(clusters[0].agreement).toEqual({ count: 1, total: 1 });            // ONE model — not 2
+    expect(new Set(clusters[0].members.map((m) => m.reviewer))).toEqual(new Set(["holistic", "lens-simplify"]));
+  });
+
+  it("two distinct models on the same issue still count as two (real consensus preserved)", () => {
+    const clusters = consolidate([
+      outR("holistic", "opus", [f("a.ts", 10, "high", "null deref body")]),
+      outR("holistic", "codex", [f("a.ts", 11, "high", "body null deref")]), // shares "body"
+    ]);
+    expect(clusters[0].agreement.count).toBe(2);
+  });
+});
+
 // Tool (deterministic) outputs join the same pool but are NOT model reviewers — they must not
 // count toward the model-agreement denominator/numerator (the panel-inflation bug from the dogfood).
 const toolOut = (findings: Finding[]): ReviewerOutput => ({ reviewer: "tools", model: "deterministic", findings });

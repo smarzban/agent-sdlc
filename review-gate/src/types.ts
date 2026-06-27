@@ -38,11 +38,14 @@ export interface ReviewerOutput {
 /** Findings from different MODELS that land on the same file + nearby lines are clustered.
  *  `agreement.count` = distinct models that flagged it; `total` = models whose review we have.
  *  A cluster is `contested` when models disagree (count < total) OR only one model saw it on a
- *  gating-severity issue — those require the agent to adjudicate. */
+ *  gating-severity issue — those require the agent to adjudicate. Each member carries its `reviewer`
+ *  (the prompt role: holistic, lens-simplify, …) AND its `model`, so one model run in several roles is
+ *  attributable — agreement still counts distinct MODELS (a model in N roles is ONE vote), but the
+ *  comment can show which roles raised it. */
 export interface FindingCluster {
   key: string;                 // file::line::slug
   representative: Finding;      // highest-severity member, for display
-  members: { model: string; finding: Finding }[];
+  members: { reviewer: string; model: string; finding: Finding }[];
   agreement: { count: number; total: number };
   severity: Severity;          // max severity across members
   contested: boolean;

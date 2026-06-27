@@ -124,12 +124,17 @@ blocking. The spine computes the verdict from what you collect — honest collec
      did a fix introduce a direct regression? **Do NOT ask it to re-scan the whole PR for new issues**
      — that re-opens discovery and the loop stops converging. Run the full deterministic `scan` every
      round regardless ($0). Escalate to a fuller panel only if a fix was large/risky — the exception.
-     - **Non-vote guard (these two models need it):** opus/glm are reasoning-heavy and sometimes return
-       a pure-prose **non-vote** (`parseFindings` can't salvage a no-array reply — the documented
-       residual). A verifier non-vote is **NOT a clean pass** — it is zero coverage. Surface the
-       `warning`, demand the JSON array explicitly in the prompt (`[]` if nothing), and **re-run** (or
-       fall back to a reliable parser — `codex gpt-5.5` / `ollama kimi-k2.7-code:cloud`). NEVER let an
-       unparseable reply convert a still-open finding into "resolved" or a `block` into `pass`.
+     - **Build the verify prompt from `review-gate prompt verify`** — do NOT hand-write it. The built-in
+       template carries the *same clean-array output contract the lenses use* (which opus parses fine),
+       and puts the prior findings AFTER the contract. A hand-written verify prompt is what invites the
+       prose non-vote: a per-finding narrative above the contract, repeated inline `[]`/`{}` tokens, or a
+       trailing "think hard" line all pull a reasoning model into prose. Append the prior findings (and
+       the `git diff <prevHead>...HEAD` scope) after the emitted prompt — like `lens-spec` takes its spec.
+     - **Non-vote guard (still applies):** opus/glm are reasoning-heavy and a *hand-written* prompt can
+       still draw a pure-prose **non-vote** (`parseFindings` can't salvage a no-array reply). A verifier
+       non-vote is **NOT a clean pass** — it is zero coverage. Surface the `warning`, re-run (or fall back
+       to `codex gpt-5.5` / `ollama kimi-k2.7-code:cloud`). NEVER let an unparseable reply convert a
+       still-open finding into "resolved" or a `block` into `pass`.
    - **Lenses are CONDITIONAL, not always-on** — a targeted backfill on 1–2 models, fired ONLY when
      (a) holistic came back **thin on that dimension** (a silence you don't trust — e.g. zero test
      findings on a PR that clearly needs tests), OR (b) the PR is **high-stakes for that dimension**
@@ -159,13 +164,22 @@ blocking. The spine computes the verdict from what you collect — honest collec
      **missed a HIGH `baseRef` argument-injection** that `lens-security` caught on the first try — the
      adversarial "assume the attacker controls every input" framing finds what "review this change"
      skims. **Silently skipping the lens evaluation is a sign-off failure, not a shortcut.**
-   - Run reviewers as parallel background subprocesses (modest concurrency — a few at a time). Collect
-     each call's `output` (skip `null`s) into `/tmp/rg-outputs.json`, and record each `null`/`warning`
-     pass in `meta.missing` (step 6). **Surface every `warning`** — a skipped/failed model means a
-     thinner panel; don't hide it.
+   - Run reviewers as parallel background subprocesses (modest concurrency — a few at a time). **Save
+     each call's full stdout to `/tmp/rg-wt-out/out-<id>.json`** (the whole `{reviewer, backend, model,
+     output, warning}` envelope, votes AND non-votes) and the `scan` output alongside it. Don't
+     hand-assemble the pool — `collect` (step 3a) does it deterministically.
 
-4. **Consolidate:** `review-gate consolidate /tmp/rg-outputs.json > /tmp/rg-clusters.json` — clusters by location
-   across models, with an agreement count and a `contested` flag.
+3a. **Collect:** `review-gate collect /tmp/rg-wt-out --round N [--scan <f>] [--missing 'reviewer|model|reason']`
+   → writes `outputs.json` (→ consolidate) + `meta.json` (→ decide) into that dir. It reads reviewer/model
+   from file **contents** (filenames may vary), folds the scan into `outputs`, and derives `meta.missing`
+   from every `output:null` file (reason = its `warning`) — so a thinned panel **can't** be silently
+   dropped from the Coverage line. Pass `--missing 'reviewer|model|reason'` only for a pass that produced
+   *no file at all* (a backend you planned then skipped, or a lens fired without its input — e.g. `lens-spec`
+   with no spec). A malformed `out-*.json` makes `collect` fail loud rather than quietly thin the panel.
+
+4. **Consolidate:** `review-gate consolidate /tmp/rg-wt-out/outputs.json > /tmp/rg-clusters.json` — clusters by
+   location across models (agreement counts distinct **models**), with a `contested` flag. Each cluster now
+   carries the reviewer **roles** that raised it, so the comment attributes one model run in several roles.
 
 5. **Adjudicate** (your only input to the verdict — treat it as such). Read **every** cluster, and
    for every gating cluster **open the code and confirm the finding for yourself** before you act on
@@ -197,16 +211,17 @@ blocking. The spine computes the verdict from what you collect — honest collec
      scanner's config/allowlist** so it stops firing. An attempted override is surfaced loudly in the
      comment as **"⚠️ Deterministic findings — override NOT honored"** but the finding stays blocking.
 
-6. **Decide.** Assemble `/tmp/rg-meta.json` = `{reviewers, missing, round}` — `reviewers` is
-   **every** reviewer×model pass that actually **voted** this round (including clean votes, which never
-   reach a cluster); **`missing` is every pass you *planned* but lost** — a backend/auth failure, an
-   unparseable non-vote, or a lens fired without its input (e.g. `lens-spec` with no spec):
-   `[{reviewer, model, reason}]`. The spine renders a loud **Coverage** line from `missing`, so a
-   thinned panel shows in the *deterministic* comment, not only your prose. `round` is the 1-based
-   round number (it numbers the comment heading). For round **N>1**, also save the **previous round's
-   blocking findings** — last round's decision `blocking` array — to `/tmp/rg-prev.json`.
+6. **Decide.** `meta.json` is already built by `collect` (step 3a) = `{reviewers, missing, round}` —
+   `reviewers` is every reviewer×model pass that **voted** (clean votes included; the deterministic scan
+   is excluded — it can't be "lost"); **`missing`** is every planned pass with no usable vote (derived
+   from the `output:null` files, plus any `--missing` you supplied). The spine renders a loud **Coverage**
+   line from `missing`, so a thinned panel shows in the *deterministic* comment, not only your prose. For
+   round **N>1**, save the **previous round's blocking findings** (last decision's `blocking` array) and
+   pass them with **`--prev`**.
 
-   Run: `review-gate decide /tmp/rg-clusters.json /tmp/rg-adjudications.json /tmp/rg-meta.json [/tmp/rg-prev.json] > /tmp/rg-decision.json`
+   Run: `review-gate decide /tmp/rg-clusters.json /tmp/rg-adjudications.json /tmp/rg-wt-out/meta.json [--prev /tmp/rg-prev.json] > /tmp/rg-decision.json`
+   (Adjudications may be a file, an inline `[]`, or an empty file / `/dev/null` when you dismissed nothing.
+   Prefer `--prev <f>` over a bare 4th positional — it's order-independent against `meta.json`.)
    → `{verdict, blocking, dismissed, prComment}`, all deterministic. With `previous` supplied,
    `prComment` gains a **Progress since Round N−1** section (✅ resolved · ⏳ still-blocking · 🆕
    new/regressed), computed by the spine. **Save this round's `blocking`** — it is the next round's

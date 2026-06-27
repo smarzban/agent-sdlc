@@ -59,8 +59,26 @@ describe("decide", () => {
 const toolCluster = (key: string, severity: Severity): FindingCluster => {
   const base = cluster(key, severity);
   const finding = { ...base.representative, source: "tool" as const };
-  return { ...base, representative: finding, members: [{ model: "deterministic", finding }] };
+  return { ...base, representative: finding, members: [{ reviewer: "tools", model: "deterministic", finding }] };
 };
+
+// Episode 4 (#4): the gate comment attributes each cluster to the reviewer ROLES that raised it, so
+// one model run in several roles (opus as holistic + lens-spec + lens-simplify) is no longer a blur.
+describe("decide — reviewer attribution in the comment", () => {
+  it("shows the distinct reviewer roles that raised a cluster (_by:_), without changing agreement", () => {
+    const c: FindingCluster = {
+      key: "a.ts::10", severity: "high", contested: false, agreement: { count: 1, total: 4 },
+      representative: { title: "race on shared state", severity: "high", file: "a.ts", line: 10, rationale: "r", suggestion: "s" },
+      members: [
+        { reviewer: "holistic", model: "claude:claude-opus-4-8", finding: { title: "race on shared state", severity: "high", file: "a.ts", line: 10, rationale: "r", suggestion: "s" } },
+        { reviewer: "lens-simplify", model: "claude:claude-opus-4-8", finding: { title: "race on shared state", severity: "high", file: "a.ts", line: 11, rationale: "r", suggestion: "s" } },
+      ],
+    };
+    const d = decide([c], [], { reviewers: [{ reviewer: "holistic", model: "claude:claude-opus-4-8" }] });
+    expect(d.prComment).toContain("_by:_ holistic, lens-simplify"); // both roles attributed
+    expect(d.prComment).toContain("1/4 models");                    // agreement unchanged (one model)
+  });
+});
 
 describe("decide — deterministic (tool) findings", () => {
   it("does NOT honor a dismissal of a deterministic gating finding — a fact still blocks (no steered override)", () => {

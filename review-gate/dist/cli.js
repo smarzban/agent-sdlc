@@ -1,20 +1,54 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { runReview } from "./runner.js";
 import { runScan, ALL_SCANNERS } from "./scan.js";
 import { consolidate } from "./consolidate.js";
 import { decide } from "./decide.js";
+import { collect } from "./collect.js";
 import { assemblePrompt } from "./prompts.js";
 const readJson = (p) => JSON.parse(readFileSync(p, "utf8"));
 // Accept a small INLINE JSON literal (e.g. `[]`) as well as a file path for the optional, often-empty
 // args (adjudications / previous), so a caller with none isn't forced to write an empty file just to
 // pass `[]` — which otherwise hit `ENOENT: open '[]'`. A value starting with `[` or `{` is parsed
-// inline; anything else is read from disk.
+// inline; anything else is read from disk, and an EMPTY file (or `/dev/null`) reads as `[]` — "no
+// adjudications" shouldn't require hand-writing a real `[]` file (Episode 4). Empty = [] is fail-safe:
+// no dismissals means nothing is cleared, so the gate only ever blocks MORE, never less.
 const readJsonArg = (arg) => {
     const t = arg.trim();
-    return t.startsWith("[") || t.startsWith("{") ? JSON.parse(t) : readJson(arg);
+    if (t.startsWith("[") || t.startsWith("{"))
+        return JSON.parse(t);
+    const raw = readFileSync(arg, "utf8").trim();
+    return raw === "" ? [] : JSON.parse(raw);
+};
+// Split argv into ordered positionals + named flags. Supports `--flag value` and repeatable flags
+// (`--missing a --missing b` → {missing:["a","b"]}); a flag with no value is `""`. Lets `decide`/`collect`
+// take robust named args (e.g. --prev) instead of brittle, easy-to-misorder positionals.
+const parseArgs = (argv) => {
+    const positionals = [];
+    const flags = {};
+    for (let i = 0; i < argv.length; i++) {
+        const a = argv[i];
+        if (a.startsWith("--")) {
+            const next = argv[i + 1];
+            const val = next !== undefined && !next.startsWith("--") ? (i++, next) : "";
+            (flags[a.slice(2)] ??= []).push(val);
+        }
+        else
+            positionals.push(a);
+    }
+    return { positionals, flags };
+};
+// A `--missing` value for a pass that produced NO file (a backend planned then skipped, a lens with no
+// input) — collect can't see those, so the orchestrator names them. Pipe-delimited `reviewer|model|reason`,
+// NOT colon-delimited, because a model string carries colons (e.g. `ollama:kimi-k2.7-code:cloud`).
+const parseMissing = (s) => {
+    const [reviewer, model, ...rest] = s.split("|");
+    if (!reviewer?.trim() || !model?.trim())
+        throw new Error(`collect: --missing must be 'reviewer|model|reason' (got ${JSON.stringify(s)})`);
+    const reason = rest.join("|").trim();
+    return { reviewer: reviewer.trim(), model: model.trim(), ...(reason ? { reason } : {}) };
 };
 const print = (o) => process.stdout.write(JSON.stringify(o, null, 2) + "\n");
 // prompts/ ships beside this binary — resolve relative to THIS file, not the cwd, so the CLI serves
@@ -61,18 +95,59 @@ async function main() {
             print(consolidate(readJson(args[0])));
             break;
         }
-        case "decide": {
-            // decide <clusters.json> <adjudications.json> <meta.json> [previous.json]   — the deterministic
-            // verdict + the gate findings comment. meta.json = {reviewers:[{reviewer,model}], round?}.
-            // previous.json (optional) = the PRIOR round's `blocking` array; supplying it adds the
-            // "Progress since Round N−1" section. The first three are required so every comment names the
-            // reviewers that ran. (The orchestrator's approval is a SEPARATE free-form comment, not here.)
-            if (!args[0] || !args[1] || !args[2]) {
-                process.stderr.write("usage: review-gate decide <clusters.json> <adjudications.json> <meta.json> [previous.json]\n");
+        case "collect": {
+            // collect <dir> [--round N] [--scan <f> ...] [--missing 'reviewer|model|reason' ...]  — gather the
+            // per-pass `out-*.json` envelopes in <dir> (plus any --scan output) into outputs.json (→ consolidate)
+            // + meta.json (→ decide). Reads reviewer/model from file CONTENTS (filenames vary across rounds),
+            // folds the scan into outputs, derives meta.missing from null-vote files. Removes the fiddliest,
+            // most mistake-prone manual step; a deterministic meta.missing means a thinned panel can't slip past.
+            const { positionals, flags } = parseArgs(args);
+            const dir = positionals[0];
+            if (!dir) {
+                process.stderr.write("usage: review-gate collect <dir> [--round N] [--scan <f>] [--missing 'reviewer|model|reason']\n");
                 process.exit(2);
             }
-            const previous = args[3] ? readJsonArg(args[3]) : undefined;
-            print(decide(readJson(args[0]), readJsonArg(args[1]), readJson(args[2]), previous));
+            const names = readdirSync(dir).filter((n) => /^out-.*\.json$/.test(n)).sort().map((n) => join(dir, n));
+            for (const s of flags.scan ?? [])
+                if (s)
+                    names.push(s); // explicit scan file(s), if stored elsewhere
+            const seen = new Set();
+            const files = names
+                .filter((p) => !seen.has(p) && (seen.add(p), true)) // dedup (a scan globbed AND passed via --scan)
+                .map((p) => {
+                try {
+                    return { name: p, json: JSON.parse(readFileSync(p, "utf8")) };
+                }
+                catch (e) {
+                    throw new Error(`collect: cannot parse ${p}: ${e instanceof Error ? e.message : String(e)}`);
+                }
+            });
+            const round = flags.round?.[0] ? Number(flags.round[0]) : undefined;
+            const missing = (flags.missing ?? []).filter(Boolean).map(parseMissing);
+            const { outputs, meta } = collect(files, { round, missing });
+            const outputsPath = join(dir, "outputs.json");
+            const metaPath = join(dir, "meta.json");
+            writeFileSync(outputsPath, JSON.stringify(outputs, null, 2) + "\n");
+            writeFileSync(metaPath, JSON.stringify(meta, null, 2) + "\n");
+            print({ outputs: outputsPath, meta: metaPath, voted: meta.reviewers.length, missing: meta.missing?.length ?? 0 });
+            break;
+        }
+        case "decide": {
+            // decide <clusters.json> <adjudications.json> <meta.json> [previous.json | --prev <f>]  — the
+            // deterministic verdict + the gate findings comment. meta.json = {reviewers:[{reviewer,model}], round?}.
+            // The PRIOR round's `blocking` array (optional) adds the "Progress since Round N−1" section; pass
+            // it as `--prev <f>` (preferred — the bare 4th positional is easy to misorder against meta) or as
+            // the 4th positional. adjudications may be inline `[]`, a file, or an empty file (= no dismissals).
+            // The first three are required so every comment names the reviewers that ran.
+            const { positionals, flags } = parseArgs(args);
+            const [clustersF, adjF, metaF, prevPos] = positionals;
+            if (!clustersF || !adjF || !metaF) {
+                process.stderr.write("usage: review-gate decide <clusters.json> <adjudications.json> <meta.json> [previous.json | --prev <f>]\n");
+                process.exit(2);
+            }
+            const prevArg = flags.prev?.[0] || prevPos; // --prev wins; falls back to the positional [previous]
+            const previous = prevArg ? readJsonArg(prevArg) : undefined;
+            print(decide(readJson(clustersF), readJsonArg(adjF), readJson(metaF), previous));
             break;
         }
         default:
