@@ -1,13 +1,16 @@
-import { envNum, spawnBounded } from "./proc.js";
+import { resolve } from "node:path";
+import { envNum, errorTail, spawnBounded } from "./proc.js";
 export const LAUNCHER = process.env.REVIEW_GATE_LAUNCHER ?? "ollama";
 export const CLAUDE_BIN = process.env.REVIEW_GATE_CLAUDE ?? "claude";
 export const CODEX_BIN = process.env.REVIEW_GATE_CODEX ?? "codex";
 // Hard cap on the Claude-harness agent loop (ollama/claude backends). A model that doesn't converge
 // would otherwise spin the loop — exploring, retrying, never finalizing — and on Ollama Cloud's
 // GPU-TIME billing that is a runaway cost (the PR #4 dogfood: ~245 requests, one 38-min hang). The
-// cap makes a non-converging run exit (with an error) instead of spinning. Generous enough that a real
-// review (read a few files, reason) won't hit it; tune via REVIEW_GATE_MAX_TURNS.
-const MAX_TURNS = envNum(process.env.REVIEW_GATE_MAX_TURNS, 25);
+// cap makes a non-converging run exit (with an error) instead of spinning. This is the SECONDARY guard
+// — the 600s wall-clock (TIMEOUT_MS) + the byte cap are the real runaway backstops. Raised 25 -> 50 in
+// Episode 3: kimi/glm on holistic/lens legitimately need >25 turns to converge, so 25 was recording
+// real reviews as non-votes. Still bounded; tune via REVIEW_GATE_MAX_TURNS.
+const MAX_TURNS = envNum(process.env.REVIEW_GATE_MAX_TURNS, 50);
 // Read-only tool surface for the Claude-harness backends: inspect, never mutate; git read-only.
 export const DEFAULT_ALLOWED_TOOLS = [
     "Read", "Grep", "Glob",
@@ -21,8 +24,11 @@ export function buildCommand(backend, model, prompt, repoDir, allowedTools = DEF
         case "claude":
             return { bin: CLAUDE_BIN, args: ["--model", model,
                     "-p", prompt, "--output-format", "json", "--allowedTools", allowedTools, "--max-turns", String(MAX_TURNS)] };
-        case "codex": // high reasoning effort; read-only sandbox; prompt as arg (no stdin)
-            return { bin: CODEX_BIN, args: ["exec", "-C", repoDir, "-m", model,
+        case "codex": // high reasoning effort; read-only sandbox; prompt as arg (no stdin). `-C` is made
+            // ABSOLUTE — a RELATIVE worktree path resolved against a cwd that was already the worktree, so
+            // codex got a doubled path (the 2 codex failures in the Episode-3 dogfood). resolve() is a no-op
+            // on an already-absolute path.
+            return { bin: CODEX_BIN, args: ["exec", "-C", resolve(repoDir), "-m", model,
                     "-c", 'model_reasoning_effort="high"', "-c", 'sandbox_mode="read-only"', prompt] };
     }
 }
@@ -168,17 +174,20 @@ export function isAffirmativelyEmpty(text) {
         .trim();
     return EMPTY_PHRASES.has(core);
 }
-/** Claude Code `--output-format json` → one envelope object; `result` is the final assistant text. */
+/** Claude Code `--output-format json` → one envelope object; `result` is the final assistant text.
+ *  `subtype` (e.g. `error_max_turns`, `error_during_execution`) is surfaced so a non-vote names WHY it
+ *  failed instead of an opaque "is_error" — the Coverage line then shows e.g. a max-turns loss. */
 export function parseClaudeResult(stdout) {
     let env;
     try {
         env = JSON.parse(stdout);
     }
     catch {
-        return { findings: null, isError: true, resultText: "" };
+        return { findings: null, isError: true, subtype: "unparseable_envelope", resultText: "" };
     }
     const resultText = typeof env?.result === "string" ? env.result : "";
-    return { findings: parseFindings(resultText), isError: env?.is_error === true, resultText };
+    const subtype = typeof env?.subtype === "string" ? env.subtype : undefined;
+    return { findings: parseFindings(resultText), isError: env?.is_error === true, subtype, resultText };
 }
 /** codex exec prints an agentic trace plus the final message; the final assistant block is the last
  *  line that is exactly `codex`, up to the trailing `tokens used` footer (or EOF). */
@@ -211,40 +220,56 @@ export async function spawnWithDeadline(bin, args, opts) {
     if (r.code === 0)
         return r.stdout; // a clean exit wins
     if (r.code === -1)
-        throw new Error(r.stderr.trim() || "spawn failed"); // spawn error / signalled
-    throw new Error(`exited ${r.code}: ${r.stderr.trim().slice(0, 200)}`);
+        throw new Error(errorTail(r.stderr) || "spawn failed"); // spawn error / signalled
+    throw new Error(`exited ${r.code}: ${errorTail(r.stderr) || "(no stderr)"}`); // tail, not head — the real error is last
 }
 const spawnCall = (backend, model, prompt, repoDir, timeoutMs) => {
-    const { bin, args } = buildCommand(backend, model, prompt, repoDir);
-    return spawnWithDeadline(bin, args, { cwd: repoDir, timeoutMs });
+    const dir = resolve(repoDir); // absolute cwd + codex -C; robust to a relative caller
+    const { bin, args } = buildCommand(backend, model, prompt, dir);
+    return spawnWithDeadline(bin, args, { cwd: dir, timeoutMs });
 };
+/** A spawn failure worth ONE retry — a flaky/transient process error (non-zero exit, connection reset,
+ *  signal). NOT retryable: a timeout or byte-cap (deliberate guards — a retry just doubles GPU cost or
+ *  re-hits the cap) and ENOENT (a missing binary is a config error, not flakiness). */
+const isTransientSpawnError = (msg) => !/timed out after|output exceeded|ENOENT/i.test(msg);
 /** Run ONE reviewer on ONE model+backend, in `repoDir` (the model explores the checked-out branch).
- *  Returns null + a warning on any failure so a dead/flaky model never throws the whole gate down. */
+ *  Returns null + a warning on any failure so a dead/flaky model never throws the whole gate down — and
+ *  that null still surfaces as lost coverage (the decide Coverage line), so a retry never masks a dead
+ *  reviewer. A TRANSIENT spawn failure is retried ONCE before it counts as lost; a model that RESPONDED
+ *  (harness error / unparseable) is NOT retried — that's model behavior, not flakiness. */
 export async function runReview(reviewer, backend, model, repoDir, prompt, opts = {}) {
     const call = opts.call ?? spawnCall;
     const tag = `${reviewer}/${backend}:${model}`;
-    try {
-        const stdout = await call(backend, model, prompt, repoDir, opts.timeoutMs ?? TIMEOUT_MS);
-        let resultText;
-        if (backend === "codex") {
-            resultText = parseCodexFinal(stdout);
+    for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+            const stdout = await call(backend, model, prompt, repoDir, opts.timeoutMs ?? TIMEOUT_MS);
+            let resultText;
+            if (backend === "codex") {
+                resultText = parseCodexFinal(stdout);
+            }
+            else {
+                const r = parseClaudeResult(stdout);
+                // Name the harness error subtype (e.g. error_max_turns) so the Coverage line says WHY it was
+                // lost. Not retried — a determined max-turns repeats with the same cap; the raised cap is the fix.
+                if (r.isError)
+                    return { output: null, warning: `${tag}: ${r.subtype ?? "harness reported is_error"}` };
+                resultText = r.resultText;
+            }
+            let findings = parseFindings(resultText);
+            // A completed run whose ENTIRE reply is an unambiguous "no issues" is a 0-findings vote, not a
+            // failure — so a clean reviewer isn't mistaken for a dead one. Anything ambiguous stays null.
+            if (findings === null && isAffirmativelyEmpty(resultText))
+                findings = [];
+            if (findings === null)
+                return { output: null, warning: `${tag}: unparseable output` };
+            return { output: { reviewer, model: `${backend}:${model}`, findings } };
         }
-        else {
-            const r = parseClaudeResult(stdout);
-            if (r.isError)
-                return { output: null, warning: `${tag}: harness reported is_error` };
-            resultText = r.resultText;
+        catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            if (attempt === 1 && isTransientSpawnError(msg))
+                continue; // retry a flaky spawn ONCE
+            return { output: null, warning: `${tag}: ${msg}${attempt > 1 ? " (retried once)" : ""}` };
         }
-        let findings = parseFindings(resultText);
-        // A completed run whose ENTIRE reply is an unambiguous "no issues" is a 0-findings vote, not a
-        // failure — so a clean reviewer isn't mistaken for a dead one. Anything ambiguous stays null.
-        if (findings === null && isAffirmativelyEmpty(resultText))
-            findings = [];
-        if (findings === null)
-            return { output: null, warning: `${tag}: unparseable output` };
-        return { output: { reviewer, model: `${backend}:${model}`, findings } };
     }
-    catch (e) {
-        return { output: null, warning: `${tag}: ${e instanceof Error ? e.message : String(e)}` };
-    }
+    return { output: null, warning: `${tag}: exhausted attempts` }; // unreachable; satisfies the type checker
 }

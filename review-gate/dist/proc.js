@@ -10,6 +10,18 @@ export const envNum = (v, def) => {
     const n = Number(v);
     return Number.isFinite(n) && n > 0 ? Math.min(n, 2_147_483_647) : def;
 };
+/** A concise, useful failure string from a child's stderr. The real error is at the END of stderr;
+ *  the old `.slice(0, max)` took the HEAD, so a benign LEADING warning (the Claude "connectors"
+ *  notice the agent flagged in Episode 3) ate the whole budget and the actual error showed as a stub.
+ *  Drop blank + known-benign (connectors) lines, then keep the TAIL within `max`. */
+export const errorTail = (stderr, max = 500) => {
+    const cleaned = stderr
+        .split("\n")
+        .filter((l) => l.trim() && !/connector/i.test(l)) // drop blanks + the benign connectors warning
+        .join("\n")
+        .trim();
+    return cleaned.length > max ? cleaned.slice(-max) : cleaned;
+};
 const KILL_GRACE_MS = 5_000;
 /** Spawn a child under a HARD wall-clock deadline + an output byte cap, in its own process group.
  *  Hardened against the orphaned-pipe hang (the PR #4 bug): the deadline FORCE-SETTLES — it does NOT

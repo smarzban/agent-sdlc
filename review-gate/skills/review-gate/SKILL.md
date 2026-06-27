@@ -92,13 +92,20 @@ blocking. The spine computes the verdict from what you collect — honest collec
 
 1. **Check out the PR branch** in an isolated worktree the reviewers will explore:
    `git worktree add /tmp/rg-wt <head-ref>`. Note the base ref (e.g. `origin/main`). (For an
-   uncommitted local diff, just use the working tree + its diff.)
+   uncommitted local diff, just use the working tree + its diff.) **Pass the worktree path ABSOLUTE**
+   to `run` (e.g. `/tmp/rg-wt`, not `./rg-wt`) — a relative path broke the codex backend in the
+   Episode-3 dogfood (it resolved `-C` against a cwd that was already the worktree). The runner now
+   absolutizes defensively, but pass absolute so every backend agrees on the dir.
 
 2. **Build each reviewer prompt** = the reviewer instructions + the output contract + a one-line
    scope: `review-gate prompt <holistic|lens-…> > /tmp/rg-<id>.txt` (this emits the reviewer prompt
    AND its output contract), then append: *"Review THIS PR — the change is `git diff <base>...HEAD`. Run it, read the changed files
    and relevant call-sites, then review. Output ONLY the JSON array."* No diff/file blobs — the
-   model reads the repo.
+   model reads the repo. **Build on the emitted contract — don't hand-write a prompt full of literal
+   `[...]` example tokens.** A reasoning model echoes those brackets into its prose, where they defeat
+   array salvage; the safe instruction is *"output the JSON array as your WHOLE final message (`[]` if
+   nothing)"*, which steps 1's parser trusts authoritatively. This matters most for a custom round-N
+   verify prompt you write yourself.
 
 3. **Run the reviews** — `review-gate run <reviewerId> <backend> <model> /tmp/rg-wt /tmp/rg-<id>.txt`:
    - **Deterministic scan first (cheap, $0, no LLM):** `review-gate scan /tmp/rg-wt <base>` → a ReviewerOutput
@@ -265,11 +272,19 @@ If any box is unchecked, keep working. A `pass` you are not certain of is not a 
   dropped).
 - The `--` after `ollama launch claude` is required (separates ollama-launch flags from claude's).
 - **Cost guards (each `run` is a full agent loop = many model requests, not one):** ollama/claude carry
-  `--max-turns` (default 25, `REVIEW_GATE_MAX_TURNS`) so a non-converging model can't spin a runaway
-  request loop — on Ollama Cloud's GPU-time billing that once burned ~245 requests + a 38-min hang. The
-  runner also enforces a **hard wall-clock timeout** (`REVIEW_GATE_TIMEOUT_MS`, default 10m) that
-  force-settles even if the child orphans a grandchild holding the pipe. Hitting either ⇒ that reviewer
-  fails (surfaced warning, lost vote) — not a runaway. The roster is all "high"-tier Ollama models now
+  `--max-turns` (default **50**, `REVIEW_GATE_MAX_TURNS`) so a non-converging model can't spin a runaway
+  request loop — on Ollama Cloud's GPU-time billing that once burned ~245 requests + a 38-min hang. This
+  is the *secondary* guard (raised 25→50 in Episode 3 — kimi/glm on holistic/lens legitimately need >25
+  turns, so 25 was logging real reviews as non-votes). The **hard wall-clock timeout**
+  (`REVIEW_GATE_TIMEOUT_MS`, default 10m) is the real backstop — it force-settles even if the child
+  orphans a grandchild holding the pipe. Hitting *either* ⇒ that reviewer fails (surfaced warning, lost
+  vote) — not a runaway.
+- **Transient-failure retry + diagnosable non-votes (Episode 3):** a flaky spawn (non-zero exit / reset)
+  is retried **once** inside `run` before it counts as lost coverage — but a *persistent* failure, a
+  timeout, a byte-cap, a missing binary (ENOENT), and a determined `error_max_turns` are **not** retried
+  and still surface as a `warning` → `meta.missing` → the Coverage line (a retry never masks a dead
+  reviewer). The `warning` now names the harness error **subtype** (e.g. `error_max_turns`) and carries
+  the **tail** of stderr (the real error), so a benign leading "connectors" warning can't hide it. The roster is all "high"-tier Ollama models now
   (deepseek's "extra high" tier was the heaviest/least-convergent and drove that runaway — swapped out
   for `glm-5.2`, a "high" tier that leads SWE-bench Pro).
 - Thinking: not needed as a flag for ollama/claude (Claude Code's harness doesn't starve the answer

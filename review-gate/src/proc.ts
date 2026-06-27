@@ -13,6 +13,19 @@ export const envNum = (v: string | undefined, def: number): number => {
   return Number.isFinite(n) && n > 0 ? Math.min(n, 2_147_483_647) : def;
 };
 
+/** A concise, useful failure string from a child's stderr. The real error is at the END of stderr;
+ *  the old `.slice(0, max)` took the HEAD, so a benign LEADING warning (the Claude "connectors"
+ *  notice the agent flagged in Episode 3) ate the whole budget and the actual error showed as a stub.
+ *  Drop blank + known-benign (connectors) lines, then keep the TAIL within `max`. */
+export const errorTail = (stderr: string, max = 500): string => {
+  const cleaned = stderr
+    .split("\n")
+    .filter((l) => l.trim() && !/connector/i.test(l)) // drop blanks + the benign connectors warning
+    .join("\n")
+    .trim();
+  return cleaned.length > max ? cleaned.slice(-max) : cleaned;
+};
+
 /** The outcome of a bounded spawn. The core NEVER rejects for a process OUTCOME — exit code, signal,
  *  timeout, byte cap, and a missing binary are all reported in fields, so each caller maps the result
  *  to its own contract (throw-on-failure for git/agent runs; pass-through for scanners, where a

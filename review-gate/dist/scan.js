@@ -1,5 +1,5 @@
 import { isAbsolute, relative } from "node:path";
-import { envNum, spawnBounded } from "./proc.js";
+import { envNum, errorTail, spawnBounded } from "./proc.js";
 /** Parse `git diff` output into a Changeset. Tracks the new-file line number across hunks so each
  *  added line carries an accurate location; removed lines don't advance it. Header detection is
  *  STATEFUL: `+++ `/`--- ` count as file headers only in the per-file header section (before the
@@ -273,8 +273,8 @@ const spawnGit = async (args, repoDir, signal) => {
     if (r.code === 0)
         return r.stdout; // a clean exit wins
     if (r.code === -1)
-        throw new Error(r.stderr.trim() ? `git: ${r.stderr.trim().slice(0, 200)}` : "git failed");
-    throw new Error(`git exited ${r.code}: ${r.stderr.trim().slice(0, 200)}`);
+        throw new Error(errorTail(r.stderr) ? `git: ${errorTail(r.stderr)}` : "git failed");
+    throw new Error(`git exited ${r.code}: ${errorTail(r.stderr) || "(no stderr)"}`); // tail, not head
 };
 // Default ToolRunner: RESOLVE (never reject) with the tool's result — a non-zero exit is normal for
 // scanners (gitleaks exit 1 = leaks found). byteCap "truncate" keeps the partial output + the flag so

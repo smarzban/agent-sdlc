@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { spawnBounded, envNum } from "../src/proc.js";
+import { spawnBounded, envNum, errorTail } from "../src/proc.js";
 
 const NODE = process.execPath;
 // Run a node one-liner as the child, so these tests need no fixtures and no network.
@@ -12,6 +12,32 @@ describe("envNum", () => {
     expect(envNum("0", 7)).toBe(7);        // non-positive ⇒ default
     expect(envNum("nope", 7)).toBe(7);     // NaN ⇒ default (a bad override can't disable a cap)
     expect(envNum("999999999999", 7)).toBe(2_147_483_647); // clamped
+  });
+});
+
+// Episode 3: a non-zero exit used to throw `${stderr}.slice(0, 200)` — the HEAD of stderr. A benign
+// leading warning (the Claude "connectors" notice) then ate the whole budget and the REAL error (at
+// the tail) showed as a stub. errorTail drops blank + known-benign lines and keeps the TAIL.
+describe("errorTail (the real failure is at the END of stderr, not the head)", () => {
+  it("keeps the tail when stderr exceeds the budget, so the real error survives a noisy head", () => {
+    const stderr = "leading noise line\n" + "x".repeat(1000) + "\nFATAL: the real error";
+    const out = errorTail(stderr, 200);
+    expect(out).toContain("FATAL: the real error"); // tail preserved
+    expect(out.length).toBeLessThanOrEqual(200);    // budget respected
+    expect(out).not.toContain("leading noise line"); // head dropped
+  });
+  it("strips the benign connectors warning line even when it isn't long enough to overflow", () => {
+    const stderr = "warning: connector mcp-foo failed to load, continuing\nActual failure: boom";
+    const out = errorTail(stderr);
+    expect(out).toContain("Actual failure: boom");
+    expect(out).not.toMatch(/connector/i); // the benign noise is gone
+  });
+  it("drops blank lines and trims; empty/whitespace stderr yields an empty string", () => {
+    expect(errorTail("   \n\n  ")).toBe("");
+    expect(errorTail("")).toBe("");
+  });
+  it("returns short, clean stderr unchanged", () => {
+    expect(errorTail("could not resolve baseRef origin/main")).toBe("could not resolve baseRef origin/main");
   });
 });
 

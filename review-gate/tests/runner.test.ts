@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildCommand, parseFindings, parseClaudeResult, parseCodexFinal, runReview, isAffirmativelyEmpty, DEFAULT_ALLOWED_TOOLS, type ModelCall } from "../src/runner.js";
+import { buildCommand, parseFindings, parseClaudeResult, parseCodexFinal, runReview, isAffirmativelyEmpty, spawnWithDeadline, DEFAULT_ALLOWED_TOOLS, type ModelCall } from "../src/runner.js";
 
 describe("buildCommand", () => {
   it("ollama backend launches claude via ollama with the model after `--`", () => {
@@ -36,6 +36,25 @@ describe("buildCommand", () => {
   });
   it("codex does not get --max-turns (different CLI)", () => {
     expect(buildCommand("codex", "m", "review", "/repo").args).not.toContain("--max-turns");
+  });
+  // Episode 3 (#1): kimi/glm on holistic/lens prompts legitimately need >25 turns to converge, so the
+  // old cap recorded them as non-votes. Raised to 50 — still bounded; the 600s wall-clock + byte cap
+  // remain the real runaway-cost backstops (this is the secondary guard). Assumes env unset in tests.
+  it("the default agent-loop cap is raised to 50 turns (kimi/glm need >25 to converge)", () => {
+    for (const b of ["ollama", "claude"] as const) {
+      const { args } = buildCommand(b, "m", "review", "/repo");
+      expect(Number(args[args.indexOf("--max-turns") + 1]), b).toBe(50);
+    }
+  });
+  // Episode 3 (orchestrator note): a RELATIVE worktree path broke codex (its `-C <dir>` resolved
+  // against a cwd that was already the worktree → doubled path → 2 failures). Defensive: absolutize.
+  it("codex gets an ABSOLUTE -C path even when handed a relative repoDir", () => {
+    const dir = buildCommand("codex", "m", "review", "some/rel/worktree").args[2]; // the value after `-C`
+    expect(dir.startsWith("/"), dir).toBe(true);
+    expect(dir.endsWith("some/rel/worktree"), dir).toBe(true);
+  });
+  it("leaves an already-absolute codex -C path intact", () => {
+    expect(buildCommand("codex", "m", "review", "/abs/worktree").args[2]).toBe("/abs/worktree");
   });
 });
 
@@ -163,6 +182,13 @@ describe("parseClaudeResult / parseCodexFinal", () => {
     expect(parseClaudeResult(JSON.stringify({ is_error: true, result: "[]" })).isError).toBe(true);
     expect(parseClaudeResult("nope").isError).toBe(true);
   });
+  // Episode 3 (#1): the harness envelope carries a `subtype` (e.g. error_max_turns). Surface it so a
+  // non-vote names WHY it failed (max-turns vs other), instead of an opaque "harness reported is_error".
+  it("surfaces the envelope subtype (error_max_turns) for diagnosable non-votes", () => {
+    const r = parseClaudeResult(JSON.stringify({ is_error: true, subtype: "error_max_turns", result: "" }));
+    expect(r.isError).toBe(true);
+    expect(r.subtype).toBe("error_max_turns");
+  });
   it("pulls the final assistant block out of a codex trace", () => {
     const trace = ["OpenAI Codex", "exec", "...tool output...", "codex", "thinking aloud", "codex", '[{"x":1}]', "tokens used", "2829"].join("\n");
     expect(parseCodexFinal(trace)).toBe('[{"x":1}]');
@@ -218,6 +244,84 @@ describe("runReview", () => {
     const { output } = await runReview("holistic", "codex", "gpt-5.5", "/repo", "p", { call });
     expect(output!.findings).toEqual([]);
   });
+
+  // Episode 3 (#1): a harness error names its subtype in the warning (the Coverage line then says WHY
+  // a reviewer was lost), not a generic "is_error". error_max_turns is NOT retried — retrying with the
+  // same cap reproduces it; the raised cap (40) is the actual fix for a legit over-25-turn review.
+  it("surfaces the harness error subtype (error_max_turns) in the warning, and does NOT retry it", async () => {
+    let n = 0;
+    const call: ModelCall = async () => { n++; return JSON.stringify({ is_error: true, subtype: "error_max_turns", result: "" }); };
+    const { output, warning } = await runReview("holistic", "ollama", "kimi", "/repo", "p", { call });
+    expect(output).toBeNull();
+    expect(warning).toMatch(/error_max_turns/);
+    expect(n).toBe(1); // a determined max-turns failure isn't retried (cost) — the raised cap is the fix
+  });
+
+  // Episode 3 (#4): a TRANSIENT spawn failure (non-zero exit / connection reset) is retried ONCE before
+  // it's counted as lost coverage — flaky local backends shouldn't silently thin the panel.
+  it("retries a transient spawn failure ONCE, then succeeds (no warning)", async () => {
+    let n = 0;
+    const call: ModelCall = async () => { n++; if (n === 1) throw new Error("exited 1: connection reset by peer"); return claudeEnv(clean); };
+    const { output, warning } = await runReview("holistic", "ollama", "kimi", "/repo", "p", { call });
+    expect(n).toBe(2);                         // retried once
+    expect(output!.findings).toHaveLength(1);  // recovered
+    expect(warning).toBeUndefined();
+  });
+
+  it("a transient failure that PERSISTS through the retry stays a surfaced non-vote (Coverage line intact)", async () => {
+    let n = 0;
+    const call: ModelCall = async () => { n++; throw new Error("exited 1: still flaky"); };
+    const { output, warning } = await runReview("holistic", "ollama", "kimi", "/repo", "p", { call });
+    expect(n).toBe(2);                  // tried twice, then gave up
+    expect(output).toBeNull();
+    expect(warning).toMatch(/still flaky/);
+    expect(warning).toMatch(/retr/i);  // annotated as retried, for diagnosability
+  });
+
+  it("does NOT retry a timeout (deliberate runaway guard — a retry doubles GPU cost)", async () => {
+    let n = 0;
+    const call: ModelCall = async () => { n++; throw new Error("timed out after 600000ms"); };
+    const { output, warning } = await runReview("holistic", "ollama", "kimi", "/repo", "p", { call });
+    expect(n).toBe(1);                  // single attempt
+    expect(output).toBeNull();
+    expect(warning).toMatch(/timed out/);
+  });
+
+  it("does NOT retry a byte-cap abort (a hard failure, not transient)", async () => {
+    let n = 0;
+    const call: ModelCall = async () => { n++; throw new Error("output exceeded 1024 bytes"); };
+    const { output } = await runReview("holistic", "ollama", "kimi", "/repo", "p", { call });
+    expect(n).toBe(1);
+    expect(output).toBeNull();
+  });
+
+  it("does NOT retry a missing binary (ENOENT) — retrying a config error is pointless", async () => {
+    let n = 0;
+    const call: ModelCall = async () => { n++; throw new Error("spawn codex ENOENT"); };
+    const { output } = await runReview("holistic", "codex", "gpt-5.5", "/repo", "p", { call });
+    expect(n).toBe(1);
+    expect(output).toBeNull();
+  });
+
+  it("does NOT retry a model that RESPONDED but unparseably (a model-behavior issue, not a transient spawn failure)", async () => {
+    let n = 0;
+    const call: ModelCall = async () => { n++; return claudeEnv("rambling prose, no array at all"); };
+    const { output, warning } = await runReview("holistic", "ollama", "kimi", "/repo", "p", { call });
+    expect(n).toBe(1);                  // a parse non-vote is not a spawn failure → no retry
+    expect(output).toBeNull();
+    expect(warning).toMatch(/unparseable/);
+  });
+});
+
+// Episode 3 (#2): spawnWithDeadline threw `${stderr}.slice(0,200)` — the HEAD — so a benign leading
+// warning hid the real error at the tail. It now routes stderr through errorTail (tail-preserving).
+describe("spawnWithDeadline surfaces the real error at the tail of stderr", () => {
+  const NODE = process.execPath;
+  it("keeps the tail so a benign connectors warning at the head can't hide the real failure", async () => {
+    const src = "process.stderr.write('warning: connector mcp-x failed\\n' + 'noise '.repeat(120) + '\\nFATAL_REAL_ERROR_AT_TAIL'); process.exit(1);";
+    await expect(spawnWithDeadline(NODE, ["-e", src], { cwd: process.cwd(), timeoutMs: 5000 }))
+      .rejects.toThrow(/FATAL_REAL_ERROR_AT_TAIL/);
+  }, 8000);
 });
 
 describe("isAffirmativelyEmpty (fail-safe: only an UNAMBIGUOUS whole-message 'no issues' counts)", () => {

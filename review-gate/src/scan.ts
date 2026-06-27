@@ -1,5 +1,5 @@
 import { isAbsolute, relative } from "node:path";
-import { envNum, spawnBounded } from "./proc.js";
+import { envNum, errorTail, spawnBounded } from "./proc.js";
 import type { Finding, ReviewerOutput } from "./types.js";
 
 // The deterministic tier: cheap, exact scanners that run on the changeset and emit findings in the
@@ -290,8 +290,8 @@ const spawnGit = async (args: string[], repoDir: string, signal?: AbortSignal): 
   if (r.byteAbort) throw new Error(`git output exceeded ${GIT_MAX_BYTES} bytes`);
   if (r.timedOut) throw new Error(`git timed out after ${GIT_TIMEOUT_MS}ms`);
   if (r.code === 0) return r.stdout; // a clean exit wins
-  if (r.code === -1) throw new Error(r.stderr.trim() ? `git: ${r.stderr.trim().slice(0, 200)}` : "git failed");
-  throw new Error(`git exited ${r.code}: ${r.stderr.trim().slice(0, 200)}`);
+  if (r.code === -1) throw new Error(errorTail(r.stderr) ? `git: ${errorTail(r.stderr)}` : "git failed");
+  throw new Error(`git exited ${r.code}: ${errorTail(r.stderr) || "(no stderr)"}`); // tail, not head
 };
 
 // Default ToolRunner: RESOLVE (never reject) with the tool's result — a non-zero exit is normal for
