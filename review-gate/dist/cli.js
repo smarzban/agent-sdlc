@@ -151,7 +151,7 @@ async function main() {
             break;
         }
         default:
-            process.stderr.write("usage: review-gate <prompt|run|scan|consolidate|decide> ...\n");
+            process.stderr.write("usage: review-gate <prompt|run|scan|collect|consolidate|decide> ...\n");
             process.exit(2);
     }
 }
