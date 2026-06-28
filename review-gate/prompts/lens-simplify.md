@@ -20,6 +20,12 @@ conventions first; if you can't say *why* a simpler form is safe, don't flag it.
   concrete case (don't generalize before the third use).
 - **A second way to do a solved thing** — re-inventing a pattern the codebase already has one way,
   adding divergence instead of reusing it.
+- **Reinventing the stdlib, or a dependency for a one-liner** — this change hand-rolls something the
+  language/runtime already provides, or adds a third-party dependency for what a native API or a few
+  lines would do. The least-code path is reuse → stdlib → native → a small dep; flag a climb past the
+  lightest option that fit. (A needless new dependency can be real maintenance + supply-chain cost — rate
+  it by impact per the calibration below; a dep with a legitimate reason — portability, a stdlib gap,
+  security, performance — isn't a finding.)
 
 **Local complexity:**
 - Deep nesting (3+ levels) a guard clause / early return would flatten; a function doing several
