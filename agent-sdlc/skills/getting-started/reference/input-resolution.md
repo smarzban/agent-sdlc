@@ -24,7 +24,7 @@ A resolved input still has to be *settled*, not merely *present*. If it exists b
 self-contradictory, treat it as today: loop back to the owning stage. Resolution finds the input;
 the stage's own bar decides whether it is good enough to run on.
 
-## Materialize before you run (A1 — the committed spec is the one source of truth)
+## Materialize before you run (the committed spec is the one source of truth)
 
 When the input came from anything other than the canonical spec, **write it into the canonical spec
 section first, then run.** The stage proceeds exactly as if a human had authored that section.

@@ -88,6 +88,7 @@ The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and le
 | "Skip the per-task review, review-gate catches it at ship." | A whole-PR gate cannot localize a per-task drift cheaply. Review early; fix while it is small. |
 | "This task won't go green, I'll wire the next one and come back." | Errors compound. Stop the line: a blocked task is recorded and raised, not deferred. |
 | "Trust my memory of what's done after the compaction." | Re-running a done task is the costliest failure. Read the ledger and `git log`. |
+| "The plan came from Linear/a doc, it's already reviewed — skip the gate." | A source is not a verdict. An unvetted plan is unvetted whatever its origin — run the gate inline, then build. |
 
 ## Red flags (stop and fix)
 
@@ -125,8 +126,11 @@ The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and le
 - Reads the `## Plan` and `## Tech Stack` sections of `specs/<feature>/<feature>.md` (the latter for
   the green bar — the commands that define a passing build) and `gate-report.md`; references `T-N`
   and `AC-N` IDs.
-- Writes only product code + `build-report.md`. Does not edit the spec sections (the front half owns
-  those) and does not open the PR (ship owns that).
+- Writes only product code + `build-report.md`. Does not **author** the front-half spec sections (the
+  front half owns those) — the one exception is **materializing an ingested plan** (the `## Plan`, and
+  a minimal provenance-marked green bar in `## Tech Stack` when none is declared) per the ingest
+  adapter, which transcribes the source, never authors criteria/design/product choices. Does not open
+  the PR (ship owns that).
 - Runs after a clean gate verdict; re-run is safe and resumes from the ledger. The plan may be
   materialized from an external source (Linear/doc) — build runs the gate inline when no verdict
   exists for it (see [reference/ingesting-plans.md](reference/ingesting-plans.md)).

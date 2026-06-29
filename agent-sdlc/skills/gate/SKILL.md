@@ -49,16 +49,16 @@ a verdict: ready to build, or not.
    and root `constitution.md` and `CONTEXT.md`.
 2. **Build the chain map** for each `AC-N`, assemble criterion -> component -> product -> task(s)
    from the artifacts.
-2b. **Note provenance + entry point** record which sections carry a source marker (materialized, not
+3. **Note provenance + entry point** record which sections carry a source marker (materialized, not
    hand-authored) and where the chain was entered; treat explicitly `untraced` links as entry
    artifacts to surface, not defects to block on.
-3. **Run the five checks** mechanically, not by impression. The value of this gate is the literal
+4. **Run the five checks** mechanically, not by impression. The value of this gate is the literal
    walk.
-4. **Severity-rate each finding** Critical (blocks build), High (blocks build), Medium, Low.
-5. **Route each finding** name the owning stage that should fix it (criteria, design, techstack, or
+5. **Severity-rate each finding** Critical (blocks build), High (blocks build), Medium, Low.
+6. **Route each finding** name the owning stage that should fix it (criteria, design, techstack, or
    plan) and a suggested next action.
-6. **State the verdict** ready to build only if there are no Critical or High findings.
-7. **Write `gate-report.md`** and stop. Do not fix anything. If Linear sync is enabled in
+7. **State the verdict** ready to build only if there are no Critical or High findings.
+8. **Write `gate-report.md`** and stop. Do not fix anything. If Linear sync is enabled in
    `.agent-sdlc/config.json`, also post the gate's status update + report via the `linear-sync` skill.
 
 ## Principles

@@ -23,8 +23,10 @@ Linear, a doc, or the request itself, or a `## Plan` exists but has no gate verd
    Transcribe only what the source contains; do not invent tasks.
 3. **Resolve the green bar.** build cannot run without a concrete green bar (compile, test, lint,
    format-check). Take it from `## Tech Stack` if present; otherwise detect the commands from the repo
-   (the manifest / CI config) or ask, and materialize a minimal green-bar declaration (provenance-
-   marked). A vague or absent green bar is a blocker — stop and resolve it, do not guess.
+   (the manifest / CI config) or ask, and materialize a minimal green-bar declaration **into
+   `## Tech Stack`** (provenance-marked) — the only front-half section build writes, and only this
+   green-bar line, never product choices. A vague or absent green bar is a blocker — stop and resolve
+   it, do not guess.
 4. **Run the gate inline.** Invoke `/agent-sdlc:gate` on the materialized plan. It walks what exists,
    renders a mid-chain-entry coverage note for the `untraced` links, and issues a verdict. Proceed
    **only** on ready-to-build — a Critical/High finding stops the line exactly as in-pipeline.
@@ -35,7 +37,7 @@ Linear, a doc, or the request itself, or a `## Plan` exists but has no gate verd
 ## Rules
 
 - **Never skip the inline gate.** "The plan came from Linear, it's already reviewed" is not a gate
-  verdict. An unvetted plan is unvetted whatever its source — guardrail #2.
+  verdict. An unvetted plan is unvetted whatever its source — never build on an unvetted plan.
 - **Never fabricate to complete the chain.** Missing upstream links are `untraced` and surfaced, not
   invented. The gate's coverage note must show them.
 - **One source of truth.** After ingest, the materialized `## Plan` is what build executes and what

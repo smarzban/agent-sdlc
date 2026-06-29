@@ -12,9 +12,11 @@ or review-gate's own merge step, and promotion belongs to a later `deploy` stage
 
 <HARD-GATE>
 Precondition: a **green, build-finished branch with a clean working tree** — proven by
-`specs/<feature>/build-report.md` (every task done), or, when no ledger exists (build ran from an
-ingested plan, or the branch was built outside the pipeline), by verifying the branch directly: the
-suite is green and the branch carries the finished work. If a task is in-progress or blocked, STOP and
+`specs/<feature>/build-report.md` (every task done; build always writes the ledger, ingested plan or
+not), or, when no ledger exists because the branch was built **outside the pipeline**, by verifying
+the branch directly: the suite is green. On that no-ledger path review-gate is the *sole* quality gate
+(no upstream spec-gate or per-task review ran) and completeness cannot be asserted from a ledger —
+lean on the spec coverage and the review, and say so. If a task is in-progress or blocked, STOP and
 route back to `/agent-sdlc:build`. Input is the green
 feature branch plus the spec (for the PR body). Output is a pushed branch, an open PR, and a
 review-gate verdict. ship creates and reviews the PR; it does NOT merge. On a blocking verdict it
@@ -23,7 +25,9 @@ stops and asks before changing anything — a PR is an outward artifact.
 
 ## The sequence
 
-1. **Precondition** `build-report.md` all-done and the working tree clean. Else stop → build.
+1. **Precondition** a green build-finished branch with a clean working tree — `build-report.md`
+   all-done, or (no ledger, a branch built outside the pipeline) verify the branch directly. A task
+   in-progress or blocked → stop → build.
 2. **Verify** run the full suite fresh and read the output (verification-before-completion). Red →
    stop; do not push a red branch.
 3. **Push** push the feature branch to the remote.
@@ -100,7 +104,7 @@ stops and asks before changing anything — a PR is an outward artifact.
 ## Conventions
 
 - Reads `build-report.md` and the spec; references `AC-N` and the feature branch. When no ledger
-  exists (an ingested-plan or out-of-pipeline build), verifies the branch directly instead.
+  exists (a branch built outside the pipeline), verifies the branch directly instead.
 - Invokes `/review-gate:review-gate` (a sibling plugin in this marketplace) for the whole-PR review,
   with a portable reviewer-subagent fallback when it is absent.
 - Does not merge and does not clean the worktree on the PR path.
