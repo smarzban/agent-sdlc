@@ -12,7 +12,9 @@ context to follow. This is the one stage the agent owns end to end.
 
 <HARD-GATE>
 Input is the `## Acceptance Criteria`, `## Design`, and `## Tech Stack` sections of
-`specs/<feature>/<feature>.md`, plus `constitution.md`. Output is the `## Plan` section of the same
+`specs/<feature>/<feature>.md`, plus `constitution.md`. Resolve these per the input-resolution rule
+([input-resolution](../getting-started/reference/input-resolution.md)): a non-canonical source is
+materialized into the named sections (with a provenance marker) before planning. Output is the `## Plan` section of the same
 file. Produce the plan and task breakdown only;
 do NOT write the product code (the build stage executes the tasks). Each task specifies the test
 to write first, but the red-green-refactor loop runs in build, not here. If the inputs are

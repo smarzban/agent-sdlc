@@ -10,6 +10,9 @@ understanding plus a short artifact the acceptance-criteria stage can consume. T
 and converges; it does not specify.
 
 <HARD-GATE>
+The raw idea may arrive in the prompt, a doc, or a Linear item — read whichever the request points
+to as the starting material (input-resolution rule:
+[input-resolution](../getting-started/reference/input-resolution.md)).
 Stop at settled intent and scope. Do NOT write acceptance criteria, functional requirements,
 success criteria, a design doc, or any code. Those belong to later stages. The terminal action of
 this skill is a settled idea artifact the user has approved, handed to the acceptance-criteria

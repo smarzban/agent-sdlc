@@ -11,8 +11,11 @@ criterion to the thing that proves it. This phase makes "done" unambiguous. It d
 choose a stack, plan, or build.
 
 <HARD-GATE>
-Input is the `## Brief` section of `specs/<feature>/<feature>.md` (settled intent + scope). Output
-is the `## Acceptance Criteria` section of the same file and nothing else. Stay tech-agnostic: criteria state
+Input is the settled brief (problem + scope), resolved per the input-resolution rule
+([input-resolution](../getting-started/reference/input-resolution.md)) — the `## Brief` section of
+`specs/<feature>/<feature>.md`, or an explicitly supplied source (a prompt, doc, or Linear item)
+materialized into `## Brief` with a provenance marker first; the precondition is a settled brief, not
+the file's presence. Output is the `## Acceptance Criteria` section of the same file and nothing else. Stay tech-agnostic: criteria state
 WHAT must be true and WHY, never HOW (no architecture, no stack, no API names, no code). Do NOT
 write design, techstack, plan, tasks, or code. If drafting criteria exposes a fuzzy or unsettled
 problem, STOP and loop back to idea rather than papering over it. The terminal action is an

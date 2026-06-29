@@ -12,7 +12,10 @@ thing only. Choosing concrete products and libraries is the next stage. Human-ow
 agent-proposed: lead with a recommended shape and the alternatives, the user decides.
 
 <HARD-GATE>
-Input is the `## Brief` and `## Acceptance Criteria` sections of `specs/<feature>/<feature>.md`.
+Input is the `## Brief` and `## Acceptance Criteria` sections of `specs/<feature>/<feature>.md`,
+resolved per the input-resolution rule
+([input-resolution](../getting-started/reference/input-resolution.md)) — a non-canonical source
+(prompt, doc, Linear) is materialized into those sections with a provenance marker first.
 Output is the `## Design` section of the same file (and, at project level, the `## Architecture`
 section of `specs/overview.md`). Name the KIND of
 thing (relational store, message queue, single-page app), NEVER the concrete product (Postgres,

@@ -13,6 +13,9 @@ alternatives with tradeoffs, the user decides.
 <HARD-GATE>
 Input is the `## Design` and `## Acceptance Criteria` sections of `specs/<feature>/<feature>.md`
 (and the `## Architecture` section of `specs/overview.md` at project level), plus `constitution.md`.
+Resolve these per the input-resolution rule
+([input-resolution](../getting-started/reference/input-resolution.md)): materialize any non-canonical
+source into the named sections (with a provenance marker) before choosing.
 Output is the `## Tech Stack` section of `specs/<feature>/<feature>.md` (the `## Tech Stack` section
 of `specs/overview.md` at project level). Choose concrete products per component; do NOT change the design
 shape (if a product would force a shape change, STOP and loop back to design), and do NOT write a
