@@ -53,6 +53,11 @@ Stated once here; the stage skills reference them by name rather than restating.
   only at a genuine blocker.)
 - **One question at a time.** Multiple-choice where possible. Walk the decision tree, do not dump.
 - **Code over questions.** If the repo answers it, go read it instead of asking.
+- **Resolve inputs from any source.** A stage's input can come from the canonical spec, a prompt, a
+  doc, a Linear issue set, or a repo artifact. Resolve it, materialize it into the spec with a
+  provenance marker, then run — the precondition is that the input *exists and is settled*, not that
+  the upstream file exists at its path. Never fabricate an input to clear a gate, and never weaken a
+  gate to enter mid-chain. See [reference/input-resolution.md](reference/input-resolution.md).
 - **Loop, don't force.** When a stage exposes that an earlier one was not actually settled, go
   back and re-settle, then continue. A fuzzy input is never patched over.
 - **Traceability is the spine.** criterion -> component -> product -> task. Each stage adds one
@@ -105,6 +110,19 @@ Decide the level the way `idea` does, and carry it through.
 - You have approved criteria: **`architecture-design`**, then **`techstack`**, then **`plan`**.
 - A `## Plan` section exists in `<feature>.md`: run **`gate`**, then **`build`**.
 - The branch is built and green (`build-report.md` all done): run **`ship`** to open the reviewed PR.
+
+Starting from outside the spec chain — a prompt, a doc, or Linear — any stage can still run (it
+resolves and materializes its input first; see [reference/input-resolution.md](reference/input-resolution.md)):
+
+- Intent lives in a prompt or doc, no spec yet: start at **`idea`** (or **`acceptance-criteria`** if
+  the problem is already settled), ingesting the source as the `## Brief`.
+- A plan already lives in Linear or a doc: run **`build`** — it ingests the plan (materializes
+  `## Plan`), runs the **`gate`** inline, then builds with the full per-task loop. You do not have to
+  hand-run the front half first.
+- Any single stage on its own ("just write the criteria", "just plan this"): invoke that stage; it
+  resolves its input from the source you give it. **Single-stage** mode produces just that section;
+  **resume-to-ship** mode backfills only the minimum upstream the gates require, marking genuinely
+  absent links untraced rather than inventing them.
 
 If you are unsure which stage you are in, you are probably one stage earlier than you think. The
 cheapest fix is always upstream.
