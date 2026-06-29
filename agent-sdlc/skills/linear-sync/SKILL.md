@@ -85,6 +85,23 @@ The `linear-ids.json` shape is in [reference/mapping.md](reference/mapping.md).
    the GitHub link first if you must restructure it. (Incident on record: promoting a Triage issue
    silently overwrote the external reporter's public issue.)
 
+## Reverse mapping — Linear -> spec (ingestion)
+
+The same stage->entity table read **backwards** is how a stage materializes a plan that already lives
+in Linear into the canonical spec (the input-resolution flow; `build`'s ingest adapter). It is a read
+of Linear, not a write — the only write is to the spec file, stamped with a provenance marker.
+
+- **Issue (`T-N`) -> a task** in the `## Plan` section; carry its `AC-N` if the issue records one,
+  else mark the task `AC: untraced` (never fabricate a criterion).
+- **Milestone -> a build phase**; **Project -> the feature** (`specs/<feature>/<feature>.md`);
+  **Initiative -> the product** (`specs/overview.md`).
+- **Faithful, not creative.** Transcribe only what the Linear entities contain; do not invent tasks,
+  criteria, or components to fill the chain. Missing upstream links stay `untraced` and surface in the
+  gate's coverage note.
+- **One source of truth.** After ingestion the materialized spec is what build executes — not the
+  Linear issues directly (which can drift). The guards above still apply (skip cleanly if the MCP is
+  absent). See [input-resolution](../getting-started/reference/input-resolution.md).
+
 ## What each stage does
 
 At its hand-off, each pipeline stage performs its Linear action AFTER writing its `##` section — the
