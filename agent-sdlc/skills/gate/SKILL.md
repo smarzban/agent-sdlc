@@ -13,7 +13,10 @@ everything and changes nothing, routing each fix to the stage that owns it.
 <HARD-GATE>
 Reads the `## Brief`, `## Acceptance Criteria`, `## Design`, `## Tech Stack`, and `## Plan` sections
 of `specs/<feature>/<feature>.md` (plus `specs/overview.md` at project level), `constitution.md`,
-and `CONTEXT.md`. Writes only `specs/<feature>/gate-report.md`. Modifies NO other file, fixes
+and `CONTEXT.md`. A section may be materialized from a non-canonical source (a provenance marker on
+its first line) and the chain may be entered mid-way (some upstream links marked `untraced`); the
+gate honours both — see [input-resolution](../getting-started/reference/input-resolution.md).
+Writes only `specs/<feature>/gate-report.md`. Modifies NO other file, fixes
 NOTHING, writes no code and no plan. Findings are reported with the owning stage
 named, so the fix happens there and the gate stays trustworthy. The terminal action is a report and
 a verdict: ready to build, or not.
@@ -23,7 +26,12 @@ a verdict: ready to build, or not.
 
 1. **Coverage, both directions.** Every `AC-N` traces to a component (design), to a product where
    one is needed (techstack), and to at least one task (plan). Flag any criterion with a gap, and
-   any component, product, or task that no criterion justifies (orphan / gold-plating).
+   any component, product, or task that no criterion justifies (orphan / gold-plating). **Mid-chain
+   entry:** when the chain was entered below `idea` (e.g. a plan ingested from Linear with no upstream
+   criteria), a task whose upstream link is explicitly `untraced` is **not** an orphan — record it in
+   the mid-chain-entry coverage note (loud, never a silent pass) rather than flagging it Critical.
+   Still flag a genuine gap (a criterion that exists but reaches no task) and any *fabricated* link (a
+   trace to an `AC-N` that does not exist).
 2. **Consistency.** Terminology matches `CONTEXT.md` across all artifacts, and the artifacts do not
    contradict each other (a criterion the design ignores, a task that fights the design, a product
    the design did not call for).
@@ -41,6 +49,9 @@ a verdict: ready to build, or not.
    and root `constitution.md` and `CONTEXT.md`.
 2. **Build the chain map** for each `AC-N`, assemble criterion -> component -> product -> task(s)
    from the artifacts.
+2b. **Note provenance + entry point** record which sections carry a source marker (materialized, not
+   hand-authored) and where the chain was entered; treat explicitly `untraced` links as entry
+   artifacts to surface, not defects to block on.
 3. **Run the five checks** mechanically, not by impression. The value of this gate is the literal
    walk.
 4. **Severity-rate each finding** Critical (blocks build), High (blocks build), Medium, Low.
@@ -76,6 +87,8 @@ a verdict: ready to build, or not.
 - A "ready to build" verdict issued with a Critical or High finding open.
 - A "ready to build" verdict with no green bar declared — build then has no shared definition of "green".
 - Findings stated as impressions rather than located in a specific artifact.
+- An `untraced` link or a materialized section silently dropped from the report — a mid-chain entry
+  passed off as a fully-traced chain (the same failure as silently dropping review coverage).
 
 ## Done when
 
@@ -91,12 +104,17 @@ a verdict: ready to build, or not.
 - **Chain coverage table** `AC-N` -> component -> product -> task(s), with gaps marked.
 - **Findings by severity** each with: location (which artifact and where), the issue, the owning
   stage, and a suggested next action.
+- **Mid-chain entry / coverage note** (when applicable) — if any section was materialized from an
+  external source or any upstream link is `untraced`: name the entry stage, the source (from the
+  provenance marker), and which links are unvetted upstream. Visible, never a silent pass.
 - **Verdict** ready to build, or not, with the blocking findings listed.
 
 ## Conventions
 
 - Lives at `specs/<feature>/gate-report.md`. Read-only over every other artifact.
 - Run after the `## Plan` section exists and before build. Re-run after any fix until the verdict is clean.
+- May be invoked **inline by `build`** on a freshly materialized plan (build runs the gate itself when
+  no verdict exists for the plan in hand), as well as standalone — the checks are identical either way.
 - Critical and High findings block build; the owning stage fixes them and the gate is re-run.
 - Mirrors spec-kit's analyze: a read-only consistency and coverage pass that modifies nothing.
 - Downstream consumer: the build stage proceeds only on a clean or explicitly accepted report.
