@@ -12,17 +12,25 @@ ledger, and delegates every line of code to a subagent. The disciplines live in 
 subagents read, not here.
 
 <HARD-GATE>
-Precondition: `specs/<feature>/gate-report.md` exists with the verdict **ready to build** (no
-Critical or High findings). If it does not, STOP and route back to `/agent-sdlc:gate` — never build
-on an unblessed chain. Input is the `## Plan` section of `specs/<feature>/<feature>.md` (plus the
-sections it references) and the gate report. Output is product code on a feature branch, one atomic
+Precondition: a **gate verdict of ready to build** (no Critical or High findings) exists **for the
+plan in hand**. The plan is resolved per the input-resolution rule
+([input-resolution](../getting-started/reference/input-resolution.md)) — the `## Plan` section of
+`specs/<feature>/<feature>.md`, or an external plan (a Linear issue set, a doc) materialized into
+`## Plan` with a provenance marker first (see [reference/ingesting-plans.md](reference/ingesting-plans.md)).
+If no verdict exists for that plan, **run `/agent-sdlc:gate` inline** and proceed only on a clean
+verdict — never build on an unblessed chain, whatever the plan's source. Input is the `## Plan`
+section (plus the sections it references) and the gate report. Output is product code on a feature branch, one atomic
 commit per task, and `specs/<feature>/build-report.md` (the ledger). The terminal action is a green
 branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
 </HARD-GATE>
 
 ## The loop (the conductor's whole job)
 
-1. **Precondition** confirm the gate verdict is ready to build. Else stop.
+1. **Precondition** resolve the plan (input-resolution rule); if it came from an external source,
+   **ingest it first** — materialize `## Plan` + minimal trace links + the green bar, provenance-
+   marked, then run `/agent-sdlc:gate` inline (mechanics in
+   [reference/ingesting-plans.md](reference/ingesting-plans.md)). Confirm a ready-to-build verdict
+   exists for the plan in hand. Proceed only on a clean verdict; else stop.
 2. **Isolate** set up an isolated workspace (detect existing isolation → native worktree tool → `git
    worktree` fallback). Run the **green bar** once — the commands `## Tech Stack` declares (compile,
    test, lint, format-check): the baseline MUST be green before touching anything.
@@ -53,6 +61,9 @@ The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and le
 
 - **Conduct, do not perform.** The conductor never writes product code. Every change comes from a
   subagent with a one-task brief. If you find yourself editing source directly, stop and dispatch.
+- **Plan source is irrelevant to the loop.** A plan ingested from Linear or a doc runs the identical
+  per-task discipline — test-first, review, green bar, isolation, ledger. The adapter changes only how
+  the plan arrives; if any rigour changes because of where it came from, that is a bug.
 - **One task, one green commit.** The repo compiles, passes, lints, and is formatted after every
   task — the whole green bar, not just the suite. A task that cannot finish green was mis-sized in
   planning — loop back, do not force it through.
@@ -89,6 +100,8 @@ The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and le
 - A reviewer prompt told what *not* to flag (pre-judging disqualifies the review).
 - A task marked done with no commit SHA, or work re-run because the ledger was not consulted.
 - Building past a blocked task instead of stopping to ask.
+- An ingested/external plan built without an inline gate verdict, or with fabricated `AC-N` trace
+  links instead of an honest `untraced` mark.
 
 ## Done when
 
@@ -114,5 +127,7 @@ The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and le
   and `AC-N` IDs.
 - Writes only product code + `build-report.md`. Does not edit the spec sections (the front half owns
   those) and does not open the PR (ship owns that).
-- Runs after a clean gate verdict; re-run is safe and resumes from the ledger.
+- Runs after a clean gate verdict; re-run is safe and resumes from the ledger. The plan may be
+  materialized from an external source (Linear/doc) — build runs the gate inline when no verdict
+  exists for it (see [reference/ingesting-plans.md](reference/ingesting-plans.md)).
 - Downstream consumer: `/agent-sdlc:ship` takes the green branch to a reviewed PR.
