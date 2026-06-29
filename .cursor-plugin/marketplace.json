@@ -11,7 +11,7 @@
     {
       "name": "agent-sdlc",
       "source": "agent-sdlc",
-      "description": "Full-SDLC pipeline for AI coding agents: idea -> acceptance criteria -> architecture -> techstack -> atomic task plan -> readiness gate -> test-first subagent-driven build -> reviewed PR, plus skills for writing the project README and full repository documentation."
+      "description": "Full-SDLC pipeline for AI coding agents: idea -> acceptance criteria -> architecture -> techstack -> atomic task plan -> readiness gate -> test-first subagent-driven build -> reviewed PR. Run the whole chain or invoke any stage standalone, resolving its input from any source (prompt, doc, Linear, repo) without weakening the gate or traceability. Plus skills for writing the project README and full repository documentation."
     }
   ]
 }
