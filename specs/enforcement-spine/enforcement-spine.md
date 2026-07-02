@@ -446,10 +446,13 @@ main guard so tests import the module without executing it. Tests build their fi
 - **T-11 — Build wiring + evidence capture.** Edit `agent-sdlc/skills/build/SKILL.md` and
   `agent-sdlc/skills/build/reference/subagent-loop.md`: define the green-bar evidence block
   (fenced command + output tail per green-bar run, recorded in the ledger beside the task);
-  invoke the checker at resume and at build-complete; stop-and-ask + degraded-fallback semantics.
-  *Verification (prose):* re-read against AC-15/16/17 + the evidence contract in `## Design` /
-  ADR-0001. *Advances:* AC-15, AC-16, AC-17 (+ the AC-5/14 contract's write side). *Component:*
-  build skill text. *Deps:* T-9.
+  invoke the checker at resume and at build-complete; stop-and-ask + degraded-fallback semantics;
+  and generalize the baseline rule — a green bar whose target paths do not yet exist is
+  **vacuously green** and binds from the first task that creates them (the class behind this
+  feature's gate MEDIUM, fixed in the skill rather than per-feature). *Verification (prose):*
+  re-read against AC-15/16/17 + the evidence contract in `## Design` / ADR-0001. *Advances:*
+  AC-15, AC-16, AC-17 (+ the AC-5/14 contract's write side). *Component:* build skill text.
+  *Deps:* T-9.
 - **T-12 — Ship wiring: verification report + proof map in PR.** Edit
   `agent-sdlc/skills/ship/SKILL.md` and `agent-sdlc/skills/ship/reference/finishing.md`: build
   the AC → proof map, write `specs/<feature>/verification-report.md`, run the checker pre-PR with
@@ -495,5 +498,9 @@ main guard so tests import the module without executing it. Tests build their fi
 - **Baseline green bar:** while `agent-sdlc/checker/` does not yet exist, the declared green bar
   is **vacuously green** (greenfield — there is nothing to check or test); it becomes binding
   from T-1 onward. Build's baseline check must not halt on the directory's absence.
+- **Evidence capture starts at T-1, not T-11:** the conductor records green-bar evidence blocks
+  (per the `## Design` contract / ADR-0001) in the ledger from the first task. T-11 lands the
+  *prose* in the build skill; the format is already defined by design. Otherwise this feature's
+  own ship-time AC-14 check would run against early ledger entries that predate the format.
 - T-10–T-12 are prose edits verified by re-reading (the rare untestable tasks); they remain
   covered terminally by the ship-stage review against AC-15..18's pass/fail questions.

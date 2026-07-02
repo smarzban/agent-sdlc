@@ -79,3 +79,13 @@ The plan stage resolved the MEDIUM: `## Plan` Notes now declare the baseline vac
 `agent-sdlc/checker/` is absent, binding from T-1. Delta walked: the amendment touches no trace
 link, task, or contract; all checks stand. **Verdict: READY TO BUILD — clean** (remaining LOW is
 a project-level note, non-blocking).
+
+## Re-run 2 (delta) — 2026-07-02
+
+Two pre-build plan amendments from the front-half run experience: (1) T-11's scope now includes
+generalizing the vacuous-green baseline rule into the build skill itself (fixes the class behind
+the earlier MEDIUM, not the instance); (2) a Notes line directs the conductor to capture green-bar
+evidence blocks from T-1 (the design defines the format; T-11 only lands the prose), so the
+feature's own ship-time AC-14 check is clean over its full ledger. Delta walked: T-11 still
+advances AC-15/16/17 and its deps are unchanged; no trace link, coverage row, or contract moved.
+**Verdict: READY TO BUILD — clean.**
