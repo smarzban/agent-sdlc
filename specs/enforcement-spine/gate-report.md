@@ -72,3 +72,10 @@ files and a failing-test-first (or, T-10–T-12, an explicit prose verification)
 **READY TO BUILD** — no Critical or High findings. One MEDIUM routed to plan (baseline note; a
 one-line amendment recommended before build starts so an autonomous run does not halt), one LOW
 noted at project level.
+
+## Re-run (delta) — 2026-07-02
+
+The plan stage resolved the MEDIUM: `## Plan` Notes now declare the baseline vacuous-green while
+`agent-sdlc/checker/` is absent, binding from T-1. Delta walked: the amendment touches no trace
+link, task, or contract; all checks stand. **Verdict: READY TO BUILD — clean** (remaining LOW is
+a project-level note, non-blocking).

@@ -492,5 +492,8 @@ main guard so tests import the module without executing it. Tests build their fi
   `node --test agent-sdlc/checker/` (declared in `## Tech Stack`).
 - **No release task:** the plugin version bump is ship-time per the repo's release conventions,
   not a plan task.
+- **Baseline green bar:** while `agent-sdlc/checker/` does not yet exist, the declared green bar
+  is **vacuously green** (greenfield — there is nothing to check or test); it becomes binding
+  from T-1 onward. Build's baseline check must not halt on the directory's absence.
 - T-10–T-12 are prose edits verified by re-reading (the rare untestable tasks); they remain
   covered terminally by the ship-stage review against AC-15..18's pass/fail questions.
