@@ -196,3 +196,126 @@ criterion. Axis: **Spec Conformance**.
 None new — the four existing terms (`enforcement spine`, `sdlc-check`, `AC → proof map`,
 `green-bar evidence`) already cover this contract; AC-14 relies on `green-bar evidence` exactly as
 `CONTEXT.md` defines it.
+
+## Design
+
+Feature-level design, fitting the architecture in `specs/overview.md` `## Architecture`. The
+checker joins agent-sdlc as its first executable component, following the marketplace's
+committed-artifact pattern (review-gate ships its runnable `dist/` the same way).
+
+### Components
+
+**Inside the checker (kind: a stateless command-line check tool):**
+
+1. **CLI shell** — single responsibility: process lifecycle. Argument handling, wiring the other
+   components, mapping the run to an exit code. Owns the cross-cutting properties: exit contract
+   (0 pass / nonzero fail), the no-write discipline (output is stdout/stderr only — the checker
+   never writes a file; the invoking stage decides what to record), and the bare-runtime
+   constraint (stdlib only, no network, no install step).
+   *Contract:* in — invocation arguments (spec path, artifact requirements); out — exit code +
+   the reporter's rendered text; errors — any internal failure exits nonzero with a message
+   (fail-closed: no error path exits 0).
+2. **Spec parser** — single responsibility: turn artifact text into a structured model. Reads the
+   consolidated spec, the build ledger, and the verification report into: sections, `AC/C/T` IDs,
+   trace references, provenance and `untraced` markers, green-bar evidence blocks, proof-map rows.
+   *Contract:* in — artifact file contents; out — the model, or a typed parse failure naming the
+   file and problem; errors — missing/unparseable input is a parse failure, never a crash and
+   never an empty-model pass.
+3. **Repo facts reader** — single responsibility: gather version-control facts. The only component
+   that touches git: reads commit history (read-only) so the ledger check can match done-tasks to
+   commits.
+   *Contract:* in — repo path + the task IDs of interest; out — the commit list (id, message);
+   errors — git absent or not-a-repo is a typed failure, not a pass.
+4. **Check suite** — single responsibility: judge the model. Pure rules (no I/O) over the parsed
+   model + repo facts, one rule per mechanical promise: trace integrity, bidirectional coverage
+   (an explicit `untraced` marker yields a coverage note, not a failure), ledger-vs-git
+   (exactly one commit referencing exactly one task ID), green-bar evidence presence, marker
+   well-formedness, proof-map completeness, evidence linkage. Rules **auto-scope to the artifacts
+   present** (no ledger → ledger rules do not run); an invoking stage can *require* an artifact,
+   making its absence itself a failure.
+   *Contract:* in — model + repo facts + required-artifact set; out — a list of findings and
+   coverage notes; errors — none (pure; anything doubtful is a finding).
+5. **Reporter** — single responsibility: render the verdict. Emits every finding (exhaustive —
+   all N violations, never only the first) plus coverage notes, and derives the exit code.
+   *Contract:* in — findings + notes; out — human-readable report text + exit code; errors — none.
+
+**Outside the checker (changed components):** the `gate`, `build`, and `ship` skill texts gain the
+invocation contract below; `build` additionally captures green-bar evidence blocks in its ledger;
+`ship` additionally writes the verification report and publishes the proof map in the PR body.
+
+### Data contracts
+
+- **Green-bar evidence block** — `build` captures each green-bar run in the ledger as a fenced
+  block: the command line plus its output tail. Evidence is captured text, never a checkbox.
+- **Verification report** — `ship` writes the AC → proof map to
+  `specs/<feature>/verification-report.md` (a sibling of `gate-report.md`/`build-report.md`:
+  process state beside the spec, per the artifact model), then copies it into the PR body. One row
+  per criterion: test-backed rows name their test identifier(s); reviewer-checked rows record the
+  answered pass/fail question. **Linkage rule:** each test-backed row's named test identifier must
+  appear in the captured green-bar evidence text (name-appearance — see ADR-0001).
+
+### Invocation contract (skill wiring)
+
+- **Points:** `gate` runs the checker after its own chain walk (mechanical corroboration);
+  `build` runs it at resume and at build-complete; `ship` runs it pre-PR with the verification
+  report required.
+- **Semantics:** runtime present → run, interpret exit code; nonzero (or any checker crash —
+  fail-closed) = a failed check = **stop-and-ask**, with any human override recorded in the PR
+  body. Runtime absent → an **announced degraded fallback**, never a silent skip. Mirrors the
+  existing ship ↔ review-gate contract.
+
+### Data flow and key state
+
+Spec + ledger + verification report + git history → parser / facts reader → model → check suite →
+findings + notes → reporter → report text + exit code → invoking stage (stop-and-ask / proceed /
+record). The checker holds **no state**: nothing persisted, nothing cached, no file written; each
+run is a pure function of the artifact set + git history.
+
+### Trust and failure boundaries
+
+- **Untrusted:** the spec, ledger, evidence blocks, verification report, and git history — all
+  authored by the agent being checked. **Trusted:** the checker.
+- The checker verifies **consistency, not truth**: a fabricating agent must now fabricate an
+  entire mutually-consistent artifact set (named tests appearing in captured output, commits
+  matching ledger rows) rather than assert "done". This is deliberately weaker than review-gate's
+  independent-reviewer model — the spine raises the cost of drift; the review panel remains the
+  judgment layer.
+- **Failure modes:** parse failure → named failure (never a pass); git unavailable → typed
+  failure; checker crash → the invoking stage treats it as a failed check (fail-closed). There is
+  no error path that reads as success.
+
+### Criterion-to-component map
+
+| Criterion | Component(s) |
+| --- | --- |
+| AC-1 | check suite (+ spec parser) |
+| AC-2 | check suite |
+| AC-3 | check suite |
+| AC-4 | repo facts reader + check suite |
+| AC-5 | check suite (+ green-bar evidence contract) |
+| AC-6 | spec parser + check suite |
+| AC-7 | check suite (auto-scoping) — integration across all |
+| AC-8 | CLI shell + reporter |
+| AC-9 | reporter |
+| AC-10 | spec parser + reporter |
+| AC-11 | CLI shell (no-write by construction) |
+| AC-12 | CLI shell |
+| AC-13 | check suite (+ verification-report contract) |
+| AC-14 | check suite (+ ADR-0001 linkage rule) |
+| AC-15 | gate/build/ship skill texts (invocation contract) |
+| AC-16 | gate/build/ship skill texts (invocation contract) |
+| AC-17 | gate/build/ship skill texts (invocation contract) |
+| AC-18 | ship skill text (+ verification-report contract) |
+| NC-1 | CLI shell |
+| NC-2 | CLI shell |
+| NC-3 | plugin packaging (manifests unchanged) |
+| NC-4 | check suite (pure rules) |
+
+### ADRs created
+
+- [ADR-0001 — plain-text evidence contracts checked by name-appearance](../adr/ADR-0001-plain-text-evidence-contracts.md)
+
+### Glossary terms touched
+
+`verification report` added to `CONTEXT.md`; `green-bar evidence` sharpened (fenced
+command + output block in the ledger).
