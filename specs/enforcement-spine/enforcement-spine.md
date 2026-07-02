@@ -377,3 +377,120 @@ needless dependency. review-gate's green bar is separate and unchanged.
 ### Glossary terms touched
 
 None.
+
+## Plan
+
+All product code lives in the single file `agent-sdlc/checker/sdlc-check.mjs` (Brief decision 1):
+each task adds exported functions to it plus a sibling test file; the CLI entry runs only under a
+main guard so tests import the module without executing it. Tests build their fixtures at runtime
+(inline spec strings; `mkdtemp` + `git init` for integration) — no committed fixture files.
+
+### Tasks
+
+- **T-1 — CLI skeleton + exit-code contract.** Create `agent-sdlc/checker/sdlc-check.mjs`
+  (module: `parseArgs` argument handling for the spec path and `--require <artifact>` flags, main
+  guard, exit-code mapping) and `agent-sdlc/checker/cli.test.mjs`. *Failing test first:* spawning
+  `node sdlc-check.mjs` with no spec path (and with a nonexistent path) exits nonzero and prints a
+  message naming the problem; `node --check sdlc-check.mjs` passes. *Advances:* AC-8, AC-10.
+  *Component:* CLI shell. *Deps:* none.
+- **T-2 — Parser: sections, IDs, trace references.** Extend `sdlc-check.mjs` (exported
+  `parseSpec`); create `agent-sdlc/checker/parser.test.mjs`. *Failing test first:* a minimal spec
+  string parses into a model carrying `AC/C/T` IDs and trace references; unparseable content
+  returns a typed parse failure naming the file and problem — never a throw, never an empty-model
+  pass. *Advances:* AC-10 (and grounds AC-1/2/3). *Component:* spec parser. *Deps:* T-1.
+- **T-3 — Parser: markers, evidence blocks, proof-map rows.** Extend `parseSpec` + ledger/report
+  parsing in `sdlc-check.mjs`; extend `parser.test.mjs`. *Failing test first:* a provenance marker
+  parses into source + date fields; an `untraced` marker parses with its reason; fenced green-bar
+  evidence blocks parse from ledger text; verification-report rows parse with criterion ID, type,
+  and named proof. *Advances:* grounds AC-3/5/6/13/14. *Component:* spec parser. *Deps:* T-2.
+- **T-4 — Rules: trace integrity + bidirectional coverage.** Extend `sdlc-check.mjs` (pure rule
+  functions); create `agent-sdlc/checker/rules.test.mjs`. *Failing test first:* a dangling trace
+  reference yields a finding naming each missing ID (AC-1); an AC reached by no task yields a
+  finding naming it (AC-2); a task with neither an AC reference nor an `untraced` marker yields a
+  finding, while an explicit `untraced` marker yields a coverage note instead (AC-3). *Advances:*
+  AC-1, AC-2, AC-3. *Component:* check suite. *Deps:* T-2.
+- **T-5 — Rules: marker well-formedness + evidence presence.** Extend `sdlc-check.mjs` and
+  `rules.test.mjs`. *Failing test first:* a marker missing its source or absolute date yields a
+  finding naming the section (AC-6); a green-bar claim with no captured evidence block yields a
+  finding naming the claim (AC-5). *Advances:* AC-5, AC-6. *Component:* check suite. *Deps:* T-3.
+- **T-6 — Repo facts reader + ledger-vs-git rule.** Extend `sdlc-check.mjs` (`execFile` over
+  read-only `git log`, argv array, no shell); create `agent-sdlc/checker/git.test.mjs`.
+  *Failing test first (integration):* in a `mkdtemp` fixture repo — a done task with no commit
+  referencing it fails naming the task; a commit referencing two task IDs fails; exactly one
+  commit per done task passes; a non-repo directory yields a typed failure, not a pass.
+  *Advances:* AC-4. *Components:* repo facts reader + check suite. *Deps:* T-2.
+- **T-7 — Rules: proof-map completeness + name-appearance linkage.** Extend `sdlc-check.mjs` and
+  `rules.test.mjs`. *Failing test first:* a map lacking a row (or a row lacking a proof) for any
+  criterion fails naming it (AC-13); a test-backed row naming a test absent from the evidence
+  text fails naming the row (AC-14); a complete, linked map passes. *Advances:* AC-13, AC-14.
+  *Component:* check suite. *Deps:* T-3, T-5.
+- **T-8 — Reporter: exhaustive findings + exit derivation.** Extend `sdlc-check.mjs`; create
+  `agent-sdlc/checker/reporter.test.mjs`. *Failing test first:* a model seeded with three
+  distinct violations reports all three (AC-9); any finding derives a nonzero exit, none derives
+  0 (AC-8); coverage notes render as notes, distinct from findings. *Component:* reporter.
+  *Deps:* T-4, T-5, T-6, T-7 (all finding kinds exist).
+- **T-9 — CLI integration: auto-scoping, `--require`, end-to-end properties.** Extend
+  `sdlc-check.mjs` (wire parser → facts → rules → reporter; rules auto-scope to artifacts
+  present; `--require` makes absence a failure); create `agent-sdlc/checker/integration.test.mjs`.
+  *Failing test first:* a fully valid fixture (spec + ledger + verification report + fixture
+  repo), including a mid-chain-entry variant with `untraced` markers, exits 0 with coverage
+  notes (AC-7); `--require verification-report` with the file absent exits nonzero; the fixture
+  tree hash is byte-identical before/after a run (AC-11, NC-2); the module's imports are
+  `node:`-prefixed only and the full run completes under a minimal env with no network (AC-12,
+  NC-1). *Component:* CLI shell (+ all). *Deps:* T-1–T-8.
+- **T-10 — Gate wiring.** Edit `agent-sdlc/skills/gate/SKILL.md`: invoke the checker after the
+  chain walk when the runtime is available; nonzero or crash = failed check = stop-and-ask;
+  runtime absent = announced degraded fallback. *Verification (prose, untestable):* re-read the
+  text against AC-15/16/17's pass/fail questions. *Advances:* AC-15, AC-16, AC-17. *Component:*
+  gate skill text. *Deps:* T-9.
+- **T-11 — Build wiring + evidence capture.** Edit `agent-sdlc/skills/build/SKILL.md` and
+  `agent-sdlc/skills/build/reference/subagent-loop.md`: define the green-bar evidence block
+  (fenced command + output tail per green-bar run, recorded in the ledger beside the task);
+  invoke the checker at resume and at build-complete; stop-and-ask + degraded-fallback semantics.
+  *Verification (prose):* re-read against AC-15/16/17 + the evidence contract in `## Design` /
+  ADR-0001. *Advances:* AC-15, AC-16, AC-17 (+ the AC-5/14 contract's write side). *Component:*
+  build skill text. *Deps:* T-9.
+- **T-12 — Ship wiring: verification report + proof map in PR.** Edit
+  `agent-sdlc/skills/ship/SKILL.md` and `agent-sdlc/skills/ship/reference/finishing.md`: build
+  the AC → proof map, write `specs/<feature>/verification-report.md`, run the checker pre-PR with
+  the report required, publish the map in the PR body, record any human override in the PR body.
+  *Verification (prose):* re-read against AC-13/14 (wiring), AC-16, AC-18. *Component:* ship
+  skill text. *Deps:* T-9, T-11.
+
+### Task-to-criterion coverage map
+
+| Criterion | Advanced by |
+| --- | --- |
+| AC-1 | T-4 |
+| AC-2 | T-4 |
+| AC-3 | T-3, T-4 |
+| AC-4 | T-6 |
+| AC-5 | T-3, T-5 (write side: T-11) |
+| AC-6 | T-3, T-5 |
+| AC-7 | T-9 |
+| AC-8 | T-1, T-8 |
+| AC-9 | T-8 |
+| AC-10 | T-1, T-2 |
+| AC-11 | T-9 |
+| AC-12 | T-9 |
+| AC-13 | T-3, T-7 (write side: T-12) |
+| AC-14 | T-7 (write side: T-11, T-12) |
+| AC-15 | T-10, T-11 |
+| AC-16 | T-10, T-11, T-12 |
+| AC-17 | T-10, T-11 |
+| AC-18 | T-12 |
+| NC-1 | T-9 (tested) |
+| NC-2 | T-9 (tested) |
+| NC-3 | constraint on every task: none may add a manifest, dependency, or build step (reviewed at ship) |
+| NC-4 | constraint on T-4–T-7: every rule deterministic, no judgment (reviewed at ship) |
+
+### Notes
+
+- **Single-file constraint:** T-2–T-9 all extend `sdlc-check.mjs`; no second product file may
+  appear. Tests import exported functions; only the main guard executes the CLI.
+- **Green bar per task:** `node --check agent-sdlc/checker/sdlc-check.mjs` +
+  `node --test agent-sdlc/checker/` (declared in `## Tech Stack`).
+- **No release task:** the plugin version bump is ship-time per the repo's release conventions,
+  not a plan task.
+- T-10–T-12 are prose edits verified by re-reading (the rare untestable tasks); they remain
+  covered terminally by the ship-stage review against AC-15..18's pass/fail questions.
