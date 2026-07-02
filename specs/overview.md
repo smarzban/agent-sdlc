@@ -32,3 +32,16 @@ The marketplace's shape, as it exists (seeded at the first feature-level design)
   fallback when absent — never a silent skip.
 - **Spec chains live in `specs/`** per the consolidated artifact model (one sectioned spec per
   feature; process reports beside the spec, never inside it).
+
+## Tech Stack
+
+Cross-cutting reality, per plugin (seeded at the first feature-level techstack run):
+
+- **agent-sdlc** — Markdown skills (no runtime). Executable additions are zero-dependency,
+  committed, bare-`node` ESM (floor ≥ 22, checked 2026-07-02); tests via stdlib `node:test`.
+  **Green bar:** `node --check agent-sdlc/checker/sdlc-check.mjs` +
+  `node --test agent-sdlc/checker/`.
+- **review-gate** — TypeScript spine compiled to committed `dist/` (no install-time build);
+  vitest + tsc, its own green bar (`npm run typecheck` · `npm test` · `npm run build:check`),
+  unchanged by this spec tree. Development has moved to the standalone product; the copy here
+  serves the installed plugin.

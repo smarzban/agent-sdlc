@@ -319,3 +319,61 @@ run is a pure function of the artifact set + git history.
 
 `verification report` added to `CONTEXT.md`; `green-bar evidence` sharpened (fenced
 command + output block in the ledger).
+
+## Tech Stack
+
+Feature level. The Brief pins the shape (single-file, zero-dependency, committed, bare `node`);
+this stage grounds the products and versions realizing it. All choices verified 2026-07-02.
+
+### Choices
+
+- **Checker runtime** — Node.js, **floor ≥ 22**, as a single ESM `.mjs` file. Node 22 is
+  maintenance LTS until 2027-04-30 (24 is active LTS; 20 is EOL) — checked 2026-07-02,
+  [endoflife.date/nodejs](https://endoflife.date/nodejs) +
+  [nodejs.org previous releases](https://nodejs.org/en/about/previous-releases). Requiring 24
+  would exclude still-supported 22 users (including review-gate's own `@types/node ^22`
+  baseline) for no criterion-driven reason; everything used is stable well below 22.
+- **CLI shell arg handling** — `node:util` `parseArgs` (stdlib; stable). No arg-parsing
+  dependency (AC-12/NC-3).
+- **Repo facts reader** — the `git` CLI (any modern 2.x) invoked via `node:child_process`
+  `execFile` — argv array, no shell, read-only commands only.
+- **Checker test suite** — `node:test` + `node:assert/strict`, run via `node --test`. Stable
+  since Node 20.0.0 — checked 2026-07-02,
+  [node:test docs](https://nodejs.org/docs/latest-v20.x/api/test.html). Chosen over the repo's
+  existing vitest (review-gate's devDependency): reusing it would force agent-sdlc to grow a
+  `package.json` and an install step, violating NC-3; `node:test` keeps the plugin zero-dep even
+  at dev time. **ADR-0001 fit verified empirically:** `node --test` prints each passing test's
+  name verbatim in its output (`ok 1 - <test name>`), so the checker's own green-bar evidence
+  satisfies the name-appearance linkage.
+
+### Green bar (declared — agent-sdlc's first executable code)
+
+```
+node --check agent-sdlc/checker/sdlc-check.mjs   # syntax gate (compile analog)
+node --test agent-sdlc/checker/                  # the checker's test suite
+```
+
+No lint, format-check, or typecheck: none exist in this plugin, and adding one would be a
+needless dependency. review-gate's green bar is separate and unchanged.
+
+### Component-to-product map
+
+| Design kind | Product |
+| --- | --- |
+| CLI shell | Node ≥ 22 ESM + `node:util` `parseArgs` |
+| Spec parser | Node stdlib (`node:fs`, `node:path`) |
+| Repo facts reader | `git` 2.x via `node:child_process` `execFile` |
+| Check suite | pure ESM (no runtime products) |
+| Reporter | Node stdlib (stdout/stderr, `process.exitCode`) |
+| Checker test suite | `node:test` + `node:assert/strict` |
+
+### Unverified / flagged
+
+- Node's docs warn reporter output format is "subject to change between versions." The
+  name-appearance linkage tolerates format drift (a substring check over captured text; test
+  names have printed in every reporter since the runner went stable), but this is the recorded
+  caveat rather than a quiet assumption.
+
+### Glossary terms touched
+
+None.
