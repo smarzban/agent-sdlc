@@ -1,7 +1,52 @@
 # Finishing — push, PR, and review-gate invocation
 
-Mechanics for ship: synthesizing the PR from the spec, the `review-gate` invocation contract, the
-portable fallback, and the worktree rule.
+Mechanics for ship: the verification report + AC → proof map, synthesizing the PR from the spec, the
+`review-gate` invocation contract, the portable fallback, and the worktree rule.
+
+## Verification report + proof map (pre-PR, AC-13/14/16/18)
+
+Before pushing or opening the PR, ship writes `specs/<feature>/verification-report.md` — a sibling of
+`gate-report.md`/`build-report.md` (process state kept beside the spec, per the artifact model) — and
+runs the checker against it. This is the terminal mechanical settle of "every AC met" against
+captured reality, distinct from the post-PR review-gate panel.
+
+- **Row grammar:** a "Criterion | Type | Proof" table, one row per `AC-N` the spec defines (the
+  checker's AC-13 completeness rule scopes to defined ACs only — `NC-N` rows are not required):
+
+  ```markdown
+  | Criterion | Type | Proof |
+  | --- | --- | --- |
+  | AC-1 | test-backed | tests/foo.test.mjs > rejects a dangling ID |
+  | AC-15 | reviewer-checked | Do gate/build/ship each mandate the checker at a defined point? Yes — see SKILL.md step 3/step-N. |
+  ```
+
+- **test-backed rows** name the test identifier(s) that prove the criterion (comma-separated if more
+  than one). Each named identifier **must appear verbatim** in the ledger's captured green-bar
+  evidence text (ADR-0001's name-appearance linkage) — the checker's AC-14 fails naming the row
+  otherwise. Pull identifiers from `build-report.md`'s evidence blocks; never name a test that was not
+  actually captured running green.
+- **reviewer-checked rows** record the ANSWERED pass/fail question — the answer itself is the proof.
+  The checker's AC-13 only requires the `Proof` cell be non-empty; it does not, and cannot, judge
+  whether the answer is correct (NC-4 — not mechanically decidable). Ship supplies these answers
+  pre-PR from its own Spec-Conformance read of the skill/spec text, and may note where the post-PR
+  review corroborates them.
+- **Every defined `AC-N` needs a row.** A missing row, or a row with an empty `Proof` cell, is an
+  AC-13 finding naming the criterion.
+
+**Run the checker pre-PR, report required:**
+
+```bash
+node agent-sdlc/checker/sdlc-check.mjs specs/<feature>/<feature>.md --require ledger \
+  --require verification-report
+```
+
+Sequence this **before** `gh pr create` — it is the mechanical spine gate; the post-PR
+`/review-gate:review-gate` panel (below) is the separate judgment gate. Runtime present → run,
+interpret the exit code: 0 = corroborated, proceed to push/PR. Nonzero, or the checker crashing, is
+itself a failed check (fail-closed) → **stop-and-ask**: do not open the PR, or if one is already open
+do not treat it as shipped. Any human override to proceed past a failed check must be **recorded in
+the PR body** (AC-16), not merely stated — see the PR body section below. Runtime absent → write an
+**announced degraded fallback** line — never a silent skip.
 
 ## PR body — synthesized from the spec
 
@@ -13,6 +58,12 @@ Build the PR title and body from `specs/<feature>/<feature>.md` (and the `SHORTC
   - **Summary** — the `## Brief` in a sentence or two.
   - **Acceptance criteria** — the `AC-N` list (the contract this PR claims to meet).
   - **Coverage** — the task→criterion map from the `## Plan`: which `T-N` advanced which `AC-N`.
+  - **Verification** — the full AC → proof map copied verbatim from
+    `specs/<feature>/verification-report.md` (AC-18 — it must appear here, not only in the spec
+    tree, so it is visible whenever ship completes) plus the checker corroboration result (pass, or
+    stop-and-ask with the recorded human override, or an announced degraded fallback); if a checker
+    failure was overridden, state the override and its justification explicitly in this section
+    (AC-16 — the override lives in the PR body, not just in conversation).
   - **Known compromises** — any `SHORTCUT(T-N)` ceilings recorded in `build-report.md` (the
     deferred-but-bounded simplifications the build accepted); omit the section if there are none.
   - **Provenance** — when the plan was ingested from a non-canonical source (a Linear issue set, a
