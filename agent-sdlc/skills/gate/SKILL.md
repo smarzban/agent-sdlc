@@ -42,6 +42,14 @@ a verdict: ready to build, or not.
    runnable commands that define a passing build (compile, test, lint, format-check) — is declared
    and concrete (no placeholders), so build inherits one definition of "green".
 5. **Hygiene.** No unresolved TBDs, placeholders, or "decide later" markers remain.
+6. **Mechanical corroboration.** After checks 1–5, run the bundled checker as a second, automated
+   witness to the same chain: `node agent-sdlc/checker/sdlc-check.mjs specs/<feature>/<feature>.md`
+   (bare `node`, no install; a plain run auto-scopes to whatever artifacts exist at gate time — do
+   not `--require` the ledger or verification report, they don't exist yet). `node` present -> run it
+   and interpret the exit code: 0 = corroborated; **nonzero, or the checker crashing, is itself a
+   failed check** (fail-closed) — it blocks the verdict exactly like a Critical finding, even if
+   checks 1–5 came back clean. `node` absent -> checks 1–5 still stand alone, but state a loud,
+   explicit **degraded fallback** line in the report; never skip this check silently.
 
 ## Checklist (do in order)
 
@@ -52,13 +60,19 @@ a verdict: ready to build, or not.
 3. **Note provenance + entry point** record which sections carry a source marker (materialized, not
    hand-authored) and where the chain was entered; treat explicitly `untraced` links as entry
    artifacts to surface, not defects to block on.
-4. **Run the five checks** mechanically, not by impression. The value of this gate is the literal
-   walk.
-5. **Severity-rate each finding** Critical (blocks build), High (blocks build), Medium, Low.
-6. **Route each finding** name the owning stage that should fix it (criteria, design, techstack, or
+4. **Run checks 1–5** mechanically, not by impression. The value of this gate is the literal walk.
+5. **Run the checker (check 6)** invoke `sdlc-check` over the spec when `node` is present. A nonzero
+   exit or a crash is a failed check — do not issue *ready to build*; treat it as a stop-and-ask, and
+   if a human explicitly overrides it, record the override in `gate-report.md` (who/what, and why the
+   verdict proceeded despite the failed check). `node` absent -> write the degraded-fallback line into
+   the report now, so it can't be dropped later.
+6. **Severity-rate each finding** Critical (blocks build), High (blocks build), Medium, Low. A failed
+   checker run (check 6) rates Critical.
+7. **Route each finding** name the owning stage that should fix it (criteria, design, techstack, or
    plan) and a suggested next action.
-7. **State the verdict** ready to build only if there are no Critical or High findings.
-8. **Write `gate-report.md`** and stop. Do not fix anything. If Linear sync is enabled in
+8. **State the verdict** ready to build only if there are no Critical or High findings AND check 6
+   did not fail (or its failure was explicitly overridden and the override is recorded).
+9. **Write `gate-report.md`** and stop. Do not fix anything. If Linear sync is enabled in
    `.agent-sdlc/config.json`, also post the gate's status update + report via the `linear-sync` skill.
 
 ## Principles
@@ -70,6 +84,11 @@ a verdict: ready to build, or not.
 - **Route, don't repair.** Each fix belongs to the stage that produced the gap. Send it back there.
 - **Believe the artifacts, flag the contradictions.** Take each artifact at face value and surface
   where they disagree, rather than guessing the intent.
+- **Corroborate, don't just impress-check.** The checker is a second, mechanical witness to the same
+  chain — a nonzero exit means the automation caught something the walk missed, or contradicts it.
+  Either way that's a real finding, not noise to wave past.
+- **Degrade loud, never quiet.** No `node`, no corroboration — the manual checks still stand, but say
+  so in the report. A silent skip reads as a clean pass it isn't.
 
 ## Rationalizations (excuses to skip the bar, and the rebuttal)
 
@@ -79,6 +98,8 @@ a verdict: ready to build, or not.
 | "It obviously hangs together, skip the chain walk." | The mechanical walk is the entire value. Impressions miss the orphan task and the uncovered criterion. |
 | "Downgrade this so the build can start." | Severity is honest or the gate is decoration. Block on Critical and High. |
 | "No need to name the owning stage." | A finding with no owner does not get fixed. Route it. |
+| "The checker isn't installed here, just skip check 6." | `node` absent is a degraded fallback, announced in the report — not a silent skip. |
+| "sdlc-check failed but the manual walk looked fine, issue ready to build anyway." | A failed checker run is a failed check — stop-and-ask. Proceeding needs an explicit, recorded human override. |
 
 ## Red flags (stop and fix the gate's behavior)
 
@@ -89,11 +110,15 @@ a verdict: ready to build, or not.
 - Findings stated as impressions rather than located in a specific artifact.
 - An `untraced` link or a materialized section silently dropped from the report — a mid-chain entry
   passed off as a fully-traced chain (the same failure as silently dropping review coverage).
+- A "ready to build" verdict issued while `sdlc-check` failed, with no recorded override.
+- The checker silently skipped when `node` was absent, instead of an announced degraded fallback.
 
 ## Done when
 
 - The full chain has been walked for every criterion.
-- All five checks have run.
+- All six checks have run, including the checker's mechanical corroboration — or, when `node` was
+  absent, a loud degraded fallback is recorded in its place.
+- A failed checker run either blocked the verdict or was overridden with the override recorded.
 - Every finding is severity-rated, located, owner-named, and given a next action.
 - A clear verdict is stated.
 - `gate-report.md` is written, and nothing else was modified.
@@ -107,12 +132,18 @@ a verdict: ready to build, or not.
 - **Mid-chain entry / coverage note** (when applicable) — if any section was materialized from an
   external source or any upstream link is `untraced`: name the entry stage, the source (from the
   provenance marker), and which links are unvetted upstream. Visible, never a silent pass.
+- **Checker corroboration result** — pass, or failed (stop-and-ask stated, plus the recorded override
+  if one was taken), or an announced degraded fallback (`node` absent). Never left implicit.
 - **Verdict** ready to build, or not, with the blocking findings listed.
 
 ## Conventions
 
 - Lives at `specs/<feature>/gate-report.md`. Read-only over every other artifact.
 - Run after the `## Plan` section exists and before build. Re-run after any fix until the verdict is clean.
+- Invokes `agent-sdlc/checker/sdlc-check.mjs` (bare `node`, no install) after its own chain walk for
+  mechanical corroboration, mirroring the existing ship <-> review-gate contract: present and clean ->
+  corroborated; present and failing (or crashing) -> stop-and-ask, override recorded; absent -> an
+  announced degraded fallback, never a silent skip. The checker is read-only, same as the gate itself.
 - May be invoked **inline by `build`** on a freshly materialized plan (build runs the gate itself when
   no verdict exists for the plan in hand), as well as standalone — the checks are identical either way.
 - Critical and High findings block build; the owning stage fixes them and the gate is re-run.
