@@ -314,3 +314,141 @@ $ node --test "agent-sdlc/checker/*.test.mjs"
 # todo 0
 (exit 0)
 ```
+
+**Build-complete comprehensive green-bar evidence (per-test listing).** The full `node --test`
+per-test `ok N - <name>` output at build-complete, captured at the contract's granularity so the
+verification report's test-backed proof rows link by name-appearance (ADR-0001 / AC-14). Re-captured
+per dogfood catch #6 — the per-task blocks above recorded summary counts only, which could not
+satisfy AC-14 linkage. This block is the union source AC-14 searches.
+
+```
+$ node --test "agent-sdlc/checker/*.test.mjs"
+ok 1 - node --check sdlc-check.mjs passes (valid syntax)
+ok 2 - no spec path: exits nonzero and names the problem
+ok 3 - nonexistent spec path: exits nonzero and names the problem
+ok 4 - an existing but non-spec path (no "\#\#" sections) exits nonzero, never a pass (AC-10, wired at T-9)
+ok 5 - importing the module does not execute the CLI (main-guard regression)
+ok 6 - readRepoFacts on a non-repo directory yields a typed failure, not a pass
+ok 7 - readRepoFacts on a real repo returns the commit list (id, message)
+ok 8 - a done task with no commit referencing it fails naming the task
+ok 9 - a commit referencing two task IDs fails the done task(s) it names
+ok 10 - exactly one commit per done task passes (no finding)
+ok 11 - a non-repo directory yields a typed failure that the rule/tests assert on (not a pass)
+ok 12 - T-1 does not cross-match a commit that only references T-12
+ok 13 - T-12 itself is correctly matched by its own commit (not swallowed by T-1 logic)
+ok 14 - checkLedgerVsGit is exhaustive: multiple offending done tasks all reported
+ok 15 - a done task with more than one commit referencing only it fails (ambiguous, not exactly one)
+ok 16 - a task ID mentioned only in a commit BODY (not its subject) is not a reference
+ok 17 - a docs(area) commit whose SUBJECT PROSE mentions a task ID does not count as referencing it
+ok 18 - revert-probe: the docs-prose case fails whole-subject matching, passes scope-position matching
+ok 19 - a multi-task SCOPE still references BOTH tasks (feat(T-3, T-4): …)
+ok 20 - an unscoped or area-scoped commit references no task (chore: bump / fix(area): …)
+ok 21 - a task not marked done is never checked, even with zero matching commits
+ok 22 - AC-7 happy path: a fully valid fixture (spec + ledger + report + matching git history) exits 0
+ok 23 - AC-7 mid-chain-entry variant: well-formed provenance + untraced marker exits 0 with a coverage NOTE
+ok 24 - --require verification-report with the file absent exits nonzero, naming the missing artifact
+ok 25 - --require ledger with the file absent exits nonzero, naming the missing artifact
+ok 26 - an unrecognized --require token is a usage error: exits nonzero, never silently ignored
+ok 27 - auto-scoping: the same spec with no ledger and no report present still exits 0, no spurious findings
+ok 28 - AC-11/NC-2: a full run leaves the fixture tree byte-identical (no file created/modified/deleted)
+ok 29 - AC-12/NC-1(a): every import in sdlc-check.mjs is node:-prefixed stdlib only
+ok 30 - AC-12/NC-1(b): the CLI completes under a minimal env (PATH only — enough to find node+git)
+ok 31 - fail-closed: an unparseable spec (no "\#\#" sections) exits nonzero, never a pass (AC-10 end-to-end)
+ok 32 - fail-closed: a ledger present but the run directory is not a git repo exits nonzero (facts-failure, not a silent pass)
+ok 33 - missing spec content (undefined) fails cleanly, naming the file and the problem
+ok 34 - null spec content fails cleanly
+ok 35 - non-string spec content fails cleanly (never throws)
+ok 36 - empty string spec content fails cleanly
+ok 37 - whitespace-only spec content fails cleanly
+ok 38 - unparseable content (no "\#\#" sections at all) fails cleanly, never an empty-model pass
+ok 39 - defaults the file name in the error when none is given
+ok 40 - parses "\#\#" sections in order, ignoring "\#\#\#" subheadings as separate sections
+ok 41 - parses AC and T IDs wherever they are defined
+ok 42 - parses component list entries under a Components subheading into synthetic C-N IDs
+ok 43 - does not mistake an unrelated numbered/bold list for component definitions
+ok 44 - captures a task's Advances/Component/Deps citations as trace references
+ok 45 - resolves a Component citation by name to its synthetic C-N id
+ok 46 - captures a coverage-map table row as a trace reference (citing site + cited IDs)
+ok 47 - expands a slash-abbreviated citation run, carrying the prefix across the whole run
+ok 48 - expands a multi-digit slash-abbreviated citation run
+ok 49 - an out-of-scope NC-N citation does not leak its embedded C-N
+ok 50 - name-resolution does not inject a false C-ref from an Advances/Deps field
+ok 51 - a table whose second column is not component/advancement is not read as a trace map
+ok 52 - parses a well-formed provenance marker into source + date, on its section
+ok 53 - a provenance marker missing the source identifier parses as present-but-malformed, not a parse failure
+ok 54 - a provenance marker missing an absolute date parses as present-but-malformed
+ok 55 - a provenance marker with a non-absolute date (e.g. "recently") is malformed
+ok 56 - a hand-authored section (no leading HTML comment) carries no provenance marker
+ok 57 - parses an explicit untraced marker with its reason, attributed to the owning task
+ok 58 - an untraced marker with no parenthetical reason still parses (empty reason, not dropped)
+ok 59 - a task with a real AC reference carries no untraced marker
+ok 60 - missing ledger content fails cleanly, naming the file and the problem
+ok 61 - unparseable ledger content (no task table, no evidence headings) fails cleanly
+ok 62 - parses the task ledger table into status/commit/AC-advanced rows
+ok 63 - parses a fenced green-bar evidence block under a "\#\#\# T-N (@ SHA)" heading
+ok 64 - a ledger heading with no fenced block at all is a present-claim with empty evidence (a bare claim), not dropped
+ok 65 - parses real-shaped multi-task ledger evidence (grounded in the actual build-report.md shape)
+ok 66 - missing verification-report content fails cleanly
+ok 67 - unparseable verification-report content (no proof-map table) fails cleanly
+ok 68 - parses a test-backed proof-map row with its named test identifier
+ok 69 - parses a reviewer-checked proof-map row with its answered pass/fail question
+ok 70 - a proof-map row with an empty proof cell still parses (empty proof, for T-13's rule to flag)
+ok 71 - three distinct findings: all three appear in the text, exit code nonzero (AC-9 + AC-8)
+ok 72 - empty results list: exit code 0 and a clean pass line (AC-8 pass side)
+ok 73 - only notes, no findings: exit code 0 (notes never fail) and notes rendered distinctly
+ok 74 - mixed findings and notes: nonzero exit, both rendered in visually distinct sections
+ok 75 - exhaustiveness: many findings are all present, never truncated
+ok 76 - exit code is exactly 0 or nonzero — a finding present derives nonzero, never 0
+ok 77 - summary line reports counts (asserts the literal section headers, not incidental digits)
+ok 78 - unexpected type: rendered (not silently dropped) AND forces a nonzero exit (fail-closed, review Minor \#1)
+ok 79 - well-typed items are unaffected by the fail-closed change: a real note still yields exit 0
+ok 80 - missing ids: formatReport does not throw and still renders (honest no-error-path, review Minor \#2)
+ok 81 - a dangling trace reference yields a finding naming the missing ID
+ok 82 - trace integrity returns ALL dangling refs, not just the first
+ok 83 - a dangling ref inside a coverage-map row is also flagged (rule is generic over trace kinds)
+ok 84 - a fully-resolved trace set yields no trace-integrity findings
+ok 85 - an AC reached by no task yields a finding naming it
+ok 86 - a coverage-map row (Advanced by tasks) counts as reaching an AC, same as an Advances field
+ok 87 - a Criterion-to-component map row does NOT count as task coverage (component refs, not task refs)
+ok 88 - every AC reached: no forward-coverage findings
+ok 89 - a task with an explicit untraced marker yields a coverage note, not a finding
+ok 90 - a task with neither an AC reference nor an untraced marker yields a finding naming it
+ok 91 - citing only a DANGLING AC does not satisfy backward coverage (still a finding, not silently OK)
+ok 92 - a task with a real AC reference: no backward-coverage finding or note
+ok 93 - a task reached ONLY via a Task-to-criterion coverage-map row passes backward coverage (no finding, no note)
+ok 94 - a map-only-linked task still needs the AC side to be a real, defined AC (dangling AC in the map does not discharge it)
+ok 95 - a fully clean model yields no findings from any of the three rules (only a marker-driven note, if any)
+ok 96 - the real enforcement-spine spec yields zero findings from all three rules (this feature would not block its own build)
+ok 97 - a provenance marker missing its source yields a finding naming the section
+ok 98 - a provenance marker missing its date yields a finding naming the section
+ok 99 - a well-formed provenance marker yields no finding
+ok 100 - a provenance marker with source and date present but date not absolute yields a finding naming the date as non-absolute
+ok 101 - a section with no provenance marker at all yields no finding (hand-authored, no marker attempt)
+ok 102 - a done task with no evidence entry at all yields a finding naming it
+ok 103 - a done task with an evidence heading but no fenced block yields a finding naming it
+ok 104 - a done task with a non-empty evidence block yields no finding
+ok 105 - a pending task with no evidence yields no finding (no claim yet)
+ok 106 - a done task with a whitespace-only fenced evidence block yields a finding naming it (fail-open guard)
+ok 107 - a done task with an empty fenced evidence block (blocks:[""]) yields a finding naming it
+ok 108 - the real enforcement-spine spec yields zero provenance-marker findings (no markers present)
+ok 109 - the real enforcement-spine ledger yields zero green-bar-evidence findings (T-1..T-4 done, each with captured evidence)
+ok 110 - a defined AC with no row at all in the proof map yields a finding naming it
+ok 111 - a proof-map row with an EMPTY proof cell yields a finding naming the criterion
+ok 112 - a reviewer-checked row with a recorded answer counts as present for AC-13 (no completeness finding)
+ok 113 - every defined AC covered by a non-empty row: no proof-map-completeness findings
+ok 114 - NC coverage decision: an NC criterion mentioned only in spec prose is OUT of proof-map-completeness scope (parseSpec never defines an NC id, so none is expected)
+ok 115 - a test-backed row whose named test is ABSENT from the captured evidence yields a finding naming the row
+ok 116 - a test-backed row whose named test IS present (name-appearance) in the captured evidence yields no finding
+ok 117 - a reviewer-checked row with a recorded answer is NOT subject to name-appearance linkage (no AC-14 finding even though nothing resembling it appears in evidence)
+ok 118 - name-appearance is searched across the UNION of all evidence entries, not just one task heading
+ok 119 - a proof cell naming SEVERAL test identifiers (comma-separated) requires each to appear; only the missing one is named
+ok 120 - an empty proof cell on a test-backed row yields no AC-14 finding (AC-13 already covers the empty-proof case)
+ok 121 - a verification report missing rows for TWO distinct defined ACs: the findings name BOTH criteria (exhaustiveness lock)
+ok 122 - a whitespace-only proof cell (parser-trimmed to empty) on a test-backed row yields a proof-map-completeness finding naming the criterion
+ok 123 - a row with a blank/unrecognized type cell is NOT subject to AC-14 linkage, but AC-13 still counts it present given a non-empty proof (current behavior, pinned)
+ok 124 - a complete, fully-linked proof map covering every defined AC yields no findings from either rule
+# tests 124
+# pass 124
+# fail 0
+(exit 0)
+```
