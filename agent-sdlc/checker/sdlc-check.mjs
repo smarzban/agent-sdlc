@@ -414,6 +414,18 @@ function splitTopBullets(bodyLines) {
   return blocks;
 }
 
+// A *Component:* field value that names nothing (`none`, the field's established null marker —
+// mirrors *Advances:*/*Deps:* fields, which are silently empty of refs the same way) or that cites
+// a pipeline-stage *skill text* (agent-sdlc's own convention — see CLAUDE.md/AC-15-18 — for a
+// "component" that is a `gate`/`build`/`ship` SKILL.md rather than a numbered `### Components`
+// entry, e.g. "gate skill text") is not a dangling citation, just outside the numbered component
+// list's own vocabulary. Scoped narrowly (an exact phrase check) so it can't blanket-launder an
+// arbitrary made-up name — "MissingWidget" doesn't match either escape hatch.
+function isNonDanglingComponentValue(raw) {
+  const lower = raw.toLowerCase();
+  return lower === 'none' || /\bskill texts?\b/.test(lower);
+}
+
 function extractFieldTraces(section, componentsByName) {
   const traces = [];
   const blocks = splitTopBullets(section.body.split('\n'));
@@ -430,14 +442,23 @@ function extractFieldTraces(section, componentsByName) {
       const raw = m[2].trim();
       const kind = m[1].toLowerCase();
       const refs = extractIdRefs(raw);
+      // A *Component:* field is the only trace kind that can cite by NAME (see
+      // resolveComponentRefs) rather than by ID, so it's the only kind where a citation can go
+      // completely unresolved without leaving so much as an ID token behind for checkTraceIntegrity
+      // to flag (AC-1's component half — H1). `none` is the field's established null marker
+      // (mirrors *Advances:*/*Deps:* fields, which are silently empty of refs the same way) and is
+      // never a dangling citation.
+      let unresolvedComponent = null;
       if (kind === 'component') {
         for (const id of resolveComponentRefs(raw, componentsByName)) refs.add(id);
+        if (refs.size === 0 && raw && !isNonDanglingComponentValue(raw)) unresolvedComponent = raw;
       }
       traces.push({
         from: fromId,
         kind,
         refs: [...refs],
         raw,
+        unresolvedComponent,
         line: section.line + block.startIdx + 1,
       });
     }
@@ -758,6 +779,17 @@ export function checkTraceIntegrity(model) {
         rule: 'trace-integrity',
         message: `${trace.from} cites ${ref} (${trace.kind}, line ${trace.line}), which is not defined anywhere in the spec`,
         ids: [ref],
+      });
+    }
+    // H1: a *Component:* field that cites a component by NAME and resolves to nothing (no C-N
+    // token, no name match — see extractFieldTraces) is just as dangling as an unresolved ID ref
+    // above, but never reaches `trace.refs` at all, so it needs its own arm here.
+    if (trace.kind === 'component' && trace.unresolvedComponent) {
+      findings.push({
+        type: 'finding',
+        rule: 'trace-integrity',
+        message: `${trace.from} cites component '${trace.unresolvedComponent}' (line ${trace.line}), which does not exist anywhere in the spec`,
+        ids: [trace.from],
       });
     }
   }

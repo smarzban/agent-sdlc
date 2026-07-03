@@ -92,6 +92,40 @@ test('a fully-resolved trace set yields no trace-integrity findings', () => {
   assert.deepEqual(checkTraceIntegrity(m), []);
 });
 
+// H1 (review-gate R1): a *Component:* field can cite a component by NAME rather than by ID (see
+// resolveComponentRefs), so a name matching no defined component previously produced NO ref at all
+// (no C-N token, no name match) and trace-integrity had nothing to flag — AC-1's component half
+// was unenforced for name-citations. Closes review finding M-42.
+
+test('a task citing a component by a name that matches no defined component yields a trace-integrity finding naming it', () => {
+  const m = model([
+    '## Design',
+    '### Components',
+    '1. **Gizmo** — does gizmo things.',
+    '',
+    '## Plan',
+    '- **T-1 — Do it.** Detail. *Component:* MissingWidget. *Deps:* none.',
+  ]);
+  const findings = checkTraceIntegrity(m);
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].type, 'finding');
+  assert.equal(findings[0].rule, 'trace-integrity');
+  assert.ok(findings[0].message.includes('MissingWidget'));
+  assert.deepEqual(findings[0].ids, ['T-1']);
+});
+
+test('a task citing a component by a name that DOES match a defined component yields no finding (no false positive)', () => {
+  const m = model([
+    '## Design',
+    '### Components',
+    '1. **Widget** — does widget things.',
+    '',
+    '## Plan',
+    '- **T-1 — Do it.** Detail. *Component:* Widget. *Deps:* none.',
+  ]);
+  assert.deepEqual(checkTraceIntegrity(m), []);
+});
+
 // --- AC-2: forward coverage ---
 
 test('an AC reached by no task yields a finding naming it', () => {
