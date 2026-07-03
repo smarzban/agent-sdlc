@@ -33,24 +33,45 @@ branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
    exists for the plan in hand. Proceed only on a clean verdict; else stop.
 2. **Isolate** set up an isolated workspace (detect existing isolation → native worktree tool → `git
    worktree` fallback). Run the **green bar** once — the commands `## Tech Stack` declares (compile,
-   test, lint, format-check): the baseline MUST be green before touching anything.
+   test, lint, format-check): the baseline MUST be green before touching anything. **Vacuous-green
+   exception (general rule):** if the green bar's target paths do not yet exist (a greenfield
+   feature — nothing to compile or test yet), the baseline is **vacuously green**, not red — report
+   it as such and proceed; the bar becomes binding from the first task that creates those paths
+   onward. This is not a per-feature carve-out — do not re-derive it in a plan's Notes.
 3. **Ledger** open `build-report.md`. If it already exists, resume from it plus `git log` — never
    re-run a task already marked done. Re-doing completed work is the most expensive failure here.
+   **Before continuing, invoke the checker** (resume invocation point, AC-15):
+   `node agent-sdlc/checker/sdlc-check.mjs specs/<feature>/<feature>.md --require ledger` (never
+   `--require verification-report` at build — that artifact is ship's, T-12). Runtime present → run,
+   interpret the exit code: 0 = corroborated, proceed; nonzero, or the checker crashing, is itself a
+   failed check (fail-closed) — **stop-and-ask**, do not resume task work; any human override must be
+   recorded in `build-report.md` (who/what, why continuing despite the failed check). Runtime absent
+   → write an **announced degraded fallback** line into `build-report.md` now — never a silent skip.
 4. **For each task `T-N`, in dependency order:**
    a. Dispatch the **implementer** subagent with a file brief for `T-N` only.
    b. Dispatch the **reviewer** subagent on the resulting diff.
    c. If the reviewer finds Critical/Important issues, dispatch a **fixer** and re-review (bounded).
    d. Verify the **green bar** is green — run the full declared set (compile, test, lint,
       format-check), read the output (verification-before-completion). Not just tests: lint or
-      format drift caught now is a clean commit; caught later is a reactive scramble.
+      format drift caught now is a clean commit; caught later is a reactive scramble. **Capture this
+      run** as the task's green-bar evidence — the command line(s) plus the output tail, verbatim.
    e. Commit: one atomic commit for the task, reflecting the reviewed code. Verify it compiles **in
       isolation** — run the bar against the staged snapshot (`git stash --keep-index
       --include-untracked` → bar → pop), not just the working tree: an under-staged commit can pass a
       working-tree check yet fail to build on checkout.
-   f. Update `build-report.md`: `T-N` done, the commit SHA, the `AC-N` it advanced.
+   f. Update `build-report.md`: `T-N` done, the commit SHA, the `AC-N` it advanced, and the captured
+      green-bar evidence as a fenced block beside the task — from the first task onward, never
+      deferred. This is the write side the checker's evidence-presence (AC-5) and
+      name-appearance-linkage (AC-14) checks read: a test-backed proof-map row's cited test
+      identifier must literally appear in this text (ADR-0001).
    g. If Linear sync is enabled in `.agent-sdlc/config.json`, transition `T-N`'s issue via the
       `linear-sync` skill.
-5. **Hand off** when every task is done and green: report "branch ready, run `/agent-sdlc:ship`".
+5. **Hand off** when every task is done and green: **invoke the checker again** (build-complete
+   invocation point, AC-15) — same command as step 3 (`--require ledger`, never
+   `--require verification-report`). Same interpretation: nonzero or a crash is a failed check →
+   stop-and-ask, do not hand off, human override recorded in `build-report.md`; runtime absent →
+   announced degraded fallback recorded in `build-report.md`. Only once corroborated (or the
+   degraded fallback is recorded): report "branch ready, run `/agent-sdlc:ship`".
 
 The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and ledger recovery are in
 [reference/subagent-loop.md](reference/subagent-loop.md). The disciplines the subagents follow are in
@@ -77,6 +98,14 @@ The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and le
   green after bounded fixes: record it blocked and ask. Do not paper over an unsettled plan.
 - **Review at two scales.** Every task gets a cheap reviewer subagent here; the whole PR gets the
   heavy `review-gate` once, at ship. Both are real gates; neither replaces the other.
+- **Evidence is captured text, never a checkbox.** Each green-bar run is recorded verbatim — the
+  command plus its output tail — beside the task, from the first task onward. A task marked done
+  with no evidence block is not done.
+- **Corroborate at resume and at hand-off.** The checker is a second, mechanical witness to the
+  ledger/trace/commits so far — run it before continuing after a break and again before ship. A
+  nonzero exit or a crash is a failed check, not noise.
+- **Degrade loud, never quiet.** No `node` at either invocation point — the loop still runs, but say
+  so in `build-report.md`. A silent skip reads as a clean pass it isn't.
 
 ## Rationalizations (excuses to skip the bar, and the rebuttal)
 
@@ -89,6 +118,10 @@ The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and le
 | "This task won't go green, I'll wire the next one and come back." | Errors compound. Stop the line: a blocked task is recorded and raised, not deferred. |
 | "Trust my memory of what's done after the compaction." | Re-running a done task is the costliest failure. Read the ledger and `git log`. |
 | "The plan came from Linear/a doc, it's already reviewed — skip the gate." | A source is not a verdict. An unvetted plan is unvetted whatever its origin — run the gate inline, then build. |
+| "The checker isn't installed here, just skip resume/build-complete." | `node` absent is a degraded fallback, announced in `build-report.md` — not a silent skip. |
+| "`sdlc-check` failed but the task looks fine, proceed anyway." | A failed checker run is a failed check — stop-and-ask. Proceeding needs an explicit, recorded human override. |
+| "I'll add the evidence block later, once more tasks land." | Evidence is captured from the first task, never deferred — a gap left for later is a hole the checker (AC-5/AC-14) will find. |
+| "The baseline is red because the target files don't exist yet — stop." | Absence of the declared paths is vacuous green, not red — greenfield has nothing to fail. Proceed; the bar binds once the paths exist. |
 
 ## Red flags (stop and fix)
 
@@ -103,12 +136,22 @@ The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and le
 - Building past a blocked task instead of stopping to ask.
 - An ingested/external plan built without an inline gate verdict, or with fabricated `AC-N` trace
   links instead of an honest `untraced` mark.
+- A task marked done with no captured green-bar evidence block.
+- Proceeded to the next task at resume, or to ship at build-complete, while `sdlc-check` failed with
+  no recorded override.
+- The checker silently skipped when `node` was absent, instead of an announced degraded fallback.
+- The baseline halted on a greenfield absence instead of recording vacuous green.
 
 ## Done when
 
 - Every `T-N` is implemented test-first, reviewed, and committed atomically, the green bar green
   (tests, lint, format-check) between each, and each commit verified to compile in isolation.
 - `build-report.md` records every task done with its SHA and `AC-N`; no task left in-progress.
+- Every done task carries a captured green-bar evidence block in `build-report.md`, present from the
+  first task onward.
+- The checker corroborated at resume (if resuming) and at build-complete — or, for either point that
+  lacked a runtime, an announced degraded fallback is recorded in its place. A failed checker run
+  either blocked the loop or was overridden with the override recorded.
 - The branch is green end to end.
 - Linear issues are transitioned to Done where sync is enabled (or skipped cleanly where it is not).
 - The hand-off to `/agent-sdlc:ship` is stated.
@@ -117,9 +160,12 @@ The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and le
 
 - Product code on a feature branch: one atomic, reviewed, green commit per task.
 - `specs/<feature>/build-report.md` — the resumable ledger: per task `T-N` its status (done /
-  in-progress / blocked), commit SHA, the `AC-N` advanced, any blocker note, and any
-  deferred-shortcut ceilings (`SHORTCUT(T-N)`) the task left in the code. Mirrors
-  `gate-report.md`'s role — process state beside the spec, never inside it.
+  in-progress / blocked), commit SHA, the `AC-N` advanced, any blocker note, a captured green-bar
+  evidence block (fenced command + output tail, from the first task onward), and any
+  deferred-shortcut ceilings (`SHORTCUT(T-N)`) the task left in the code, plus the checker's
+  resume/build-complete corroboration result (pass, stop-and-ask with any recorded override, or an
+  announced degraded fallback). Mirrors `gate-report.md`'s role — process state beside the spec,
+  never inside it.
 
 ## Conventions
 
@@ -134,4 +180,9 @@ The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and le
 - Runs after a clean gate verdict; re-run is safe and resumes from the ledger. The plan may be
   materialized from an external source (Linear/doc) — build runs the gate inline when no verdict
   exists for it (see [reference/ingesting-plans.md](reference/ingesting-plans.md)).
+- Invokes `agent-sdlc/checker/sdlc-check.mjs specs/<feature>/<feature>.md --require ledger` (bare
+  `node`, no install) at resume and at build-complete, mirroring gate's and ship's checker contract:
+  present and clean → corroborated; present and failing (or crashing) → stop-and-ask, override
+  recorded in `build-report.md`; absent → an announced degraded fallback, never a silent skip. Never
+  `--require verification-report` at build — that artifact is ship's (T-12).
 - Downstream consumer: `/agent-sdlc:ship` takes the green branch to a reviewed PR.

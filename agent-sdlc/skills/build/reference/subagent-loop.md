@@ -12,7 +12,11 @@ the disciplines the subagents follow are in the sibling reference files.
    `git worktree add` under `.worktrees/<feature>` from the base branch.
 3. **Baseline green.** Run the full green bar once before any task — the commands `## Tech Stack`
    declares (compile, test, lint, format-check). If the baseline is red, stop — you cannot tell your
-   regressions from pre-existing ones. Report "baseline N passing" and proceed.
+   regressions from pre-existing ones. Report "baseline N passing" and proceed. **Vacuous-green
+   exception (general rule, not a per-feature carve-out):** a green bar whose target paths do not yet
+   exist (greenfield — nothing to compile or test yet) is not red, it is **vacuously green** — there
+   is nothing to fail. Report it as such and proceed; the bar becomes binding from the first task
+   that creates those paths, not before.
 4. **Provenance for cleanup.** Note whether you created the worktree (`.worktrees/`) or inherited it.
    ship preserves the worktree on the PR path; only an explicitly created, finished one is cleaned.
 
@@ -76,9 +80,18 @@ changes, then run the bar against exactly what will be committed — `git stash 
 --include-untracked`, run the bar, `git stash pop` — or, after committing, build a clean checkout of
 HEAD. An under-staged commit is a broken commit even when the working tree is green.
 
+**Capture the evidence block.** One of the green-bar runs above is the task's evidence: a fenced
+block recording the command line(s) exactly as run, plus the output tail, verbatim — never a
+checkbox. Capture it from the first task onward, never deferred: it is what the checker's
+evidence-presence check (AC-5) and name-appearance-linkage check (AC-14) read, so a test-backed
+proof-map row's cited test identifier must literally appear in this text (ADR-0001). The canonical
+worked example is this very feature's own ledger — `specs/enforcement-spine/build-report.md`'s
+`## Green-bar evidence` section (per-task `### T-N (@ SHA)` blocks).
+
 The message states the task and the `AC-N` (e.g. `feat(T-3): root resolver — advances AC-1`). Then
-updates the ledger — including any `SHORTCUT(T-N)` markers the diff introduced, so deferred ceilings
-are recorded beside the task in `build-report.md` rather than buried in the code.
+updates the ledger — the captured green-bar evidence block for this task, plus any `SHORTCUT(T-N)`
+markers the diff introduced, so evidence and deferred ceilings are recorded beside the task in
+`build-report.md` rather than buried in the code or lost after the run.
 
 ## Model selection (optional, platform-dependent)
 
@@ -94,4 +107,11 @@ dispatch with the default model; the loop is unchanged.
 1. Read `build-report.md` for the per-task status.
 2. Cross-check with `git log` — a task with a commit is done even if the ledger missed the write.
 3. Resume at the first task not marked done. **Never re-run a done task.**
+4. **Invoke the checker before continuing** (resume invocation point, AC-15) — a second, mechanical
+   witness to 1–3: `node agent-sdlc/checker/sdlc-check.mjs specs/<feature>/<feature>.md --require
+   ledger` (never `--require verification-report` here — that artifact is ship's). Runtime present →
+   interpret the exit code: 0 proceeds; nonzero, or the checker crashing, is a failed check
+   (fail-closed) — **stop-and-ask**, do not resume task work, and record any human override in
+   `build-report.md`. Runtime absent → write an announced degraded fallback line into
+   `build-report.md` — never a silent skip.
 Trust the ledger and git history over any recollection of what happened before the break.
