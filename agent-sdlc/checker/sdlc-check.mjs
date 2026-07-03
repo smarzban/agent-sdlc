@@ -1000,6 +1000,70 @@ export function checkProofEvidenceLinkage(verificationReport, ledger) {
   return findings;
 }
 
+// --- Reporter (T-8): exhaustive findings + exit derivation ----------------------------------
+//
+// formatReport() is pure: `results` in (the flat concatenation of every rule's output — findings
+// and notes, in whatever order the caller supplied), `{ text, exitCode }` out. No I/O, no
+// `process.exit`, no writes, no git — the CLI (T-9) is the only thing that prints `text` and sets
+// `process.exitCode = exitCode`. No error path: `results` is always an already-produced array of
+// well-shaped items (every rule task before this one guarantees the shape), so there is nothing
+// here to fail on.
+//
+// `type` is the sole discriminant, per every rule task's shared contract:
+//   { type: 'finding' | 'note', rule, message, ids }
+// Exit derivation is FAIL-CLOSED on the discriminant itself: 'note' is the only type that does not
+// count as a finding, so exitCode is 0 IFF every item in `results` is a 'note' (equivalently: 1 iff
+// at least one item's type is anything other than 'note'). This is deliberately NOT
+// `type === 'finding'` — that positive-match form is fail-OPEN: an item with an unexpected/mistyped
+// `type` (e.g. a typo `'Finding'`) would match neither `'finding'` nor `'note'`, vanish from both
+// buckets, and let the run exit 0 with the defect invisible. Under the fail-closed form such an item
+// falls into `findings` (not `'note'` -> counts, and renders in the Findings section, exhaustively,
+// same as any other finding) so it is surfaced and forces a nonzero exit instead of silently passing.
+// Well-typed items are unaffected: a real 'finding' still counts, a real 'note' still doesn't.
+//
+// Rendering is exhaustive (AC-9): every finding and every note is rendered, in the order given,
+// never truncated or short-circuited. Findings and notes render in two separate, distinctly
+// labelled sections ("Findings" / "Notes") so a reader can tell a blocking finding from an
+// informational note at a glance — never interleaved. A results list with neither renders a single
+// clean pass line instead of two empty section headers (a reporter that always prints "Findings
+// (0):" on the happy path is noise, not signal).
+//
+// No error path, made honest: `ids` defaults to `[]` when missing/undefined so a shape-variant item
+// (e.g. a rule that forgot to set `ids`) is rendered, not thrown on — the minimal guard that backs
+// the "no error path" claim above, not general validation.
+function formatItem(item) {
+  const ids = Array.isArray(item.ids) ? item.ids : [];
+  return `  - [${item.rule}] ${item.message} (ids: ${ids.join(', ')})`;
+}
+
+export function formatReport(results) {
+  const findings = results.filter((r) => r.type !== 'note');
+  const notes = results.filter((r) => r.type === 'note');
+  const exitCode = findings.length === 0 ? 0 : 1;
+
+  if (findings.length === 0 && notes.length === 0) {
+    return { text: 'sdlc-check: all checks passed — 0 findings, 0 notes.\n', exitCode };
+  }
+
+  const lines = [];
+  lines.push(`Findings (${findings.length}):`);
+  if (findings.length === 0) {
+    lines.push('  (none)');
+  } else {
+    for (const f of findings) lines.push(formatItem(f));
+  }
+  lines.push('');
+  lines.push(`Notes (${notes.length}):`);
+  if (notes.length === 0) {
+    lines.push('  (none)');
+  } else {
+    for (const n of notes) lines.push(formatItem(n));
+  }
+  lines.push('');
+  lines.push(`sdlc-check: ${findings.length} finding(s), ${notes.length} note(s).`);
+  return { text: lines.join('\n') + '\n', exitCode };
+}
+
 // Portable ESM main-guard: `import.meta.main` only exists from Node v22.18.0 (undefined, thus
 // falsy, on the declared floor's earlier 22.x patches — a false guard there would silently no-op
 // instead of failing closed). Compare resolved URLs instead: pathToFileURL() resolves the argv
