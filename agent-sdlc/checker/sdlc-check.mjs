@@ -910,6 +910,96 @@ export function checkLedgerVsGit(ledger, repoFacts) {
   return findings;
 }
 
+// AC-13 — proof-map completeness: every DEFINED acceptance criterion (`AC-N` from
+// `parseSpec().ids`, kind === 'AC') must have a row in the verification report's proof map, and
+// that row's `proof` cell must be non-empty. A criterion with no row at all -> a finding naming
+// it; a row present but with an empty `proof` -> a finding naming it too (parseVerificationReport
+// already trims the cell, so `''` is the exact absent-proof signal — no re-trimming needed).
+// Exhaustive: both checked for every AC, never short-circuited.
+//
+// NC-N coverage decision (plan asked to decide + justify): NC-N criteria are OUT of this rule's
+// scope — the universe iterated here is `parseSpec().ids` filtered to kind === 'AC', and NC-N
+// never reaches that set at all: T-2's own ID-definition grammar (`ID_DEFINITION_RE`, prefix
+// `AC|C|T` only) does not recognize an `NC-` prefix, so a `**NC-1**` heading is prose from
+// parseSpec's point of view, never a defined id (the same fact `checkTraceIntegrity`'s comment
+// already relies on for `refs`). Re-deriving an NC universe here would mean inventing a second,
+// parallel NC-parsing mechanism inside a rule function — scope creep on T-2/T-3's committed
+// grammar, which this task may not touch. The spec's own artifacts corroborate this split: the
+// per-row proof-map data contract and every criterion list in `enforcement-spine.md` name the
+// artifact "AC -> proof map" (never "AC/NC -> proof map"), and the Task-to-criterion coverage map
+// treats NC-1/NC-2 as riding on AC-11/AC-12's own oracle (no row of their own expected) and
+// NC-3/NC-4 as "reviewed at ship" (a whole-PR judgment, not a per-criterion recorded row).
+// `parseVerificationReport` still ACCEPTS an `NC-\d+` criterion cell (it does not reject one an
+// author chooses to add), but nothing here requires one to exist.
+export function checkProofMapCompleteness(model, verificationReport) {
+  const acIds = model.ids.filter((i) => i.kind === 'AC').map((i) => i.id);
+  const rowByCriterion = new Map(verificationReport.rows.map((r) => [r.criterion, r]));
+  const findings = [];
+  for (const ac of acIds) {
+    const row = rowByCriterion.get(ac);
+    if (!row) {
+      findings.push({
+        type: 'finding',
+        rule: 'proof-map-completeness',
+        message: `${ac} has no row in the verification report's proof map`,
+        ids: [ac],
+      });
+      continue;
+    }
+    if (row.proof === '') {
+      findings.push({
+        type: 'finding',
+        rule: 'proof-map-completeness',
+        message: `${ac}'s proof-map row has an empty proof`,
+        ids: [ac],
+      });
+    }
+  }
+  return findings;
+}
+
+// Test identifiers named in a test-backed proof cell are comma-separated (a row "may name one or
+// several" per the plan) — the same low-risk separator this file already uses for a multi-value
+// field elsewhere (`*Advances:* AC-1, AC-97, AC-98`, a `T-1, T-99` coverage-map cell): a markdown
+// table cell cannot itself contain an unescaped `|`, and a plain-text test identifier (a file path
+// plus a `>`-joined runner description, e.g. `tests/foo.test.mjs > case one`) never contains a
+// literal comma in practice, so splitting on `,` cannot misparse a single identifier into two.
+function extractTestIdentifiers(proof) {
+  return proof
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s !== '');
+}
+
+// AC-14 — proof-evidence linkage (ADR-0001's name-appearance contract): for each test-backed proof-
+// map row, every test identifier named in its `proof` cell must appear (plain substring —
+// name-appearance, never an interpretation of pass/fail) somewhere in the ledger's captured
+// green-bar evidence text. The search haystack is the UNION of every evidence entry's `text`
+// across the whole ledger: a proof-map row names a CRITERION, not a task, so there is no per-row
+// task to narrow the search to — ADR-0001 speaks of "the captured green-bar evidence" generically,
+// and the plan brief names the union as the reading. Reviewer-checked rows are exempt (their proof
+// is a recorded answer, not a test) — AC-13 above already covers their presence. A row with an
+// empty proof yields zero identifiers here (nothing to check appearance for) — AC-13 already
+// names that as a completeness failure, so AC-14 does not double-report it. Exhaustive: every
+// missing identifier across every row is reported, never just the first.
+export function checkProofEvidenceLinkage(verificationReport, ledger) {
+  const haystack = ledger.evidence.map((e) => e.text).join('\n');
+  const findings = [];
+  for (const row of verificationReport.rows) {
+    if (row.type !== 'test-backed') continue;
+    for (const testId of extractTestIdentifiers(row.proof)) {
+      if (haystack.includes(testId)) continue;
+      findings.push({
+        type: 'finding',
+        rule: 'proof-evidence-linkage',
+        message: `${row.criterion}'s proof-map row names a test ("${testId}") that does not appear in the captured green-bar evidence`,
+        ids: [row.criterion],
+      });
+    }
+  }
+  return findings;
+}
+
 // Portable ESM main-guard: `import.meta.main` only exists from Node v22.18.0 (undefined, thus
 // falsy, on the declared floor's earlier 22.x patches — a false guard there would silently no-op
 // instead of failing closed). Compare resolved URLs instead: pathToFileURL() resolves the argv

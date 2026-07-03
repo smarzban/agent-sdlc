@@ -9,11 +9,14 @@ import path from 'node:path';
 import {
   parseSpec,
   parseLedger,
+  parseVerificationReport,
   checkTraceIntegrity,
   checkForwardCoverage,
   checkBackwardCoverage,
   checkProvenanceMarkers,
   checkGreenBarEvidence,
+  checkProofMapCompleteness,
+  checkProofEvidenceLinkage,
 } from './sdlc-check.mjs';
 
 function model(spec) {
@@ -25,6 +28,12 @@ function model(spec) {
 function ledger(lines) {
   const result = parseLedger(lines.join('\n'), 'x.md');
   assert.equal(result.ok, true, 'fixture ledger must itself parse cleanly');
+  return result;
+}
+
+function verificationReport(lines) {
+  const result = parseVerificationReport(lines.join('\n'), 'x.md');
+  assert.equal(result.ok, true, 'fixture verification report must itself parse cleanly');
   return result;
 }
 
@@ -475,4 +484,317 @@ test('the real enforcement-spine ledger yields zero green-bar-evidence findings 
   const result = parseLedger(text, ledgerPath);
   assert.equal(result.ok, true, 'the real ledger must parse cleanly');
   assert.deepEqual(checkGreenBarEvidence(result), []);
+});
+
+// --- AC-13: proof-map completeness ---
+
+test('a defined AC with no row at all in the proof map yields a finding naming it', () => {
+  const m = model([
+    '## Acceptance Criteria',
+    '- **AC-1** — first, has a row.',
+    '- **AC-2** — second, missing entirely.',
+  ]);
+  const vr = verificationReport([
+    '| Criterion | Type | Proof |',
+    '| --- | --- | --- |',
+    '| AC-1 | test-backed | tests/foo.test.mjs > covers AC-1 |',
+  ]);
+  const findings = checkProofMapCompleteness(m, vr);
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].type, 'finding');
+  assert.equal(findings[0].rule, 'proof-map-completeness');
+  assert.deepEqual(findings[0].ids, ['AC-2']);
+});
+
+test('a proof-map row with an EMPTY proof cell yields a finding naming the criterion', () => {
+  const m = model(['## Acceptance Criteria', '- **AC-1** — has a row, but no proof.']);
+  const vr = verificationReport([
+    '| Criterion | Type | Proof |',
+    '| --- | --- | --- |',
+    '| AC-1 | test-backed |  |',
+  ]);
+  const findings = checkProofMapCompleteness(m, vr);
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].type, 'finding');
+  assert.equal(findings[0].rule, 'proof-map-completeness');
+  assert.deepEqual(findings[0].ids, ['AC-1']);
+});
+
+test('a reviewer-checked row with a recorded answer counts as present for AC-13 (no completeness finding)', () => {
+  const m = model(['## Acceptance Criteria', '- **AC-1** — reviewer-checked, answered.']);
+  const vr = verificationReport([
+    '| Criterion | Type | Proof |',
+    '| --- | --- | --- |',
+    '| AC-1 | reviewer-checked | pass — all three skills name the invocation point |',
+  ]);
+  assert.deepEqual(checkProofMapCompleteness(m, vr), []);
+});
+
+test('every defined AC covered by a non-empty row: no proof-map-completeness findings', () => {
+  const m = model([
+    '## Acceptance Criteria',
+    '- **AC-1** — first.',
+    '- **AC-2** — second.',
+  ]);
+  const vr = verificationReport([
+    '| Criterion | Type | Proof |',
+    '| --- | --- | --- |',
+    '| AC-1 | test-backed | tests/foo.test.mjs > case one |',
+    '| AC-2 | reviewer-checked | pass |',
+  ]);
+  assert.deepEqual(checkProofMapCompleteness(m, vr), []);
+});
+
+test('NC coverage decision: an NC criterion mentioned only in spec prose is OUT of proof-map-completeness scope (parseSpec never defines an NC id, so none is expected)', () => {
+  const m = model([
+    '## Acceptance Criteria',
+    '- **AC-1** — the only DEFINED criterion (parseSpec has no NC-kind ids).',
+    '- **NC-1** — a negative criterion, prose-only from parseSpec\'s point of view.',
+  ]);
+  assert.ok(
+    !m.ids.some((i) => i.id === 'NC-1'),
+    'sanity check: parseSpec does not define NC-1 as an id at all (T-2 grammar excludes NC)',
+  );
+  const vr = verificationReport([
+    '| Criterion | Type | Proof |',
+    '| --- | --- | --- |',
+    '| AC-1 | test-backed | tests/foo.test.mjs > case one |',
+  ]);
+  // No NC-1 row exists in the proof map, and none is required: NC-1 is simply not part of the
+  // universe this rule iterates (sourced from parseSpec().ids, kind === 'AC').
+  assert.deepEqual(checkProofMapCompleteness(m, vr), []);
+});
+
+// --- AC-14: proof-evidence linkage (name-appearance, ADR-0001) ---
+
+test('a test-backed row whose named test is ABSENT from the captured evidence yields a finding naming the row', () => {
+  const vr = verificationReport([
+    '| Criterion | Type | Proof |',
+    '| --- | --- | --- |',
+    '| AC-1 | test-backed | tests/foo.test.mjs > the missing case |',
+  ]);
+  const l = ledger([
+    '## Task ledger',
+    '| Task | Status |',
+    '| --- | --- |',
+    '| T-1 | done |',
+    '',
+    '### T-1 (@ `abc123`)',
+    '',
+    '```',
+    '$ node --test tests/foo.test.mjs',
+    'ok 1 - tests/foo.test.mjs > a completely different case',
+    '```',
+  ]);
+  const findings = checkProofEvidenceLinkage(vr, l);
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].type, 'finding');
+  assert.equal(findings[0].rule, 'proof-evidence-linkage');
+  assert.deepEqual(findings[0].ids, ['AC-1']);
+});
+
+test('a test-backed row whose named test IS present (name-appearance) in the captured evidence yields no finding', () => {
+  const vr = verificationReport([
+    '| Criterion | Type | Proof |',
+    '| --- | --- | --- |',
+    '| AC-1 | test-backed | tests/foo.test.mjs > the present case |',
+  ]);
+  const l = ledger([
+    '## Task ledger',
+    '| Task | Status |',
+    '| --- | --- |',
+    '| T-1 | done |',
+    '',
+    '### T-1 (@ `abc123`)',
+    '',
+    '```',
+    '$ node --test tests/foo.test.mjs',
+    'ok 1 - tests/foo.test.mjs > the present case',
+    '```',
+  ]);
+  assert.deepEqual(checkProofEvidenceLinkage(vr, l), []);
+});
+
+test('a reviewer-checked row with a recorded answer is NOT subject to name-appearance linkage (no AC-14 finding even though nothing resembling it appears in evidence)', () => {
+  const vr = verificationReport([
+    '| Criterion | Type | Proof |',
+    '| --- | --- | --- |',
+    '| AC-1 | reviewer-checked | pass — the skill text names the invocation point |',
+  ]);
+  const l = ledger([
+    '## Task ledger',
+    '| Task | Status |',
+    '| --- | --- |',
+    '| T-1 | done |',
+    '',
+    '### T-1 (@ `abc123`)',
+    '',
+    '```',
+    '$ node --test tests/foo.test.mjs',
+    'ok 1 - unrelated',
+    '```',
+  ]);
+  assert.deepEqual(checkProofEvidenceLinkage(vr, l), []);
+});
+
+test('name-appearance is searched across the UNION of all evidence entries, not just one task heading', () => {
+  const vr = verificationReport([
+    '| Criterion | Type | Proof |',
+    '| --- | --- | --- |',
+    '| AC-1 | test-backed | tests/bar.test.mjs > lives under a different task heading |',
+  ]);
+  const l = ledger([
+    '## Task ledger',
+    '| Task | Status |',
+    '| --- | --- |',
+    '| T-1 | done |',
+    '| T-2 | done |',
+    '',
+    '### T-1 (@ `abc123`)',
+    '',
+    '```',
+    '$ node --test tests/foo.test.mjs',
+    'ok 1 - tests/foo.test.mjs > unrelated case',
+    '```',
+    '',
+    '### T-2 (@ `def456`)',
+    '',
+    '```',
+    '$ node --test tests/bar.test.mjs',
+    'ok 1 - tests/bar.test.mjs > lives under a different task heading',
+    '```',
+  ]);
+  assert.deepEqual(checkProofEvidenceLinkage(vr, l), []);
+});
+
+test('a proof cell naming SEVERAL test identifiers (comma-separated) requires each to appear; only the missing one is named', () => {
+  const vr = verificationReport([
+    '| Criterion | Type | Proof |',
+    '| --- | --- | --- |',
+    '| AC-1 | test-backed | tests/foo.test.mjs > case one, tests/foo.test.mjs > case two |',
+  ]);
+  const l = ledger([
+    '## Task ledger',
+    '| Task | Status |',
+    '| --- | --- |',
+    '| T-1 | done |',
+    '',
+    '### T-1 (@ `abc123`)',
+    '',
+    '```',
+    '$ node --test tests/foo.test.mjs',
+    'ok 1 - tests/foo.test.mjs > case one',
+    '```',
+  ]);
+  const findings = checkProofEvidenceLinkage(vr, l);
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].type, 'finding');
+  assert.equal(findings[0].rule, 'proof-evidence-linkage');
+  assert.deepEqual(findings[0].ids, ['AC-1']);
+  assert.match(findings[0].message, /case two/);
+});
+
+test('an empty proof cell on a test-backed row yields no AC-14 finding (AC-13 already covers the empty-proof case)', () => {
+  const vr = verificationReport([
+    '| Criterion | Type | Proof |',
+    '| --- | --- | --- |',
+    '| AC-1 | test-backed |  |',
+  ]);
+  const l = ledger(['## Task ledger', '| Task | Status |', '| --- | --- |', '| T-1 | done |']);
+  assert.deepEqual(checkProofEvidenceLinkage(vr, l), []);
+});
+
+// --- AC-13 exhaustiveness lock (review Minor #2): TWO distinct missing ACs must BOTH be named —
+// guards against a future `break`-after-first-finding regression in checkProofMapCompleteness,
+// which the single-missing-AC test above cannot distinguish from exhaustive behavior. ---
+
+test('a verification report missing rows for TWO distinct defined ACs: the findings name BOTH criteria (exhaustiveness lock)', () => {
+  const m = model([
+    '## Acceptance Criteria',
+    '- **AC-1** — has a row.',
+    '- **AC-2** — missing entirely.',
+    '- **AC-3** — also missing entirely.',
+  ]);
+  const vr = verificationReport([
+    '| Criterion | Type | Proof |',
+    '| --- | --- | --- |',
+    '| AC-1 | test-backed | tests/foo.test.mjs > covers AC-1 |',
+  ]);
+  const findings = checkProofMapCompleteness(m, vr);
+  assert.ok(findings.length >= 2, 'must report both missing ACs, not short-circuit at the first');
+  const ids = findings.flatMap((f) => f.ids);
+  assert.ok(ids.includes('AC-2'), 'AC-2 must be named');
+  assert.ok(ids.includes('AC-3'), 'AC-3 must be named too — not just the first missing AC');
+});
+
+// --- Whitespace-only proof assertion (review Minor #3): the parser trims the proof cell so a
+// `|    |` cell arrives as '' — verified end-to-end here, not just at the parser, so a future
+// parser change that stops trimming would be caught by THIS rule's own test, the same fail-open
+// shape closed for green-bar evidence in T-5. ---
+
+test('a whitespace-only proof cell (parser-trimmed to empty) on a test-backed row yields a proof-map-completeness finding naming the criterion', () => {
+  const m = model(['## Acceptance Criteria', '- **AC-1** — test-backed, whitespace-only proof cell.']);
+  const vr = verificationReport([
+    '| Criterion | Type | Proof |',
+    '| --- | --- | --- |',
+    '| AC-1 | test-backed |     |',
+  ]);
+  assert.equal(vr.rows[0].proof, '', 'sanity check: the parser trims a whitespace-only cell to empty string');
+  const findings = checkProofMapCompleteness(m, vr);
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].type, 'finding');
+  assert.equal(findings[0].rule, 'proof-map-completeness');
+  assert.deepEqual(findings[0].ids, ['AC-1']);
+});
+
+// --- Unrecognized/empty `type` cell (review Minor #3): pins CURRENT behavior (not a change) — a
+// row whose type cell is neither 'test-backed' nor 'reviewer-checked' is out of AC-14's linkage
+// scope (only type === 'test-backed' rows are checked), but AC-13 still counts the row as present
+// as long as its proof cell is non-empty (AC-13 never looks at type at all). ---
+
+test('a row with a blank/unrecognized type cell is NOT subject to AC-14 linkage, but AC-13 still counts it present given a non-empty proof (current behavior, pinned)', () => {
+  const m = model(['## Acceptance Criteria', '- **AC-1** — blank type cell, non-empty proof.']);
+  const vr = verificationReport([
+    '| Criterion | Type | Proof |',
+    '| --- | --- | --- |',
+    '| AC-1 |  | tests/foo.test.mjs > a case absent from any evidence |',
+  ]);
+  assert.equal(vr.rows[0].type, '', 'sanity check: normalizeProofType leaves a blank cell as the empty string, not a default');
+  // AC-13: present, because the proof cell is non-empty — type is irrelevant to this rule.
+  assert.deepEqual(checkProofMapCompleteness(m, vr), []);
+  // AC-14: type !== 'test-backed', so linkage is never checked for this row — no finding even
+  // though the named test does not appear anywhere in the (empty) evidence below.
+  const l = ledger(['## Task ledger', '| Task | Status |', '| --- | --- |', '| T-1 | done |']);
+  assert.deepEqual(checkProofEvidenceLinkage(vr, l), []);
+});
+
+// --- A complete, fully-linked map covering all criteria: no findings from either rule (happy path) ---
+
+test('a complete, fully-linked proof map covering every defined AC yields no findings from either rule', () => {
+  const m = model([
+    '## Acceptance Criteria',
+    '- **AC-1** — test-backed, linked.',
+    '- **AC-2** — reviewer-checked, answered.',
+  ]);
+  const vr = verificationReport([
+    '| Criterion | Type | Proof |',
+    '| --- | --- | --- |',
+    '| AC-1 | test-backed | tests/foo.test.mjs > case one |',
+    '| AC-2 | reviewer-checked | pass |',
+  ]);
+  const l = ledger([
+    '## Task ledger',
+    '| Task | Status |',
+    '| --- | --- |',
+    '| T-1 | done |',
+    '',
+    '### T-1 (@ `abc123`)',
+    '',
+    '```',
+    '$ node --test tests/foo.test.mjs',
+    'ok 1 - tests/foo.test.mjs > case one',
+    '```',
+  ]);
+  assert.deepEqual(checkProofMapCompleteness(m, vr), []);
+  assert.deepEqual(checkProofEvidenceLinkage(vr, l), []);
 });
