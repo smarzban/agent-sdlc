@@ -81,12 +81,18 @@ changes, then run the bar against exactly what will be committed — `git stash 
 HEAD. An under-staged commit is a broken commit even when the working tree is green.
 
 **Capture the evidence block.** One of the green-bar runs above is the task's evidence: a fenced
-block recording the command line(s) exactly as run, plus the output tail, verbatim — never a
-checkbox. Capture it from the first task onward, never deferred: it is what the checker's
-evidence-presence check (AC-5) and name-appearance-linkage check (AC-14) read, so a test-backed
-proof-map row's cited test identifier must literally appear in this text (ADR-0001). The canonical
-worked example is this very feature's own ledger — `specs/enforcement-spine/build-report.md`'s
-`## Green-bar evidence` section (per-task `### T-N (@ SHA)` blocks).
+block recording the command line(s) exactly as run, plus the output, verbatim — never a checkbox.
+Capture it from the first task onward, never deferred: it is what the checker's evidence-presence
+check (AC-5) and name-appearance-linkage check (AC-14) read, so a test-backed proof-map row's cited
+test identifier must literally appear in this text (ADR-0001). **Capture the per-test listing, not
+just summary counts.** A test runner that prints one line per test (e.g. `node --test` → `ok N -
+<name>`) must have those `ok - <name>` lines recorded in the block — a summary tail (`# pass N`)
+alone names no test, so ship's AC-14 linkage cannot match any proof row against it and the terminal
+gate blocks. The block's output must contain the identifiers a proof row will later cite. (If per-task
+capture is impractical, at minimum a build-complete comprehensive block carrying the full per-test
+listing satisfies the union AC-14 searches — but the per-test names, never mere counts, are the
+load-bearing content.) The canonical worked example is this very feature's own ledger —
+`specs/enforcement-spine/build-report.md`'s `## Green-bar evidence` section.
 
 The message states the task and the `AC-N` (e.g. `feat(T-3): root resolver — advances AC-1`). Then
 updates the ledger — the captured green-bar evidence block for this task, plus any `SHORTCUT(T-N)`

@@ -54,7 +54,9 @@ branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
    d. Verify the **green bar** is green — run the full declared set (compile, test, lint,
       format-check), read the output (verification-before-completion). Not just tests: lint or
       format drift caught now is a clean commit; caught later is a reactive scramble. **Capture this
-      run** as the task's green-bar evidence — the command line(s) plus the output tail, verbatim.
+      run** as the task's green-bar evidence — the command line(s) plus the output, verbatim,
+      including the **per-test listing** (e.g. `node --test`'s `ok N - <name>` lines), not just
+      summary counts — those names are what ship's AC-14 linkage matches against.
    e. Commit: one atomic commit for the task, reflecting the reviewed code. Verify it compiles **in
       isolation** — run the bar against the staged snapshot (`git stash --keep-index
       --include-untracked` → bar → pop), not just the working tree: an under-staged commit can pass a
@@ -63,7 +65,8 @@ branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
       green-bar evidence as a fenced block beside the task — from the first task onward, never
       deferred. This is the write side the checker's evidence-presence (AC-5) and
       name-appearance-linkage (AC-14) checks read: a test-backed proof-map row's cited test
-      identifier must literally appear in this text (ADR-0001).
+      identifier must literally appear in this text (ADR-0001) — so the block must record the
+      per-test names, not a summary count that names no test.
    g. If Linear sync is enabled in `.agent-sdlc/config.json`, transition `T-N`'s issue via the
       `linear-sync` skill.
 5. **Hand off** when every task is done and green: **invoke the checker again** (build-complete
