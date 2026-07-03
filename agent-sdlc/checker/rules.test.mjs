@@ -3,19 +3,28 @@
 // Notes) — not hand-built model objects — so rules are proven against the actual model shape.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import {
   parseSpec,
+  parseLedger,
   checkTraceIntegrity,
   checkForwardCoverage,
   checkBackwardCoverage,
+  checkProvenanceMarkers,
+  checkGreenBarEvidence,
 } from './sdlc-check.mjs';
 
 function model(spec) {
   const result = parseSpec(spec.join('\n'), 'x.md');
   assert.equal(result.ok, true, 'fixture spec must itself parse cleanly');
+  return result;
+}
+
+function ledger(lines) {
+  const result = parseLedger(lines.join('\n'), 'x.md');
+  assert.equal(result.ok, true, 'fixture ledger must itself parse cleanly');
   return result;
 }
 
@@ -242,7 +251,7 @@ test('a fully clean model yields no findings from any of the three rules (only a
 // map, no *Advances:* field) exposed the Critical asymmetry. Reading the file with node:fs is
 // TEST I/O, not rule I/O — the three rules under test stay pure (spec text/model in, array out).
 
-test('the real enforcement-spine spec yields zero findings from all three rules (this feature would not block its own build)', () => {
+test('the real enforcement-spine spec yields zero findings from all three rules (this feature would not block its own build)', (t) => {
   const specPath = path.join(
     path.dirname(fileURLToPath(import.meta.url)),
     '..',
@@ -251,6 +260,10 @@ test('the real enforcement-spine spec yields zero findings from all three rules 
     'enforcement-spine',
     'enforcement-spine.md',
   );
+  if (!existsSync(specPath)) {
+    t.skip('real enforcement-spine spec not present (not committed to this checkout, or running outside the repo)');
+    return;
+  }
   const text = readFileSync(specPath, 'utf8');
   const result = parseSpec(text, specPath);
   assert.equal(result.ok, true, 'the real spec must parse cleanly');
@@ -261,4 +274,205 @@ test('the real enforcement-spine spec yields zero findings from all three rules 
     ...checkBackwardCoverage(result),
   ].filter((item) => item.type === 'finding');
   assert.deepEqual(findings, [], 'the real spec has no known dangling refs or coverage gaps');
+});
+
+// --- AC-6: provenance marker well-formedness ---
+
+test('a provenance marker missing its source yields a finding naming the section', () => {
+  const m = model([
+    '## Plan',
+    '<!-- ingested 2026-07-02 -->',
+    '- **T-1 — Do it.** Detail. *Component:* none. *Deps:* none.',
+  ]);
+  const findings = checkProvenanceMarkers(m);
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].type, 'finding');
+  assert.equal(findings[0].rule, 'provenance-marker');
+  assert.deepEqual(findings[0].ids, ['Plan']);
+  assert.match(findings[0].message, /missing source/);
+});
+
+test('a provenance marker missing its date yields a finding naming the section', () => {
+  const m = model([
+    '## Plan',
+    '<!-- source: Linear SMA-1 -->',
+    '- **T-1 — Do it.** Detail. *Component:* none. *Deps:* none.',
+  ]);
+  const findings = checkProvenanceMarkers(m);
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].type, 'finding');
+  assert.equal(findings[0].rule, 'provenance-marker');
+  assert.deepEqual(findings[0].ids, ['Plan']);
+  assert.match(findings[0].message, /missing date/);
+});
+
+test('a well-formed provenance marker yields no finding', () => {
+  const m = model([
+    '## Plan',
+    '<!-- source: Linear SMA-1 · ingested 2026-07-02 -->',
+    '- **T-1 — Do it.** Detail. *Component:* none. *Deps:* none.',
+  ]);
+  assert.deepEqual(checkProvenanceMarkers(m), []);
+});
+
+test('a provenance marker with source and date present but date not absolute yields a finding naming the date as non-absolute', () => {
+  const m = model([
+    '## Plan',
+    '<!-- source: Linear SMA-1 · ingested 2026/07/02 -->',
+    '- **T-1 — Do it.** Detail. *Component:* none. *Deps:* none.',
+  ]);
+  const findings = checkProvenanceMarkers(m);
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].type, 'finding');
+  assert.equal(findings[0].rule, 'provenance-marker');
+  assert.deepEqual(findings[0].ids, ['Plan']);
+  assert.match(findings[0].message, /date is not an absolute \(YYYY-MM-DD\) date/);
+});
+
+test('a section with no provenance marker at all yields no finding (hand-authored, no marker attempt)', () => {
+  const m = model([
+    '## Plan',
+    '- **T-1 — Do it.** Detail. *Component:* none. *Deps:* none.',
+  ]);
+  assert.deepEqual(checkProvenanceMarkers(m), []);
+});
+
+// --- AC-5: green-bar evidence presence ---
+
+test('a done task with no evidence entry at all yields a finding naming it', () => {
+  const l = ledger([
+    '## Task ledger',
+    '| Task | Status |',
+    '| --- | --- |',
+    '| T-1 | done |',
+  ]);
+  const findings = checkGreenBarEvidence(l);
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].type, 'finding');
+  assert.equal(findings[0].rule, 'green-bar-evidence');
+  assert.deepEqual(findings[0].ids, ['T-1']);
+});
+
+test('a done task with an evidence heading but no fenced block yields a finding naming it', () => {
+  const l = ledger([
+    '## Task ledger',
+    '| Task | Status |',
+    '| --- | --- |',
+    '| T-1 | done |',
+    '',
+    '### T-1 (@ `abc123`)',
+    '',
+    'no fenced block here',
+  ]);
+  const findings = checkGreenBarEvidence(l);
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].type, 'finding');
+  assert.equal(findings[0].rule, 'green-bar-evidence');
+  assert.deepEqual(findings[0].ids, ['T-1']);
+});
+
+test('a done task with a non-empty evidence block yields no finding', () => {
+  const l = ledger([
+    '## Task ledger',
+    '| Task | Status |',
+    '| --- | --- |',
+    '| T-1 | done |',
+    '',
+    '### T-1 (@ `abc123`)',
+    '',
+    '```',
+    '$ node --check foo.mjs',
+    '(exit 0)',
+    '```',
+  ]);
+  assert.deepEqual(checkGreenBarEvidence(l), []);
+});
+
+test('a pending task with no evidence yields no finding (no claim yet)', () => {
+  const l = ledger([
+    '## Task ledger',
+    '| Task | Status |',
+    '| --- | --- |',
+    '| T-1 | pending |',
+  ]);
+  assert.deepEqual(checkGreenBarEvidence(l), []);
+});
+
+test('a done task with a whitespace-only fenced evidence block yields a finding naming it (fail-open guard)', () => {
+  const l = ledger([
+    '## Task ledger',
+    '| Task | Status |',
+    '| --- | --- |',
+    '| T-1 | done |',
+    '',
+    '### T-1 (@ `abc123`)',
+    '',
+    '```',
+    '   ',
+    '```',
+  ]);
+  const findings = checkGreenBarEvidence(l);
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].type, 'finding');
+  assert.equal(findings[0].rule, 'green-bar-evidence');
+  assert.deepEqual(findings[0].ids, ['T-1']);
+});
+
+test('a done task with an empty fenced evidence block (blocks:[""]) yields a finding naming it', () => {
+  const l = ledger([
+    '## Task ledger',
+    '| Task | Status |',
+    '| --- | --- |',
+    '| T-1 | done |',
+    '',
+    '### T-1 (@ `abc123`)',
+    '',
+    '```',
+    '```',
+  ]);
+  const findings = checkGreenBarEvidence(l);
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].type, 'finding');
+  assert.equal(findings[0].rule, 'green-bar-evidence');
+  assert.deepEqual(findings[0].ids, ['T-1']);
+});
+
+// --- Empirical regression: the REAL spec + REAL ledger yield zero AC-5/AC-6 findings ---
+
+test('the real enforcement-spine spec yields zero provenance-marker findings (no markers present)', (t) => {
+  const specPath = path.join(
+    path.dirname(fileURLToPath(import.meta.url)),
+    '..',
+    '..',
+    'specs',
+    'enforcement-spine',
+    'enforcement-spine.md',
+  );
+  if (!existsSync(specPath)) {
+    t.skip('real enforcement-spine spec not present (not committed to this checkout, or running outside the repo)');
+    return;
+  }
+  const text = readFileSync(specPath, 'utf8');
+  const result = parseSpec(text, specPath);
+  assert.equal(result.ok, true, 'the real spec must parse cleanly');
+  assert.deepEqual(checkProvenanceMarkers(result), []);
+});
+
+test('the real enforcement-spine ledger yields zero green-bar-evidence findings (T-1..T-4 done, each with captured evidence)', (t) => {
+  const ledgerPath = path.join(
+    path.dirname(fileURLToPath(import.meta.url)),
+    '..',
+    '..',
+    'specs',
+    'enforcement-spine',
+    'build-report.md',
+  );
+  if (!existsSync(ledgerPath)) {
+    t.skip('build-report.md is an untracked build ledger — absent in a clean checkout/isolation snapshot');
+    return;
+  }
+  const text = readFileSync(ledgerPath, 'utf8');
+  const result = parseLedger(text, ledgerPath);
+  assert.equal(result.ok, true, 'the real ledger must parse cleanly');
+  assert.deepEqual(checkGreenBarEvidence(result), []);
 });

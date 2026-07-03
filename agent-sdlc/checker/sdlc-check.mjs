@@ -723,6 +723,57 @@ export function checkBackwardCoverage(model) {
   return items;
 }
 
+// AC-6 — provenance marker well-formedness: a marker that IS present (parseSpec already only
+// records an entry for a first-body-line HTML comment — a hand-authored section with none
+// contributes nothing here, by design; see NC-4 note in the plan) but `malformed` names WHICH
+// field is bad, re-deriving it from the fields the parser already exposes rather than re-parsing
+// the date itself: `!source` -> missing source; `source && !date` -> missing date; otherwise
+// (both fields present but still `malformed`) the date failed the parser's absolute-date check.
+function describeMalformedProvenance(marker) {
+  if (!marker.source) return 'missing source';
+  if (!marker.date) return 'missing date';
+  return 'date is not an absolute (YYYY-MM-DD) date';
+}
+
+export function checkProvenanceMarkers(model) {
+  const findings = [];
+  for (const marker of model.provenance) {
+    if (!marker.malformed) continue;
+    findings.push({
+      type: 'finding',
+      rule: 'provenance-marker',
+      message: `${marker.section} (line ${marker.line}) has a malformed provenance marker: ${describeMalformedProvenance(marker)}`,
+      ids: [marker.section],
+    });
+  }
+  return findings;
+}
+
+// AC-5 — green-bar evidence presence: a task marked "done" in the ledger table asserts the green
+// bar passed for it; that claim is backed iff a corresponding "### T-N (@ SHA)" evidence entry
+// exists AND carries at least one non-empty captured block (evidence is captured text, never a
+// checkbox — `## Design`). A done task with no evidence entry, or an entry present but empty
+// (`blocks: []` / `text: ''` — parseLedger's present-but-bare shape), is an unbacked claim: a
+// finding naming the task. A task not marked done makes no claim yet, so it is never checked here
+// (pending/blocked tasks are silently out of scope, not a miss). Takes the parseLedger() model
+// (not the spec model) — this rule's only input is the ledger.
+export function checkGreenBarEvidence(ledger) {
+  const findings = [];
+  for (const t of ledger.tasks) {
+    if (!/^done$/i.test(t.status)) continue;
+    const entry = ledger.evidence.find((e) => e.task === t.task);
+    if (!entry || entry.blocks.length === 0 || entry.text.trim() === '') {
+      findings.push({
+        type: 'finding',
+        rule: 'green-bar-evidence',
+        message: `${t.task} is marked done but has no captured green-bar evidence block`,
+        ids: [t.task],
+      });
+    }
+  }
+  return findings;
+}
+
 // Portable ESM main-guard: `import.meta.main` only exists from Node v22.18.0 (undefined, thus
 // falsy, on the declared floor's earlier 22.x patches — a false guard there would silently no-op
 // instead of failing closed). Compare resolved URLs instead: pathToFileURL() resolves the argv
