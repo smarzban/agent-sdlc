@@ -349,12 +349,16 @@ this stage grounds the products and versions realizing it. All choices verified 
 ### Green bar (declared — agent-sdlc's first executable code)
 
 ```
-node --check agent-sdlc/checker/sdlc-check.mjs   # syntax gate (compile analog)
-node --test agent-sdlc/checker/                  # the checker's test suite
+node --check agent-sdlc/checker/sdlc-check.mjs        # syntax gate (compile analog)
+node --test "agent-sdlc/checker/*.test.mjs"           # the checker's test suite
 ```
 
 No lint, format-check, or typecheck: none exist in this plugin, and adding one would be a
 needless dependency. review-gate's green bar is separate and unchanged.
+(Amended during build, T-1 checkpoint: the original `node --test agent-sdlc/checker/` exits 1 on
+Node v22.23.1 — a bare directory arg is passed to the runner's glob matcher without recursion.
+Verified empirically by builder, implementer, reviewer, and overseer; the glob form is the
+runnable-as-written command.)
 
 ### Component-to-product map
 
@@ -492,7 +496,7 @@ main guard so tests import the module without executing it. Tests build their fi
 - **Single-file constraint:** T-2–T-9 all extend `sdlc-check.mjs`; no second product file may
   appear. Tests import exported functions; only the main guard executes the CLI.
 - **Green bar per task:** `node --check agent-sdlc/checker/sdlc-check.mjs` +
-  `node --test agent-sdlc/checker/` (declared in `## Tech Stack`).
+  `node --test "agent-sdlc/checker/*.test.mjs"` (declared in `## Tech Stack`).
 - **No release task:** the plugin version bump is ship-time per the repo's release conventions,
   not a plan task.
 - **Baseline green bar:** while `agent-sdlc/checker/` does not yet exist, the declared green bar

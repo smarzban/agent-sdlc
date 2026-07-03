@@ -89,3 +89,15 @@ evidence blocks from T-1 (the design defines the format; T-11 only lands the pro
 feature's own ship-time AC-14 check is clean over its full ledger. Delta walked: T-11 still
 advances AC-15/16/17 and its deps are unchanged; no trace link, coverage row, or contract moved.
 **Verdict: READY TO BUILD — clean.**
+
+## Re-run 3 (delta) — 2026-07-03, mid-build T-1 checkpoint
+
+The builder found the declared green-bar test command not runnable as written:
+`node --test agent-sdlc/checker/` exits 1 on Node v22.23.1 (bare directory arg hits the runner's
+glob matcher without recursion). Empirically verified by builder, implementer, reviewer, and
+overseer. Techstack-stage amendment: both occurrences (`## Tech Stack` green bar, `## Plan` Notes)
+now use `node --test "agent-sdlc/checker/*.test.mjs"` (exit 0, all tests pass). This was a
+techstack-bar violation ("each command runnable as written") that gate check 4 verified only for
+concreteness, not runnability — recorded as a process finding for the audit backlog (the gate/
+checker should dry-run declared green-bar commands). Delta walked: wording only; no trace link,
+task, or contract moved. **Verdict: READY TO BUILD — clean; build proceeding from T-2.**
