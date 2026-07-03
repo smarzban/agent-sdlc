@@ -960,14 +960,94 @@ function distinctTaskTokens(message) {
   return tokens;
 }
 
-export async function readRepoFacts(repoPath, taskIds) {
-  let stdout;
+// M-968 (AC-4 scoping fix): resolves the repo's default-branch ref, read-only, no network. Tried
+// in order — the first that resolves wins:
+//   1. `symbolic-ref refs/remotes/origin/HEAD` — the remote's OWN recorded default (e.g. resolves
+//      to `origin/main`); this is the authoritative source when a remote is configured.
+//   2. the literal `origin/main`, then local `main`, then local `master` — each verified to
+//      actually exist via `rev-parse --verify --quiet` before being trusted; never assume a name
+//      resolves just because it's conventional.
+// Verified empirically against git 2.53.0: `symbolic-ref --quiet` exits 1 (no stdout) when no
+// `origin/HEAD` is recorded; `rev-parse --verify --quiet <ref>` exits non-zero silently (no stderr
+// noise) when `<ref>` doesn't exist. Returns `null` (never throws) when nothing resolves — the
+// caller treats that as "default branch undeterminable" and falls back to the full-history walk.
+async function resolveDefaultBranch(repoPath) {
   try {
-    ({ stdout } = await execFileAsync(
+    const { stdout } = await execFileAsync(
       'git',
-      ['-C', repoPath, 'log', '-z', `--format=${GIT_LOG_FORMAT}`],
+      ['-C', repoPath, 'symbolic-ref', '--quiet', 'refs/remotes/origin/HEAD'],
+      { encoding: 'utf8' },
+    );
+    const short = stdout.trim().replace(/^refs\/remotes\//, '');
+    if (short) return short;
+  } catch {
+    // no origin, or origin/HEAD isn't recorded locally (`git remote set-head` never ran) — fall
+    // through to the static candidates below.
+  }
+  for (const candidate of ['origin/main', 'main', 'master']) {
+    try {
+      await execFileAsync('git', ['-C', repoPath, 'rev-parse', '--verify', '--quiet', candidate], {
+        encoding: 'utf8',
+      });
+      return candidate;
+    } catch {
+      // candidate doesn't exist in this repo — try the next one.
+    }
+  }
+  return null;
+}
+
+// M-968: computes the `<mergeBase>..HEAD` rev-range that scopes readRepoFacts to THIS feature's
+// commits — bounding the walk instead of it defaulting to HEAD's entire ancestor history (the
+// confirmed bug: task IDs T-1..T-N restart per feature, so an unbounded walk collides two
+// features' `feat(T-N):` commits into one false "N commits reference it" AC-4 finding).
+//
+// Fail-safe by construction, never by a special case: returns `null` (→ full-history fallback,
+// the strictly WIDER scope — it can only over-count and produce a finding, never silently pass) in
+// every case where a genuine feature-vs-default split can't be established:
+//   - no default branch resolves (no origin, no local main/master)          — resolveDefaultBranch
+//     returns null;
+//   - `merge-base HEAD <default>` fails (unrelated histories / detached HEAD with no common
+//     ancestor / a single-commit repo)                                     — caught below;
+//   - `merge-base` SUCCEEDS but equals HEAD's own commit — i.e. HEAD *is* (or is an ancestor of)
+//     the resolved default branch, not a diverged feature branch (verified empirically: checking
+//     out the same branch the candidate resolves to gives `merge-base HEAD <default> == HEAD`).
+//     Scoping to `<mergeBase>..HEAD` here would silently give an EMPTY range (mergeBase excludes
+//     itself) — an under-count, the unsafe direction — so this is folded into "undeterminable" too.
+async function computeRevRange(repoPath) {
+  const defaultBranch = await resolveDefaultBranch(repoPath);
+  if (!defaultBranch) return null;
+  let headSha;
+  let mergeBase;
+  try {
+    ({ stdout: headSha } = await execFileAsync('git', ['-C', repoPath, 'rev-parse', 'HEAD'], {
+      encoding: 'utf8',
+    }));
+    ({ stdout: mergeBase } = await execFileAsync(
+      'git',
+      ['-C', repoPath, 'merge-base', 'HEAD', defaultBranch],
       { encoding: 'utf8' },
     ));
+  } catch {
+    return null; // no common ancestor, empty repo, or another merge-base failure
+  }
+  headSha = headSha.trim();
+  mergeBase = mergeBase.trim();
+  if (!mergeBase || mergeBase === headSha) return null;
+  return `${mergeBase}..HEAD`;
+}
+
+export async function readRepoFacts(repoPath, taskIds) {
+  let stdout;
+  // M-968: scope the walk to this feature's own commits (`<mergeBase>..HEAD`) rather than HEAD's
+  // entire ancestor history, whenever a default branch + merge-base can be established; otherwise
+  // fall back to the prior unscoped full-history walk (fail-safe — see computeRevRange above).
+  const range = await computeRevRange(repoPath);
+  const logArgs = ['-C', repoPath, 'log'];
+  if (range) logArgs.push(range);
+  logArgs.push('-z', `--format=${GIT_LOG_FORMAT}`);
+  try {
+    ({ stdout } = await execFileAsync('git', logArgs, { encoding: 'utf8' }));
   } catch (err) {
     // Covers both failure modes the contract names: git absent (ENOENT spawn error) and
     // `repoPath` not a repo (git exits 128, "fatal: not a git repository ..."). Either way this

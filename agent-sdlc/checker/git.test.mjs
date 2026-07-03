@@ -11,9 +11,14 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { parseLedger, readRepoFacts, checkLedgerVsGit } from './sdlc-check.mjs';
 
+// M-968: the initial branch is pinned to "main" explicitly (`-b main`) rather than left to
+// whatever `init.defaultBranch` happens to be configured on the machine running the tests — the
+// M-968 scoping logic's fallback candidates include a literal "main", so the fixture's branch name
+// must be deterministic for the tests below (in particular the merge-base tests, which checkout a
+// second "feature" branch off this one) to be reproducible in any environment.
 function makeRepo() {
   const dir = mkdtempSync(path.join(tmpdir(), 'sdlc-check-git-'));
-  execFileSync('git', ['init', '-q'], { cwd: dir });
+  execFileSync('git', ['init', '-q', '-b', 'main'], { cwd: dir });
   execFileSync('git', ['config', 'user.email', 'fixture@example.com'], { cwd: dir });
   execFileSync('git', ['config', 'user.name', 'Fixture'], { cwd: dir });
   return dir;
@@ -321,6 +326,106 @@ test('a task not marked done is never checked, even with zero matching commits',
     assert.equal(ledger.ok, true);
     const findings = checkLedgerVsGit(ledger, facts);
     assert.deepEqual(findings, []);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// --- M-968: scope the walk to this feature's commits (`<mergeBase>..HEAD`), not HEAD's entire
+// ancestor history -----------------------------------------------------------------------------
+//
+// The confirmed real-repo bug: task IDs T-1..T-N restart per feature and `build` mandates
+// `feat(T-N): …` as the commit scope. An unbounded `git log` walk over HEAD's whole history means
+// a SECOND feature's `feat(T-1): …` commit (already on the default branch, an ancestor of the
+// current feature branch) collides with the current feature's OWN `feat(T-1): …` commit — two
+// commits reference T-1 → a false "2 commits reference it (expected exactly one)" AC-4 finding,
+// even though the current feature did everything right.
+
+test('readRepoFacts scopes to the feature branch: a same-task commit already on the default branch is excluded (cross-feature collision, the exact M-968 bug)', async () => {
+  const dir = makeRepo();
+  try {
+    // A prior feature landed on "main" with its own T-1 (task IDs restart per feature).
+    commit(dir, 'a', 'feat(T-1): prior feature, already on main');
+    // The current feature branches off main and does its OWN T-1.
+    execFileSync('git', ['checkout', '-q', '-b', 'feature'], { cwd: dir });
+    commit(dir, 'b', 'feat(T-1): current feature, own commit');
+
+    const facts = await readRepoFacts(dir, ['T-1']);
+    assert.equal(facts.ok, true);
+    // Scoped to `<mergeBase>..HEAD`: only the feature branch's own commit, not main's.
+    assert.equal(facts.commits.length, 1);
+    assert.equal(facts.commits[0].message, 'feat(T-1): current feature, own commit');
+
+    const ledger = ledgerWithDoneTasks(['T-1']);
+    const findings = checkLedgerVsGit(ledger, facts);
+    assert.deepEqual(findings, []); // no false ambiguous-commits finding
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('revert-probe: the same cross-feature fixture returns 2 matches under the OLD unscoped walk, 1 under the NEW scoped walk', async () => {
+  const dir = makeRepo();
+  try {
+    commit(dir, 'a', 'feat(T-1): prior feature, already on main');
+    execFileSync('git', ['checkout', '-q', '-b', 'feature'], { cwd: dir });
+    commit(dir, 'b', 'feat(T-1): current feature, own commit');
+
+    // OLD behavior: `git log` with NO rev-range walks HEAD's entire ancestor history. main's
+    // commit is an ancestor of the feature branch, so the old unscoped walk wrongly returns BOTH.
+    const stdout = execFileSync('git', ['-C', dir, 'log', '-z', '--format=%H%x00%s'], {
+      encoding: 'utf8',
+    });
+    const fields = stdout.split('\0').filter((f) => f !== '');
+    const oldCommits = [];
+    for (let i = 0; i + 1 < fields.length; i += 2) {
+      oldCommits.push({ id: fields[i], message: fields[i + 1] });
+    }
+    const oldMatches = oldCommits.filter((c) => /\bT-1\b/.test(c.message));
+    assert.equal(oldMatches.length, 2, 'old unscoped walk DID collide across features');
+
+    // NEW behavior: readRepoFacts (scoped via merge-base) excludes main's commit.
+    const facts = await readRepoFacts(dir, ['T-1']);
+    assert.equal(facts.ok, true);
+    assert.equal(facts.commits.length, 1, 'new scoped walk excludes the other feature commit');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('fallback: with no separate default branch to scope against, readRepoFacts falls back to the full-history walk (fail-safe, never an empty/crashed read)', async () => {
+  // A single-branch repo ("main" only, no origin): the only candidate default-branch name IS the
+  // checked-out branch itself, so `merge-base HEAD main` trivially equals HEAD — M-968 treats that
+  // as "undeterminable" and falls back to the unscoped walk rather than returning an empty range.
+  const dir = makeRepo();
+  try {
+    commit(dir, 'a', 'feat(T-1): only commit on the only branch');
+    commit(dir, 'b', 'feat(T-2): second commit, still no other branch to diff against');
+    const facts = await readRepoFacts(dir, ['T-1', 'T-2']);
+    assert.equal(facts.ok, true);
+    assert.equal(facts.commits.length, 2, 'fallback returns full history, not an empty range');
+    const ledger = ledgerWithDoneTasks(['T-1', 'T-2']);
+    const findings = checkLedgerVsGit(ledger, facts);
+    assert.deepEqual(findings, []);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('fallback: an unrelated-history repo (orphan branch, no common ancestor) falls back to full history rather than crashing', async () => {
+  const dir = makeRepo();
+  try {
+    commit(dir, 'a', 'feat(T-1): on main');
+    // An orphan branch shares no history with main — `merge-base HEAD main` fails (no common
+    // ancestor) — this must fall back to full history on the orphan branch's OWN commits, not
+    // throw and not silently return an empty read.
+    execFileSync('git', ['checkout', '-q', '--orphan', 'orphan'], { cwd: dir });
+    execFileSync('git', ['rm', '-rf', '--quiet', '.'], { cwd: dir });
+    commit(dir, 'c', 'feat(T-9): orphan branch commit');
+    const facts = await readRepoFacts(dir, ['T-9']);
+    assert.equal(facts.ok, true);
+    assert.equal(facts.commits.length, 1);
+    assert.equal(facts.commits[0].message, 'feat(T-9): orphan branch commit');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
