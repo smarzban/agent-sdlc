@@ -105,6 +105,47 @@ Green-bar evidence blocks are captured per task from T-1 onward (plan Notes; for
   mechanical rule forced the ambiguity into the open. Not a one-off; a class worth a spec-authoring
   guard (pin the relation precisely at criteria time). Overseer is tracking it as a pattern.
 
+## Review-gate round 1 (ship-time) — fixes + follow-ups
+
+The multi-model panel (holistic ×4 + lens-security ×2 + lens-spec ×1 + scan) found **6 real blockers
+the per-task single-reviewer gates structurally could not see** (holistic/integration issues).
+Fixed on this branch (overseer-confirmed):
+- **H3** (`dcce31b`) — mandated checker path was cwd-relative (`node agent-sdlc/checker/…`), which
+  won't resolve for installed-plugin users → whole pipeline fail-closed. Fixed: an on-PATH
+  `agent-sdlc/bin/sdlc-check` launcher (mirrors review-gate/bin; NC-3-safe, no manifest/build) + all
+  invocation sites use `sdlc-check`.
+- **M-968** (`811360a`) — `readRepoFacts` walked full history → T-N reuse across features collided.
+  Fixed: rev-range `merge-base(HEAD, default)..HEAD` with fail-safe fallback to full history
+  (overseer ruled option (a); option (b) = verify ledger `t.commit` filed as a follow-up WITH an AC-4
+  amendment, the better long-term model but a spec change, not a ship fix).
+- **H1** (`a2f054b`) — dangling component-by-name was dropped, unenforced by AC-1. Fixed: flag an
+  unresolved `*Component:*` value, with a narrow fail-safe allowlist for agent-sdlc's `skill text`
+  convention (declared in Design prose, outside the numbered `### Components` list).
+- **M-34/M-36** (`dcce31b`) — ship never committed `verification-report.md`; no-ledger path
+  contradicted `--require ledger`. Fixed in ship prose.
+- **M-43** (`dcce31b`) — build resume-checker could block a fresh build before its ledger exists.
+  Fixed: conditional on an existing ledger.
+Dismissed (code-checked, advisory/by-design): scope-position "ignores unscoped refs" (by-design,
+fail-safe), arbitrary-file-read (local tool, no privilege boundary), NC excluded from proof-map
+(by-design T-7), shell-injection-in-template (author-controlled slug).
+
+**PATTERN (overseer-tracked) — now THREE relational under-specifications**, same root cause: an AC's
+relational term admitting two readings, forced open by the mechanical rule. T-4: AC-3 "carries a
+reference". T-6: AC-4 "referencing". **T-6/M-968: AC-4 "git history" never said WHICH history** (the
+third instance). Long-term guard: pin the relation precisely at criteria-authoring time. Related but
+distinct: a **dual-path asymmetry** (like T-4 forward/backward) surfaced in H1 review — the
+`*Component:*` FIELD path now flags dangling names but the coverage-map TABLE path still silently
+drops them (`extractTableTraces` `refs.size > 0`); no false pass (AC-1 locus is the field; AC-15-18
+forward-covered via `*Advances:*`), filed as a follow-up.
+
+**Follow-ups (non-blocking, filed):** (1) close the table-path dangling-component drop symmetric with
+H1; (2) replace the `skill text` string allowlist with structured recognition of "Outside the checker
+(changed components)" declarations (a spec-format change); (3) option-(b) ledger-`t.commit` AC-4
+verification + AC-4 amendment; (4) two low nits — a ragged markdown row throws `TypeError` vs the
+never-throw parse contract; `readRepoFacts` drops empty NUL fields so an empty commit subject mis-pairs
+later records; (5) the substring false-negative in `resolveComponentRefs` (a dangling name containing
+a real component name resolves).
+
 ## Green-bar evidence
 
 (appended per task below; command form note — the `## Tech Stack` wording
