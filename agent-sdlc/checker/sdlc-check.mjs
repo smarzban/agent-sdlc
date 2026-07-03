@@ -49,7 +49,7 @@ export function run(argv) {
 // and the problem, never an empty-model `{ ok: true }` that would later read as a pass.
 //
 // Model grown across tasks (T-3 adds markers/evidence/proof-map rows to this same success shape):
-//   { ok: true, sections, ids, components, traces }
+//   { ok: true, sections, ids, components, traces, provenance, untraced }
 //   sections   — the consolidated spec's "##" sections, in order: { name, line, body }.
 //   ids        — every AC-N/T-N/C-N ID at its DEFINITION site: { id, kind, section, line, text }.
 //                C-N is synthesized from a Design "### Components" numbered list entry's own
@@ -61,6 +61,46 @@ export function run(argv) {
 //                raw, line }. `refs` are the cited IDs — a *Component:* field citing a component by
 //                NAME is resolved against `components` to its C-N id. T-4's rules consume this to
 //                find dangling/unreached links; this task only produces the model.
+//   provenance — (T-3) a materialized section's leading HTML-comment marker (see
+//                getting-started/reference/input-resolution.md): { section, line, raw, source,
+//                date, malformed }. `source`/`date` are `null` when absent; `malformed` is true
+//                when either is missing OR `date` is not an absolute `YYYY-MM-DD` date — this is a
+//                MODEL fact (AC-6's rule flags it), never a parse failure. A hand-authored section
+//                (no leading HTML comment) contributes no entry.
+//   untraced   — (T-3) an explicit `AC: untraced (reason)` marker on a task, scoped to the same
+//                top-level-bullet ownership as a trace field: { from, reason, raw, section, line }.
+//                `reason` is `''` when no parenthetical is given (still recorded, never dropped) —
+//                T-4's rule renders this as a coverage note rather than a dangling-reference failure.
+
+// --- Ledger (build-report.md) — task table + green-bar evidence blocks (T-3) ----------------
+//
+// parseLedger() mirrors parseSpec(): pure (text in, model or typed failure out), never throws.
+//   success: { ok: true, tasks, evidence }
+//   failure: { ok: false, error: { file, problem } }
+//   tasks    — the "## Task ledger" table, one row per task: { task, status, commit, acAdvanced,
+//              notes, line }. Column lookup is by header name (case-insensitive), not position.
+//   evidence — one entry per "### T-N (@ SHA)" heading (ADR-0001's green-bar evidence shape):
+//              { task, sha, blocks, text, commands, line }. `blocks` is the raw text of each fenced
+//              code block found before the next heading (usually one); `text` is them joined
+//              (T-7's AC-14 name-appearance search target); `commands` are the `$ `-prefixed lines
+//              across all blocks. A heading with NO fenced block still gets an entry with
+//              `blocks: []`, `text: ''` — a bare claim, present but evidence-less (AC-5's rule
+//              needs exactly this present-vs-bare distinction, not a dropped/absent task).
+//   A typed failure is reserved for genuinely unreadable input: missing/non-string/empty text, or
+//   text with neither a task table nor any evidence heading at all (not a ledger).
+
+// --- Verification report (verification-report.md) — AC → proof-map rows (T-3) ---------------
+//
+// parseVerificationReport() mirrors parseSpec(): pure, never throws.
+//   success: { ok: true, rows }
+//   failure: { ok: false, error: { file, problem } }
+//   rows — one per criterion row in the "Criterion | Type | Proof" table (the grammar this task
+//          designs from the `## Design` data contract — ship writes this file at T-12; no example
+//          exists yet): { criterion, type, proof, line }. `type` normalizes to 'test-backed' /
+//          'reviewer-checked' when the cell says so (case/spacing-tolerant), else the raw cell
+//          text verbatim. `proof` is the named test identifier(s) (test-backed) or the answered
+//          pass/fail question (reviewer-checked) — trimmed verbatim, including '' when the cell is
+//          empty (a MODEL fact for T-7's AC-13 completeness rule to flag, not a parse failure).
 
 const ID_DEFINITION_RE = /\*\*(AC|C|T)-(\d+)\b/g;
 const COMPONENT_LIST_ITEM_RE = /^\s*(\d+)\.\s+\*\*([^*]+)\*\*/;
@@ -82,6 +122,22 @@ const TRACE_FIELD_RE = /\*(Advances|Component|Deps):\*\s*([^.]*)\./g;
 const ID_REF_RE = /\b(AC|C|T)-\d+(?:\/\d+)*\b/g;
 const TABLE_ROW_RE = /^\s*\|.*\|\s*$/;
 const TABLE_SEPARATOR_RE = /^\s*\|[\s:-]+\|\s*$/;
+// A provenance marker is the whole first non-blank line of a materialized section's body, an HTML
+// comment (see getting-started/reference/input-resolution.md). Any leading HTML comment there is
+// treated as a marker ATTEMPT — parsed for source/date and flagged malformed if either is missing,
+// rather than silently skipped, so "present but malformed" (AC-6) has a representation.
+const PROVENANCE_MARKER_RE = /^<!--\s*(.*?)\s*-->\s*$/;
+const PROVENANCE_SOURCE_RE = /source\s*:\s*([^·|]*?)(?=\s*(?:·|\||\bingested\b)|$)/i;
+const PROVENANCE_DATE_RE = /\bingested\b\s+([^\s].*?)\s*$/i;
+const ABSOLUTE_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+// `AC: untraced` — the input-resolution contract's marker for a task with no real upstream
+// criterion. The parenthetical reason is optional in the grammar (never required to keep the
+// marker from being dropped); capture it when present.
+const UNTRACED_RE = /AC:\s*untraced\b\s*(?:\(([^)]*)\))?/gi;
+// Ledger: a green-bar evidence heading, "### T-N (@ `SHA`)" (backticks optional/tolerant).
+const LEDGER_EVIDENCE_HEADING_RE = /^###\s+(T-\d+)\s*\(@\s*`?([^`)]*?)`?\s*\)/;
+const HEADING_RE = /^#{1,6}\s+/;
+const FENCE_LINE_RE = /^```/;
 
 export function parseSpec(text, file = '<unknown spec file>') {
   if (typeof text !== 'string' || text.trim() === '') {
@@ -110,7 +166,10 @@ export function parseSpec(text, file = '<unknown spec file>') {
     traces.push(...extractTableTraces(section, componentsByName));
   }
 
-  return { ok: true, sections, ids, components, traces };
+  const provenance = extractProvenanceMarkers(sections);
+  const untraced = extractUntracedMarkers(sections);
+
+  return { ok: true, sections, ids, components, traces, provenance, untraced };
 }
 
 function extractSections(lines) {
@@ -308,6 +367,230 @@ function extractTableTraces(section, componentsByName) {
     i = j;
   }
   return traces;
+}
+
+// A provenance marker is looked for on a section's first NON-BLANK body line only (the documented
+// convention places it immediately under the "##" heading) — a comment appearing later in the body
+// is prose, not the section's stamp.
+function extractProvenanceMarkers(sections) {
+  const markers = [];
+  for (const section of sections) {
+    const bodyLines = section.body.split('\n');
+    const firstIdx = bodyLines.findIndex((l) => l.trim() !== '');
+    if (firstIdx === -1) continue;
+    const candidate = bodyLines[firstIdx].trim();
+    const m = PROVENANCE_MARKER_RE.exec(candidate);
+    if (!m) continue; // not an HTML comment at all — a hand-authored section, no marker
+    const inner = m[1];
+    const sourceMatch = PROVENANCE_SOURCE_RE.exec(inner);
+    const dateMatch = PROVENANCE_DATE_RE.exec(inner);
+    const source = sourceMatch ? sourceMatch[1].trim() : '';
+    const date = dateMatch ? dateMatch[1].trim() : '';
+    markers.push({
+      section: section.name,
+      line: section.line + firstIdx + 1,
+      raw: candidate,
+      source: source || null,
+      date: date || null,
+      malformed: !source || !date || !ABSOLUTE_DATE_RE.test(date),
+    });
+  }
+  return markers;
+}
+
+// An `untraced` marker is scoped to the same top-level-bullet ownership as a trace field (T-2's
+// splitTopBullets) — it marks a specific task/link, not the section at large.
+function extractUntracedMarkers(sections) {
+  const markers = [];
+  for (const section of sections) {
+    const blocks = splitTopBullets(section.body.split('\n'));
+    for (const block of blocks) {
+      const blockText = block.lines.join('\n');
+      ID_DEFINITION_RE.lastIndex = 0;
+      const owner = ID_DEFINITION_RE.exec(blockText);
+      const fromId = owner ? `${owner[1]}-${owner[2]}` : null;
+      UNTRACED_RE.lastIndex = 0;
+      let m;
+      while ((m = UNTRACED_RE.exec(blockText))) {
+        markers.push({
+          from: fromId,
+          reason: (m[1] || '').trim(),
+          raw: m[0].trim(),
+          section: section.name,
+          line: section.line + block.startIdx + 1,
+        });
+      }
+    }
+  }
+  return markers;
+}
+
+// --- Ledger parser (T-3): task table + green-bar evidence blocks ----------------------------
+
+export function parseLedger(text, file = '<unknown ledger file>') {
+  if (typeof text !== 'string' || text.trim() === '') {
+    return { ok: false, error: { file, problem: 'missing or empty ledger content' } };
+  }
+  const lines = text.split(/\r\n|\r|\n/);
+  const tasks = extractLedgerTasks(lines);
+  const evidence = extractLedgerEvidence(lines);
+  if (tasks.length === 0 && evidence.length === 0) {
+    return {
+      ok: false,
+      error: { file, problem: 'no task ledger table or evidence blocks found — unparseable ledger content' },
+    };
+  }
+  return { ok: true, tasks, evidence };
+}
+
+// The "## Task ledger" table — columns looked up by header name (case-insensitive), not position,
+// so column reordering does not silently misattribute cells.
+function extractLedgerTasks(lines) {
+  const tasks = [];
+  let i = 0;
+  while (i < lines.length) {
+    if (!TABLE_ROW_RE.test(lines[i])) {
+      i += 1;
+      continue;
+    }
+    const header = splitTableCells(lines[i]);
+    const col = {
+      task: header.findIndex((h) => /^task$/i.test(h)),
+      status: header.findIndex((h) => /^status$/i.test(h)),
+      commit: header.findIndex((h) => /^commit$/i.test(h)),
+      ac: header.findIndex((h) => /ac advanced/i.test(h)),
+      notes: header.findIndex((h) => /^notes$/i.test(h)),
+    };
+    let j = i + 1;
+    if (col.task === -1 || col.status === -1) {
+      i = j;
+      continue; // not the task table
+    }
+    if (j < lines.length && TABLE_SEPARATOR_RE.test(lines[j])) j += 1;
+    while (j < lines.length && TABLE_ROW_RE.test(lines[j])) {
+      const cells = splitTableCells(lines[j]);
+      const taskId = cells[col.task];
+      if (/^T-\d+$/.test(taskId)) {
+        tasks.push({
+          task: taskId,
+          status: (cells[col.status] || '').trim(),
+          commit: col.commit >= 0 ? cells[col.commit].replace(/`/g, '').trim() : null,
+          acAdvanced: col.ac >= 0 ? cells[col.ac].trim() : null,
+          notes: col.notes >= 0 ? cells[col.notes].trim() : null,
+          line: j + 1,
+        });
+      }
+      j += 1;
+    }
+    i = j;
+  }
+  return tasks;
+}
+
+// One entry per "### T-N (@ SHA)" heading, gathering every fenced code block up to the next
+// heading (any level) or end of text. A heading with zero fenced blocks still yields an entry with
+// `blocks: []` / `text: ''` — present-but-evidence-less, never silently dropped (AC-5).
+function extractLedgerEvidence(lines) {
+  const evidence = [];
+  let i = 0;
+  while (i < lines.length) {
+    const heading = LEDGER_EVIDENCE_HEADING_RE.exec(lines[i]);
+    if (!heading) {
+      i += 1;
+      continue;
+    }
+    const headingLine = i + 1;
+    let j = i + 1;
+    const blocks = [];
+    while (j < lines.length && !HEADING_RE.test(lines[j])) {
+      if (FENCE_LINE_RE.test(lines[j])) {
+        let k = j + 1;
+        while (k < lines.length && !FENCE_LINE_RE.test(lines[k])) k += 1;
+        blocks.push(lines.slice(j + 1, k).join('\n'));
+        j = k + 1;
+        continue;
+      }
+      j += 1;
+    }
+    evidence.push({
+      task: heading[1],
+      sha: heading[2].trim() || null,
+      line: headingLine,
+      blocks,
+      text: blocks.join('\n'),
+      commands: blocks.flatMap(extractCommandLines),
+    });
+    i = j;
+  }
+  return evidence;
+}
+
+function extractCommandLines(blockText) {
+  return blockText
+    .split('\n')
+    .filter((l) => l.trim().startsWith('$ '))
+    .map((l) => l.trim().slice(2).trim());
+}
+
+// --- Verification report parser (T-3): AC → proof-map rows ----------------------------------
+//
+// No verification-report.md exists yet (ship writes it at T-12) — this grammar is designed from
+// the `## Design` data contract + AC-13/14 wording: a "Criterion | Type | Proof" table, one row
+// per criterion.
+
+function normalizeProofType(raw) {
+  const t = raw.trim();
+  if (/test/i.test(t)) return 'test-backed';
+  if (/reviewer/i.test(t)) return 'reviewer-checked';
+  return t;
+}
+
+export function parseVerificationReport(text, file = '<unknown verification report file>') {
+  if (typeof text !== 'string' || text.trim() === '') {
+    return { ok: false, error: { file, problem: 'missing or empty verification report content' } };
+  }
+  const lines = text.split(/\r\n|\r|\n/);
+  const rows = [];
+  let i = 0;
+  while (i < lines.length) {
+    if (!TABLE_ROW_RE.test(lines[i])) {
+      i += 1;
+      continue;
+    }
+    const header = splitTableCells(lines[i]);
+    const col = {
+      criterion: header.findIndex((h) => /criterion/i.test(h)),
+      type: header.findIndex((h) => /type/i.test(h)),
+      proof: header.findIndex((h) => /proof/i.test(h)),
+    };
+    let j = i + 1;
+    if (col.criterion === -1) {
+      i = j;
+      continue; // not the proof-map table
+    }
+    if (j < lines.length && TABLE_SEPARATOR_RE.test(lines[j])) j += 1;
+    while (j < lines.length && TABLE_ROW_RE.test(lines[j])) {
+      const cells = splitTableCells(lines[j]);
+      const criterion = cells[col.criterion];
+      if (/^(AC|NC)-\d+$/.test(criterion)) {
+        rows.push({
+          criterion,
+          type: col.type >= 0 ? normalizeProofType(cells[col.type]) : null,
+          proof: col.proof >= 0 ? cells[col.proof].trim() : '',
+          line: j + 1,
+        });
+      }
+      j += 1;
+    }
+    i = j;
+  }
+  if (rows.length === 0) {
+    return {
+      ok: false,
+      error: { file, problem: 'no criterion proof-map rows found — unparseable verification report content' },
+    };
+  }
+  return { ok: true, rows };
 }
 
 // Portable ESM main-guard: `import.meta.main` only exists from Node v22.18.0 (undefined, thus

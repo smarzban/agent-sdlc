@@ -1,8 +1,9 @@
-// Tests for the spec parser: sections, AC/C/T IDs, and trace references (T-2).
+// Tests for the spec parser: sections, AC/C/T IDs, and trace references (T-2); provenance/untraced
+// markers and ledger/verification-report parsing (T-3).
 // Fixtures are minimal inline spec strings (per plan Notes) — no committed fixture files.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseSpec } from './sdlc-check.mjs';
+import { parseSpec, parseLedger, parseVerificationReport } from './sdlc-check.mjs';
 
 // --- Typed parse failure: never a throw, never an empty-model pass ---
 
@@ -223,4 +224,281 @@ test('a table whose second column is not component/advancement is not read as a 
   const result = parseSpec(spec, 'x.md');
   assert.equal(result.ok, true);
   assert.equal(result.traces.some((t) => t.kind === 'map-row'), false);
+});
+
+// --- Provenance markers (T-3) ---
+
+test('parses a well-formed provenance marker into source + date, on its section', () => {
+  const spec = [
+    '## Plan',
+    '<!-- source: linear SMA-328..348 · ingested 2026-06-29 -->',
+    '- **T-1 — Do it.** Detail. *Advances:* AC-1. *Component:* Widget. *Deps:* none.',
+  ].join('\n');
+  const result = parseSpec(spec, 'x.md');
+  assert.equal(result.ok, true);
+  assert.equal(result.provenance.length, 1);
+  const marker = result.provenance[0];
+  assert.equal(marker.section, 'Plan');
+  assert.equal(marker.source, 'linear SMA-328..348');
+  assert.equal(marker.date, '2026-06-29');
+  assert.equal(marker.malformed, false);
+});
+
+test('a provenance marker missing the source identifier parses as present-but-malformed, not a parse failure', () => {
+  const spec = [
+    '## Plan',
+    '<!-- ingested 2026-06-29 -->',
+    '- **T-1 — Do it.** Detail. *Advances:* AC-1. *Component:* Widget. *Deps:* none.',
+  ].join('\n');
+  const result = parseSpec(spec, 'x.md');
+  assert.equal(result.ok, true);
+  const marker = result.provenance[0];
+  assert.equal(marker.source, null);
+  assert.equal(marker.malformed, true);
+});
+
+test('a provenance marker missing an absolute date parses as present-but-malformed', () => {
+  const spec = [
+    '## Plan',
+    '<!-- source: linear SMA-328..348 -->',
+    '- **T-1 — Do it.** Detail. *Advances:* AC-1. *Component:* Widget. *Deps:* none.',
+  ].join('\n');
+  const result = parseSpec(spec, 'x.md');
+  assert.equal(result.ok, true);
+  const marker = result.provenance[0];
+  assert.equal(marker.date, null);
+  assert.equal(marker.malformed, true);
+});
+
+test('a provenance marker with a non-absolute date (e.g. "recently") is malformed', () => {
+  const spec = [
+    '## Plan',
+    '<!-- source: linear SMA-328..348 · ingested recently -->',
+    '- **T-1 — Do it.** Detail. *Advances:* AC-1. *Component:* Widget. *Deps:* none.',
+  ].join('\n');
+  const result = parseSpec(spec, 'x.md');
+  assert.equal(result.ok, true);
+  assert.equal(result.provenance[0].malformed, true);
+});
+
+test('a hand-authored section (no leading HTML comment) carries no provenance marker', () => {
+  const spec = [
+    '## Plan',
+    '- **T-1 — Do it.** Detail. *Advances:* AC-1. *Component:* Widget. *Deps:* none.',
+  ].join('\n');
+  const result = parseSpec(spec, 'x.md');
+  assert.equal(result.ok, true);
+  assert.equal(result.provenance.length, 0);
+});
+
+// --- untraced markers (T-3) ---
+
+test('parses an explicit untraced marker with its reason, attributed to the owning task', () => {
+  const spec = [
+    '## Plan',
+    '- **T-1 — Do it.** Detail. *Advances:* AC: untraced (entered at build, no criteria in source).',
+    '  *Component:* Widget. *Deps:* none.',
+  ].join('\n');
+  const result = parseSpec(spec, 'x.md');
+  assert.equal(result.ok, true);
+  assert.equal(result.untraced.length, 1);
+  const marker = result.untraced[0];
+  assert.equal(marker.from, 'T-1');
+  assert.equal(marker.reason, 'entered at build, no criteria in source');
+});
+
+test('an untraced marker with no parenthetical reason still parses (empty reason, not dropped)', () => {
+  const spec = [
+    '## Plan',
+    '- **T-1 — Do it.** Detail. *Advances:* AC: untraced. *Component:* Widget. *Deps:* none.',
+  ].join('\n');
+  const result = parseSpec(spec, 'x.md');
+  assert.equal(result.ok, true);
+  assert.equal(result.untraced.length, 1);
+  assert.equal(result.untraced[0].reason, '');
+});
+
+test('a task with a real AC reference carries no untraced marker', () => {
+  const spec = [
+    '## Plan',
+    '- **T-1 — Do it.** Detail. *Advances:* AC-1. *Component:* Widget. *Deps:* none.',
+  ].join('\n');
+  const result = parseSpec(spec, 'x.md');
+  assert.equal(result.ok, true);
+  assert.equal(result.untraced.length, 0);
+});
+
+// --- Ledger parsing: task table + green-bar evidence blocks (T-3) ---
+
+test('missing ledger content fails cleanly, naming the file and the problem', () => {
+  const result = parseLedger(undefined, 'specs/x/build-report.md');
+  assert.equal(result.ok, false);
+  assert.equal(result.error.file, 'specs/x/build-report.md');
+  assert.match(result.error.problem, /missing|empty/i);
+});
+
+test('unparseable ledger content (no task table, no evidence headings) fails cleanly', () => {
+  const result = parseLedger('just some prose with no ledger structure at all', 'build-report.md');
+  assert.equal(result.ok, false);
+  assert.match(result.error.problem, /ledger/i);
+});
+
+test('parses the task ledger table into status/commit/AC-advanced rows', () => {
+  const ledger = [
+    '## Task ledger',
+    '',
+    '| Task | Status | Commit | AC advanced | Notes |',
+    '| --- | --- | --- | --- | --- |',
+    '| T-1 | done | `823bc91` | AC-8, AC-10 | some notes |',
+    '| T-2 | pending | — | AC-1 | |',
+  ].join('\n');
+  const result = parseLedger(ledger, 'build-report.md');
+  assert.equal(result.ok, true);
+  const t1 = result.tasks.find((t) => t.task === 'T-1');
+  assert.equal(t1.status, 'done');
+  assert.equal(t1.commit, '823bc91');
+  assert.equal(t1.acAdvanced, 'AC-8, AC-10');
+  const t2 = result.tasks.find((t) => t.task === 'T-2');
+  assert.equal(t2.status, 'pending');
+});
+
+test('parses a fenced green-bar evidence block under a "### T-N (@ SHA)" heading', () => {
+  const ledger = [
+    '## Green-bar evidence',
+    '',
+    '### T-1 (@ `823bc91`)',
+    '',
+    '```',
+    '$ node --check agent-sdlc/checker/sdlc-check.mjs',
+    '(exit 0)',
+    '$ node --test "agent-sdlc/checker/*.test.mjs"',
+    'ok 1 - some test name',
+    '(exit 0)',
+    '```',
+    '',
+    '### T-2 (@ `abc1234`)',
+    '',
+    '```',
+    '$ node --check agent-sdlc/checker/sdlc-check.mjs',
+    '```',
+  ].join('\n');
+  const result = parseLedger(ledger, 'build-report.md');
+  assert.equal(result.ok, true);
+  const t1 = result.evidence.find((e) => e.task === 'T-1');
+  assert.equal(t1.sha, '823bc91');
+  assert.match(t1.text, /ok 1 - some test name/);
+  assert.deepEqual(t1.commands, [
+    'node --check agent-sdlc/checker/sdlc-check.mjs',
+    'node --test "agent-sdlc/checker/*.test.mjs"',
+  ]);
+  const t2 = result.evidence.find((e) => e.task === 'T-2');
+  assert.equal(t2.sha, 'abc1234');
+});
+
+test('a ledger heading with no fenced block at all is a present-claim with empty evidence (a bare claim), not dropped', () => {
+  const ledger = [
+    '## Green-bar evidence',
+    '',
+    '### T-3 (@ `deadbee`)',
+    '',
+    'Passed, trust me.',
+  ].join('\n');
+  const result = parseLedger(ledger, 'build-report.md');
+  assert.equal(result.ok, true);
+  const t3 = result.evidence.find((e) => e.task === 'T-3');
+  assert.ok(t3, 'expected an evidence entry for T-3 even with no fenced block');
+  assert.deepEqual(t3.blocks, []);
+  assert.equal(t3.text, '');
+});
+
+test('parses real-shaped multi-task ledger evidence (grounded in the actual build-report.md shape)', () => {
+  const ledger = [
+    '## Task ledger',
+    '',
+    '| Task | Status | Commit | AC advanced | Notes |',
+    '| --- | --- | --- | --- | --- |',
+    '| T-1 | done | `823bc91` | AC-8, AC-10 | 1 fix round. |',
+    '| T-2 | done | `0f5381e` | AC-10 | Re-review clean. |',
+    '',
+    '## Green-bar evidence',
+    '',
+    '### T-1 (@ `823bc91`)',
+    '',
+    '```',
+    '$ node --check agent-sdlc/checker/sdlc-check.mjs',
+    '(exit 0)',
+    '```',
+    '',
+    '### T-2 (@ `0f5381e`)',
+    '',
+    '```',
+    '$ node --check agent-sdlc/checker/sdlc-check.mjs',
+    '(exit 0)',
+    '$ node --test "agent-sdlc/checker/*.test.mjs"',
+    '1..24',
+    '# pass 24',
+    '```',
+  ].join('\n');
+  const result = parseLedger(ledger, 'build-report.md');
+  assert.equal(result.ok, true);
+  assert.equal(result.tasks.length, 2);
+  assert.equal(result.evidence.length, 2);
+  assert.match(result.evidence.find((e) => e.task === 'T-2').text, /# pass 24/);
+});
+
+// --- Verification-report parsing (T-3) ---
+
+test('missing verification-report content fails cleanly', () => {
+  const result = parseVerificationReport(undefined, 'verification-report.md');
+  assert.equal(result.ok, false);
+  assert.match(result.error.problem, /missing|empty/i);
+});
+
+test('unparseable verification-report content (no proof-map table) fails cleanly', () => {
+  const result = parseVerificationReport('just some prose, no table here', 'verification-report.md');
+  assert.equal(result.ok, false);
+  assert.match(result.error.problem, /verification|proof/i);
+});
+
+test('parses a test-backed proof-map row with its named test identifier', () => {
+  const report = [
+    '## Verification Report',
+    '',
+    '| Criterion | Type | Proof |',
+    '| --- | --- | --- |',
+    '| AC-1 | test-backed | parser.test.mjs: "parses AC and T IDs wherever they are defined" |',
+  ].join('\n');
+  const result = parseVerificationReport(report, 'verification-report.md');
+  assert.equal(result.ok, true);
+  const row = result.rows.find((r) => r.criterion === 'AC-1');
+  assert.equal(row.type, 'test-backed');
+  assert.match(row.proof, /parses AC and T IDs/);
+});
+
+test('parses a reviewer-checked proof-map row with its answered pass/fail question', () => {
+  const report = [
+    '## Verification Report',
+    '',
+    '| Criterion | Type | Proof |',
+    '| --- | --- | --- |',
+    '| AC-15 | reviewer-checked | Yes — gate/build/ship all name the invocation point. |',
+  ].join('\n');
+  const result = parseVerificationReport(report, 'verification-report.md');
+  assert.equal(result.ok, true);
+  const row = result.rows.find((r) => r.criterion === 'AC-15');
+  assert.equal(row.type, 'reviewer-checked');
+  assert.match(row.proof, /invocation point/);
+});
+
+test('a proof-map row with an empty proof cell still parses (empty proof, for T-13\'s rule to flag)', () => {
+  const report = [
+    '## Verification Report',
+    '| Criterion | Type | Proof |',
+    '| --- | --- | --- |',
+    '| AC-2 | test-backed | |',
+  ].join('\n');
+  const result = parseVerificationReport(report, 'verification-report.md');
+  assert.equal(result.ok, true);
+  const row = result.rows.find((r) => r.criterion === 'AC-2');
+  assert.equal(row.proof, '');
 });
