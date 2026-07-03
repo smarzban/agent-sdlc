@@ -930,21 +930,33 @@ export function checkGreenBarEvidence(ledger) {
 const GIT_LOG_FORMAT = '%H%x00%s';
 const TASK_TOKEN_RE = /\bT-\d+\b/g;
 
-// Distinct T-N tokens appearing in a commit's SUBJECT LINE only (the `%s` readRepoFacts captures
-// via `git log --format=%H%x00%s` — the commit body is never read). Subject-only is the intended
-// scope for AC-4, not an oversight: the repo's commit convention puts the authoritative task scope
-// in the subject (`feat(T-N): …`); whole-message matching would be WORSE — a legitimately atomic
-// commit whose BODY mentions another task in prose ("supersedes T-3", "unlike T-2's approach")
-// would falsely read as multi-task and false-positive AC-4, blocking a good history. (Content
-// atomicity — whether the commit's diff touches only that task's files — is explicitly out of
-// AC-4's scope by design; it stays with build's review.) `\bT-\d+\b`'s `\d+` is greedy so it always
-// consumes the FULL run of digits before the trailing `\b` is checked — "T-1" can never match as a
-// prefix inside "T-12" (the same token-boundary class as the T-2 parser's ID regex).
+// Conventional-commit header: `type(scope): …` (optionally `type(scope)!: …`). Captures group 1 =
+// the text inside the FIRST parens after the type — the SCOPE — or `undefined` when there is no
+// `(...)` at all (`docs: …`, `feat: …`). Anchored at the start of the subject (`^\s*`) so it only
+// ever looks at the conventional-commit header itself, never anywhere else in the line.
+const COMMIT_HEADER_RE = /^\s*\w+(?:\(([^)]*)\))?!?:/;
+
+// Distinct T-N tokens appearing in a commit's SUBJECT LINE's SCOPE POSITION only — the `type(scope):`
+// parens — not the whole subject (the `%s` readRepoFacts captures via `git log --format=%H%x00%s`;
+// the commit body is never read either way). This is a corrective narrowing of the original
+// subject-wide match (T-6): the repo's commit convention puts the authoritative task in the scope
+// (`feat(T-N): …`), while docs/chore/area commits use an area scope (`docs(enforcement-spine): …`)
+// and only ever mention a task in PROSE after the colon — e.g. "...(T-1 checkpoint)..." or
+// "...evidence capture from T-1" — which whole-subject matching wrongly counted as a reference,
+// false-positiving AC-4 (a healthy task with exactly one `feat(T-N):` commit read as having
+// multiple). A commit with no parens at all (`docs: …`) has an undefined scope and therefore
+// references no task. `\bT-\d+\b`'s `\d+` is greedy so it always consumes the FULL run of digits
+// before the trailing `\b` is checked — "T-1" can never match as a prefix inside "T-12" (the same
+// token-boundary class as the T-2 parser's ID regex). Multi-task scopes still work as before:
+// `feat(T-3, T-4): …` → scope string `T-3, T-4` → {T-3, T-4}.
 function distinctTaskTokens(message) {
+  const header = COMMIT_HEADER_RE.exec(message);
+  const scope = header ? header[1] : undefined;
+  if (!scope) return new Set();
   const tokens = new Set();
   TASK_TOKEN_RE.lastIndex = 0;
   let m;
-  while ((m = TASK_TOKEN_RE.exec(message))) tokens.add(m[0]);
+  while ((m = TASK_TOKEN_RE.exec(scope))) tokens.add(m[0]);
   return tokens;
 }
 
@@ -976,8 +988,9 @@ export async function readRepoFacts(repoPath, taskIds) {
 }
 
 // AC-4 — ledger-vs-git: for each `done` task, git history must contain EXACTLY ONE commit whose
-// SUBJECT LINE references EXACTLY that task ID (see distinctTaskTokens above for why subject-only
-// is the intended scope, not the whole commit message).
+// SUBJECT LINE'S SCOPE POSITION references EXACTLY that task ID (see distinctTaskTokens above for
+// why scope-position — not the whole subject, and not the whole commit message — is the intended
+// source).
 //
 // Exact rule: map each commit's subject line to its distinct-token set (distinctTaskTokens above);
 // a done task T is backed iff exactly one commit's token set CONTAINS T, and that same commit's

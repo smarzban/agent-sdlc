@@ -189,7 +189,9 @@ test('a done task with more than one commit referencing only it fails (ambiguous
 // Guard: matching is over the commit SUBJECT LINE only (`%s`) — the body is never read. If this
 // regresses to `%B` (whole message), a body mention would falsely count as a reference: T-4's own
 // commit would wrongly also "reference" T-3 (multi-task false positive on T-4), and T-3 would
-// wrongly be considered backed by a commit that never names it in its subject.
+// wrongly be considered backed by a commit that never names it in its subject. (The body is outside
+// the subject entirely, so this guard holds independent of the T-6 corrective below — a body
+// mention is never even reached, subject-wide or scope-position.)
 test('a task ID mentioned only in a commit BODY (not its subject) is not a reference', async () => {
   const dir = makeRepo();
   try {
@@ -200,13 +202,103 @@ test('a task ID mentioned only in a commit BODY (not its subject) is not a refer
     assert.equal(facts.commits[0].message, 'feat(T-4): work'); // body never captured
     const ledger = ledgerWithDoneTasks(['T-3', 'T-4']);
     const findings = checkLedgerVsGit(ledger, facts);
-    // T-4 passes: its one commit's subject-only token set is exactly {T-4}, not polluted by the
+    // T-4 passes: its one commit's scope-position token set is exactly {T-4}, not polluted by the
     // body's "T-3" mention.
     assert.equal(findings.some((f) => f.ids.includes('T-4')), false);
     // T-3 fails as "no commit references it": a body mention doesn't count.
     const t3Finding = findings.find((f) => f.ids.includes('T-3'));
     assert.ok(t3Finding, 'T-3 must be reported — its only mention is in a commit body');
     assert.match(t3Finding.message, /no commit in git history references it/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// --- T-6 corrective: scope-position matching (not whole-subject) --------------------------------
+//
+// The real-repo false positive this guards: a `docs(enforcement-spine): ...(T-1 checkpoint)...`
+// commit mentions T-1 in PROSE after the colon, in an AREA scope, not a task scope. Whole-subject
+// matching (`\bT-\d+\b` over the full `%s`) wrongly counted this as "referencing T-1", so a task
+// with exactly one real `feat(T-1):` commit was flagged as having multiple. Scope-position matching
+// fixes this: only the text inside the `type(scope):` parens is searched for task tokens.
+test('a docs(area) commit whose SUBJECT PROSE mentions a task ID does not count as referencing it', async () => {
+  const dir = makeRepo();
+  try {
+    commit(dir, 'a', 'feat(T-1): first');
+    commit(
+      dir,
+      'b',
+      'docs(enforcement-spine): amend green-bar test command (T-1 checkpoint) + gate re-run clean',
+    );
+    const facts = await readRepoFacts(dir, ['T-1']);
+    assert.equal(facts.ok, true);
+    assert.equal(facts.commits.length, 1); // the docs commit's scope has no T-N token, so it's filtered out
+    const ledger = ledgerWithDoneTasks(['T-1']);
+    const findings = checkLedgerVsGit(ledger, facts);
+    // T-1 passes: exactly one commit (the feat(T-1) one) references it; the docs commit's prose
+    // mention in an area scope is not a reference. This is the exact real-repo false positive.
+    assert.deepEqual(findings, []);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// Revert-probe: pins that the fix is the SCOPE narrowing, not something else. Reproduces the test
+// above's assertion logic directly against the OLD whole-subject regex to prove it would have
+// failed (the false positive existed) before proving the NEW regex passes.
+test('revert-probe: the docs-prose case fails whole-subject matching, passes scope-position matching', () => {
+  const OLD_TASK_TOKEN_RE = /\bT-\d+\b/g;
+  function oldDistinctTaskTokens(message) {
+    const tokens = new Set();
+    OLD_TASK_TOKEN_RE.lastIndex = 0;
+    let m;
+    while ((m = OLD_TASK_TOKEN_RE.exec(message))) tokens.add(m[0]);
+    return tokens;
+  }
+  const docsSubject =
+    'docs(enforcement-spine): amend green-bar test command (T-1 checkpoint) + gate re-run clean';
+
+  // OLD (whole-subject) behavior: the docs commit's message wrongly contains T-1 -> false positive.
+  assert.equal(oldDistinctTaskTokens(docsSubject).has('T-1'), true, 'old regex DID false-positive');
+
+  // NEW (scope-position) behavior: the same subject's scope is `enforcement-spine`, no T-N token.
+  const COMMIT_HEADER_RE = /^\s*\w+(?:\(([^)]*)\))?!?:/;
+  const header = COMMIT_HEADER_RE.exec(docsSubject);
+  const scope = header ? header[1] : undefined;
+  assert.equal(scope, 'enforcement-spine');
+  assert.equal(/\bT-\d+\b/.test(scope), false, 'scope string carries no task token');
+});
+
+test('a multi-task SCOPE still references BOTH tasks (feat(T-3, T-4): …)', async () => {
+  const dir = makeRepo();
+  try {
+    commit(dir, 'a', 'feat(T-3, T-4): shared work with prose about T-9 too');
+    const facts = await readRepoFacts(dir, ['T-3', 'T-4', 'T-9']);
+    const ledger = ledgerWithDoneTasks(['T-3', 'T-4']);
+    const findings = checkLedgerVsGit(ledger, facts);
+    const ids = findings.flatMap((f) => f.ids).sort();
+    // T-3 and T-4 both fail: their one matching commit's scope-token-set is {T-3, T-4}, not exactly
+    // itself. T-9 (prose only, not in scope) is correctly never even considered — it's not done and
+    // its mention is outside the scope position.
+    assert.deepEqual(ids, ['T-3', 'T-4']);
+    for (const f of findings) assert.equal(f.rule, 'ledger-vs-git');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('an unscoped or area-scoped commit references no task (chore: bump / fix(area): …)', async () => {
+  const dir = makeRepo();
+  try {
+    commit(dir, 'a', 'chore: bump T-1 mentioned in prose only');
+    commit(dir, 'b', 'fix(enforcement-spine): tweak T-1 wording, no scope token');
+    commit(dir, 'c', 'feat(T-1): the real implementing commit');
+    const facts = await readRepoFacts(dir, ['T-1']);
+    assert.equal(facts.ok, true);
+    assert.equal(facts.commits.length, 1); // only the feat(T-1) commit's scope carries the token
+    const ledger = ledgerWithDoneTasks(['T-1']);
+    const findings = checkLedgerVsGit(ledger, facts);
+    assert.deepEqual(findings, []);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
