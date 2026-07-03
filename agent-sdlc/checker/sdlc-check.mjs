@@ -593,6 +593,136 @@ export function parseVerificationReport(text, file = '<unknown verification repo
   return { ok: true, rows };
 }
 
+// --- Rules (T-4): trace integrity + bidirectional coverage ----------------------------------
+//
+// Pure predicates over a parseSpec() SUCCESS model (the `{ ok: true, ... }` payload itself) — no
+// file reads, no git, no process.exit. Each rule returns an array of items sharing one shape so a
+// later reporter (T-8) can tell findings from notes by one field alone, and later rule tasks
+// (T-5/T-6/T-7) reuse the same shape:
+//   { type: 'finding' | 'note', rule, message, ids }
+//   type    — 'finding' fails the gate; 'note' is informational (an explicit `untraced` marker is
+//             a deliberate, surfaced decision, not a defect). T-8 derives exit status from findings
+//             only and renders notes as notes, never as failures.
+//   rule    — the rule's stable name, so a later reporter/config can address one rule specifically.
+//   message — a human-readable, self-contained description of the one problem/note.
+//   ids     — every ID the item is ABOUT (the offending/named ID(s)) — always non-empty, so a
+//             consumer never has to re-derive "which ID is this about" by parsing `message`.
+// Every rule returns ALL items, never short-circuits at the first — exhaustive rendering is a
+// reporter concern (T-8/AC-9), but a rule that stops early can never be made exhaustive downstream.
+
+function definedIdSet(model) {
+  return new Set(model.ids.map((i) => i.id));
+}
+
+// AC-1 — trace integrity: every ID cited in ANY trace's `refs` must resolve to a real definition
+// (an AC/C/T `ids` entry — components are already synthesized into `ids` by parseSpec, so no
+// separate lookup against `components` is needed). NC IDs never reach `refs` — T-2's grammar
+// excludes them at the source (no word boundary inside "NC-3") — so nothing here re-admits them;
+// this rule only ever sees what parseSpec already scoped to AC/C/T.
+export function checkTraceIntegrity(model) {
+  const defined = definedIdSet(model);
+  const findings = [];
+  for (const trace of model.traces) {
+    for (const ref of trace.refs) {
+      if (defined.has(ref)) continue;
+      findings.push({
+        type: 'finding',
+        rule: 'trace-integrity',
+        message: `${trace.from} cites ${ref} (${trace.kind}, line ${trace.line}), which is not defined anywhere in the spec`,
+        ids: [ref],
+      });
+    }
+  }
+  return findings;
+}
+
+// Shared task<->criterion link relation (T-4 refactor, post-Critical-fix): the SINGLE source of
+// "is this task linked to this AC" that both checkForwardCoverage (AC-2) and checkBackwardCoverage
+// (AC-3) consume — neither rule may compute "is linked" independently anymore. Before this, the
+// two rules read different subsets of the same two sources (forward read both; backward read only
+// the *Advances:* field), which produced a real false-positive: a task reached ONLY via a
+// Task-to-criterion coverage-map row (no *Advances:* field of its own) passed forward coverage but
+// was wrongly flagged by backward coverage. Building the union ONCE makes that asymmetry class
+// impossible even as a third rule joins later.
+//
+// The union of the plan's two authoritative link sources:
+//   (i)  an `advances` trace — a task's own *Advances:* field;
+//   (ii) a `map-row` trace FROM an AC — a Task-to-criterion coverage-map row's "Advanced by" column.
+// A Criterion-to-component map row (refs are C-N, `from` is an AC but naming a component, not a
+// task) is never a source here — table shape (ii) requires a T- ref to produce a link at all.
+//
+// Every link is checked against REAL, DEFINED ids on BOTH sides:
+//   - the AC side must be a defined AC-N (a dangling-AC cite, already flagged by
+//     checkTraceIntegrity, never discharges a task — AC-3's own guard, preserved);
+//   - the task side must be a defined T-N (closes the Minor: an `advances` trace whose `from` is
+//     some other ID kind, or a map-row ref that isn't actually a task, can never fabricate
+//     coverage by pretending to be a task link).
+// Returns Array<{ task: 'T-N', ac: 'AC-N' }>, one entry per (task, ac) pair found — duplicates are
+// harmless since both consumers only test set membership.
+function buildTaskAcLinks(model) {
+  const definedAc = new Set(model.ids.filter((i) => i.kind === 'AC').map((i) => i.id));
+  const definedTask = new Set(model.ids.filter((i) => i.kind === 'T').map((i) => i.id));
+  const links = [];
+  for (const trace of model.traces) {
+    if (trace.kind === 'advances' && definedTask.has(trace.from)) {
+      for (const ref of trace.refs) {
+        if (definedAc.has(ref)) links.push({ task: trace.from, ac: ref });
+      }
+    } else if (trace.kind === 'map-row' && definedAc.has(trace.from)) {
+      for (const ref of trace.refs) {
+        if (definedTask.has(ref)) links.push({ task: ref, ac: trace.from });
+      }
+    }
+  }
+  return links;
+}
+
+// AC-2 — forward coverage: every defined AC-N must be reached by at least one task, per the
+// shared task<->criterion link relation (buildTaskAcLinks) above.
+export function checkForwardCoverage(model) {
+  const acIds = model.ids.filter((i) => i.kind === 'AC').map((i) => i.id);
+  const reached = new Set(buildTaskAcLinks(model).map((l) => l.ac));
+  return acIds
+    .filter((ac) => !reached.has(ac))
+    .map((ac) => ({
+      type: 'finding',
+      rule: 'coverage-forward',
+      message: `${ac} is not reached by any task (no *Advances:* field and no Task-to-criterion coverage-map row names it)`,
+      ids: [ac],
+    }));
+}
+
+// AC-3 — backward coverage: every defined T-N must either appear as a `task` in the shared
+// task<->criterion link relation (buildTaskAcLinks — an *Advances:* field OR a coverage-map row,
+// same relation AC-2 reads), or carry an explicit `untraced` marker. A task with an `untraced`
+// marker surfaces as a coverage NOTE (a deliberate, surfaced decision), never a finding; a task
+// with neither is a finding naming the task.
+export function checkBackwardCoverage(model) {
+  const taskIds = model.ids.filter((i) => i.kind === 'T').map((i) => i.id);
+  const linkedTasks = new Set(buildTaskAcLinks(model).map((l) => l.task));
+  const items = [];
+  for (const taskId of taskIds) {
+    if (linkedTasks.has(taskId)) continue;
+    const marker = model.untraced.find((u) => u.from === taskId);
+    if (marker) {
+      items.push({
+        type: 'note',
+        rule: 'coverage-backward',
+        message: `${taskId} is explicitly untraced${marker.reason ? `: ${marker.reason}` : ' (no reason given)'}`,
+        ids: [taskId],
+      });
+    } else {
+      items.push({
+        type: 'finding',
+        rule: 'coverage-backward',
+        message: `${taskId} has no acceptance-criterion reference (inline *Advances:* or coverage-map row) and no explicit untraced marker`,
+        ids: [taskId],
+      });
+    }
+  }
+  return items;
+}
+
 // Portable ESM main-guard: `import.meta.main` only exists from Node v22.18.0 (undefined, thus
 // falsy, on the declared floor's earlier 22.x patches — a false guard there would silently no-op
 // instead of failing closed). Compare resolved URLs instead: pathToFileURL() resolves the argv
