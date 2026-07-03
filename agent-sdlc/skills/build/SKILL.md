@@ -40,8 +40,11 @@ branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
    onward. This is not a per-feature carve-out — do not re-derive it in a plan's Notes.
 3. **Ledger** open `build-report.md`. If it already exists, resume from it plus `git log` — never
    re-run a task already marked done. Re-doing completed work is the most expensive failure here.
-   **Before continuing, invoke the checker** (resume invocation point, AC-15):
-   `node agent-sdlc/checker/sdlc-check.mjs specs/<feature>/<feature>.md --require ledger` (never
+   **When resuming an existing ledger, invoke the checker first** (resume invocation point, AC-15) —
+   this corroborates the work already recorded, so it runs ONLY when a `build-report.md` already
+   exists; a fresh build has no ledger yet (this step CREATES it), so skip the checker here and let
+   the build-complete run (step 5) be the first invocation. Command (when resuming):
+   `sdlc-check specs/<feature>/<feature>.md --require ledger` (never
    `--require verification-report` at build — that artifact is ship's, T-12). Runtime present → run,
    interpret the exit code: 0 = corroborated, proceed; nonzero, or the checker crashing, is itself a
    failed check (fail-closed) — **stop-and-ask**, do not resume task work; any human override must be
@@ -183,7 +186,7 @@ The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and le
 - Runs after a clean gate verdict; re-run is safe and resumes from the ledger. The plan may be
   materialized from an external source (Linear/doc) — build runs the gate inline when no verdict
   exists for it (see [reference/ingesting-plans.md](reference/ingesting-plans.md)).
-- Invokes `agent-sdlc/checker/sdlc-check.mjs specs/<feature>/<feature>.md --require ledger` (bare
+- Invokes `sdlc-check specs/<feature>/<feature>.md --require ledger` (bare
   `node`, no install) at resume and at build-complete, mirroring gate's and ship's checker contract:
   present and clean → corroborated; present and failing (or crashing) → stop-and-ask, override
   recorded in `build-report.md`; absent → an announced degraded fallback, never a silent skip. Never

@@ -36,7 +36,7 @@ captured reality, distinct from the post-PR review-gate panel.
 **Run the checker pre-PR, report required:**
 
 ```bash
-node agent-sdlc/checker/sdlc-check.mjs specs/<feature>/<feature>.md --require ledger \
+sdlc-check specs/<feature>/<feature>.md --require ledger \
   --require verification-report
 ```
 
@@ -47,6 +47,22 @@ itself a failed check (fail-closed) → **stop-and-ask**: do not open the PR, or
 do not treat it as shipped. Any human override to proceed past a failed check must be **recorded in
 the PR body** (AC-16), not merely stated — see the PR body section below. Runtime absent → write an
 **announced degraded fallback** line — never a silent skip.
+
+`sdlc-check` is the plugin's bundled launcher (agent-sdlc adds its `bin/` to PATH on install, same as
+review-gate) — call it by name, never a cwd-relative `node agent-sdlc/checker/…` path, which does not
+exist in a user's own repo and would fail-closed the whole pipeline.
+
+**No-ledger path** (a branch built outside the pipeline — the HARD-GATE's alternate precondition):
+there is no `build-report.md`, so **drop `--require ledger`** (`sdlc-check … --require
+verification-report` only). Without captured green-bar evidence the AC-14 name-appearance linkage
+cannot corroborate the proof map's test-backed rows — state that explicitly in the verification report
+and PR body, and rely on the direct suite verification plus the review-gate panel (the HARD-GATE's
+sole-gate contract for this path).
+
+**Commit the verification report before pushing.** After the checker passes, `git add
+specs/<feature>/verification-report.md && git commit` it — a sibling of the already-committed
+`gate-report.md`/`build-report.md`, so it rides the PR branch. Skipping this leaves the report absent
+from the pushed branch and the worktree dirty.
 
 ## PR body — synthesized from the spec
 

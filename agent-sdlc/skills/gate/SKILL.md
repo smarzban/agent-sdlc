@@ -43,7 +43,7 @@ a verdict: ready to build, or not.
    and concrete (no placeholders), so build inherits one definition of "green".
 5. **Hygiene.** No unresolved TBDs, placeholders, or "decide later" markers remain.
 6. **Mechanical corroboration.** After checks 1–5, run the bundled checker as a second, automated
-   witness to the same chain: `node agent-sdlc/checker/sdlc-check.mjs specs/<feature>/<feature>.md`
+   witness to the same chain: `sdlc-check specs/<feature>/<feature>.md`
    (bare `node`, no install; a plain run auto-scopes to whatever artifacts exist at gate time — do
    not `--require` the ledger or verification report, they don't exist yet). `node` present -> run it
    and interpret the exit code: 0 = corroborated; **nonzero, or the checker crashing, is itself a
@@ -140,7 +140,7 @@ a verdict: ready to build, or not.
 
 - Lives at `specs/<feature>/gate-report.md`. Read-only over every other artifact.
 - Run after the `## Plan` section exists and before build. Re-run after any fix until the verdict is clean.
-- Invokes `agent-sdlc/checker/sdlc-check.mjs` (bare `node`, no install) after its own chain walk for
+- Invokes `sdlc-check` (bare `node`, no install) after its own chain walk for
   mechanical corroboration, mirroring the existing ship <-> review-gate contract: present and clean ->
   corroborated; present and failing (or crashing) -> stop-and-ask, override recorded; absent -> an
   announced degraded fallback, never a silent skip. The checker is read-only, same as the gate itself.

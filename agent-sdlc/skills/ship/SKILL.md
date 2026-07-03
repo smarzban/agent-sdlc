@@ -33,15 +33,21 @@ it stops and asks before changing anything — a PR is an outward artifact.
    stop; do not push a red branch.
 3. **Verify criteria** build the AC → proof map, write `specs/<feature>/verification-report.md`, then
    **invoke the checker** (pre-PR invocation point, AC-15) with the report required:
-   `node agent-sdlc/checker/sdlc-check.mjs specs/<feature>/<feature>.md --require ledger --require
-   verification-report`. Runtime present → run, interpret the exit code: 0 = every AC settled
-   mechanically, proceed; nonzero, or the checker crashing, is itself a failed check (fail-closed) —
-   **stop-and-ask**, do not open the PR (or, if one is already open, do not treat it as shipped); any
-   human override must be **recorded in the PR body** (AC-16). Runtime absent → an **announced
-   degraded fallback** — never a silent skip. This runs *before* `gh pr create`, distinct from the
-   *post-PR* review-gate panel (step 7): sdlc-check is the mechanical spine, review-gate is the
-   judgment panel, both are real gates. (Mechanics + row grammar in
-   [reference/finishing.md](reference/finishing.md).)
+   `sdlc-check specs/<feature>/<feature>.md --require ledger --require verification-report`. Runtime
+   present → run, interpret the exit code: 0 = every AC settled mechanically, proceed; nonzero, or the
+   checker crashing, is itself a failed check (fail-closed) — **stop-and-ask**, do not open the PR
+   (or, if one is already open, do not treat it as shipped); any human override must be **recorded in
+   the PR body** (AC-16). Runtime absent → an **announced degraded fallback** — never a silent skip.
+   **No-ledger path** (a branch built outside the pipeline — the HARD-GATE's alternate precondition):
+   there is no `build-report.md`, so drop `--require ledger` (run `sdlc-check … --require
+   verification-report` only) and state in the verification report + PR body that ledger-backed AC-14
+   corroboration is unavailable — the direct suite verification (step 2) plus the review-gate panel
+   (step 7) are the quality gate, as the HARD-GATE says. Then **commit the verification report** so it
+   rides the PR: `git add specs/<feature>/verification-report.md && git commit` (a sibling of the
+   already-committed `gate-report.md`/`build-report.md`; without this the pushed branch omits it and
+   the worktree is left dirty). This all runs *before* `gh pr create`, distinct from the *post-PR*
+   review-gate panel (step 7): sdlc-check is the mechanical spine, review-gate is the judgment panel,
+   both are real gates. (Mechanics + row grammar in [reference/finishing.md](reference/finishing.md).)
 4. **Push** push the feature branch to the remote.
 5. **PR** open it with `gh pr create`. Synthesize the title and body from the spec — the `## Brief`
    summary, the `AC-N` list, the task→criterion coverage, any `SHORTCUT(T-N)` ceilings the build
@@ -143,7 +149,7 @@ it stops and asks before changing anything — a PR is an outward artifact.
 
 - Reads `build-report.md` and the spec; references `AC-N` and the feature branch. When no ledger
   exists (a branch built outside the pipeline), verifies the branch directly instead.
-- Invokes `agent-sdlc/checker/sdlc-check.mjs specs/<feature>/<feature>.md --require ledger --require
+- Invokes `sdlc-check specs/<feature>/<feature>.md --require ledger --require
   verification-report` (bare `node`, no install) pre-PR, mirroring gate's and build's checker
   contract: present and clean → corroborated, proceed; present and failing (or crashing) →
   stop-and-ask, override recorded in the PR body; absent → an announced degraded fallback, never a

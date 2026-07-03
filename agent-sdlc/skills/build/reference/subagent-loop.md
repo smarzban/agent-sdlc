@@ -114,7 +114,7 @@ dispatch with the default model; the loop is unchanged.
 2. Cross-check with `git log` — a task with a commit is done even if the ledger missed the write.
 3. Resume at the first task not marked done. **Never re-run a done task.**
 4. **Invoke the checker before continuing** (resume invocation point, AC-15) — a second, mechanical
-   witness to 1–3: `node agent-sdlc/checker/sdlc-check.mjs specs/<feature>/<feature>.md --require
+   witness to 1–3: `sdlc-check specs/<feature>/<feature>.md --require
    ledger` (never `--require verification-report` here — that artifact is ship's). Runtime present →
    interpret the exit code: 0 proceeds; nonzero, or the checker crashing, is a failed check
    (fail-closed) — **stop-and-ask**, do not resume task work, and record any human override in
