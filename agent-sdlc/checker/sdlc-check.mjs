@@ -1,15 +1,28 @@
-// sdlc-check — enforcement-spine CLI skeleton.
-// Zero-dependency, bare Node ESM. Parses the CLI surface (spec path + repeatable --require) and
-// establishes the exit-code contract: any error path exits nonzero with a message on stderr
-// naming the problem; nothing here ever exits 0 on failure (fail-closed).
+// sdlc-check — enforcement-spine CLI shell (T-9: full pipeline wiring).
+// Zero-dependency, bare Node ESM. Wires: parse the spec (always required) -> read the ledger and
+// verification report when present (siblings of the spec file) -> read repo facts when the ledger
+// needs them -> run every rule the artifacts present support -> format the report -> print + set
+// process.exitCode. Rules AUTO-SCOPE to the artifacts present (## Design): no ledger -> ledger
+// rules don't run; no verification report -> proof-map rules don't run. `--require <artifact>`
+// flips a missing artifact into a finding instead of a silent skip. Every error path exits
+// nonzero with a message naming the problem; nothing here ever exits 0 on failure (fail-closed) —
+// a parse failure, a repo-facts failure while the ledger's rules would run, and any internal throw
+// (caught at the main guard below) all exit nonzero, never 0.
 import { parseArgs, promisify } from 'node:util';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { execFile } from 'node:child_process';
 
 const execFileAsync = promisify(execFile);
 
-export function run(argv) {
+// --require tokens (decided here, T-9): `ledger` and `verification-report` — the two artifacts
+// whose rules otherwise auto-scope away when absent. `spec` is deliberately NOT a token: it is
+// already unconditionally required (the positional argument + the existsSync check above), so a
+// `--require spec` would be a no-op token, not a real second gate.
+const REQUIRABLE_ARTIFACTS = new Set(['ledger', 'verification-report']);
+
+export async function run(argv) {
   let parsed;
   try {
     parsed = parseArgs({
@@ -39,9 +52,121 @@ export function run(argv) {
     return;
   }
 
-  // Later tasks: read the spec, apply --require'd artifact checks, report results.
-  // For now, an existing spec path with no further checks is not yet a pass or fail decision —
-  // this task only implements the missing/unparseable-input failure path.
+  for (const token of parsed.values.require) {
+    if (!REQUIRABLE_ARTIFACTS.has(token)) {
+      process.stderr.write(
+        `sdlc-check: unrecognized --require artifact '${token}' (valid: ${[...REQUIRABLE_ARTIFACTS].join(', ')})\n`,
+      );
+      process.exitCode = 1;
+      return;
+    }
+  }
+  const required = new Set(parsed.values.require);
+
+  // The spec is always required and always parsed first: a parse failure is fail-closed (AC-10) —
+  // name the problem, exit nonzero, never 0. (A read failure here — e.g. a permission error — is
+  // an internal throw; it propagates to the main guard's catch below, which is itself the same
+  // fail-closed exit path, so it needs no separate handling here.)
+  const model = parseSpec(readFileSync(specPath, 'utf8'), specPath);
+  if (!model.ok) {
+    process.stderr.write(`sdlc-check: ${model.error.file}: ${model.error.problem}\n`);
+    process.exitCode = 1;
+    return;
+  }
+
+  const results = [
+    ...checkTraceIntegrity(model),
+    ...checkForwardCoverage(model),
+    ...checkBackwardCoverage(model),
+    ...checkProvenanceMarkers(model),
+  ];
+
+  // Ledger and verification report are siblings of the spec file — `build-report.md` /
+  // `verification-report.md` (the artifact model: process state kept beside the spec, never
+  // inside it; confirmed against `## Design`'s data contracts and CONTEXT.md's "verification
+  // report" entry).
+  const specDir = path.dirname(specPath);
+  const ledgerPath = path.join(specDir, 'build-report.md');
+  const reportPath = path.join(specDir, 'verification-report.md');
+
+  let ledger = null;
+  if (existsSync(ledgerPath)) {
+    const parsedLedger = parseLedger(readFileSync(ledgerPath, 'utf8'), ledgerPath);
+    if (!parsedLedger.ok) {
+      // Present-but-unparseable is fail-closed, NOT auto-scoped away as "absent" — silently
+      // reading a corrupted ledger as no-ledger would hide a broken artifact behind the same path
+      // that legitimately skips a genuinely absent one.
+      results.push({
+        type: 'finding',
+        rule: 'artifact-parse',
+        message: `ledger present but unparseable (${ledgerPath}): ${parsedLedger.error.problem}`,
+        ids: ['ledger'],
+      });
+    } else {
+      ledger = parsedLedger;
+    }
+  } else if (required.has('ledger')) {
+    results.push({
+      type: 'finding',
+      rule: 'required-artifact',
+      message: `--require ledger: no ledger found at ${ledgerPath}`,
+      ids: ['ledger'],
+    });
+  }
+
+  if (ledger) {
+    results.push(...checkGreenBarEvidence(ledger));
+
+    const doneTaskIds = ledger.tasks.filter((t) => /^done$/i.test(t.status)).map((t) => t.task);
+    const repoFacts = await readRepoFacts(process.cwd(), doneTaskIds);
+    if (!repoFacts.ok) {
+      // Fail-closed (## Design trust/failure boundaries; plan T-9 note): a repo-facts failure
+      // while the ledger's rules would run is itself a failed check — NEVER silently treated as
+      // "no facts" and skipped.
+      results.push({
+        type: 'finding',
+        rule: 'repo-facts',
+        message: `ledger present but repo facts unavailable: ${repoFacts.error.problem}`,
+        ids: ['ledger'],
+      });
+    } else {
+      results.push(...checkLedgerVsGit(ledger, repoFacts));
+    }
+  }
+
+  let verificationReport = null;
+  if (existsSync(reportPath)) {
+    const parsedReport = parseVerificationReport(readFileSync(reportPath, 'utf8'), reportPath);
+    if (!parsedReport.ok) {
+      results.push({
+        type: 'finding',
+        rule: 'artifact-parse',
+        message: `verification report present but unparseable (${reportPath}): ${parsedReport.error.problem}`,
+        ids: ['verification-report'],
+      });
+    } else {
+      verificationReport = parsedReport;
+    }
+  } else if (required.has('verification-report')) {
+    results.push({
+      type: 'finding',
+      rule: 'required-artifact',
+      message: `--require verification-report: no verification report found at ${reportPath}`,
+      ids: ['verification-report'],
+    });
+  }
+
+  if (verificationReport) {
+    results.push(...checkProofMapCompleteness(model, verificationReport));
+    // AC-14's evidence linkage needs the ledger's captured green-bar text; with no ledger present
+    // there is nothing to search, so this half of the proof-map checks stays scoped to "both
+    // present" (AC-13 completeness above already runs regardless).
+    if (ledger) results.push(...checkProofEvidenceLinkage(verificationReport, ledger));
+  }
+
+  const { text, exitCode } = formatReport(results);
+  process.stdout.write(text);
+  process.exitCode = exitCode;
 }
 
 // --- Spec parser (T-2): sections, AC/C/T IDs, trace references ------------------------------
@@ -1072,5 +1197,10 @@ export function formatReport(results) {
 // for undefined (e.g. `node -e '...'`, no script file) since pathToFileURL() throws on non-string
 // input.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  run(process.argv.slice(2));
+  // Any internal throw (a rejected promise from run() — the async work is readRepoFacts) exits
+  // nonzero: the CLI shell's exit contract has no error path that exits 0.
+  run(process.argv.slice(2)).catch((err) => {
+    process.stderr.write(`sdlc-check: unexpected internal error: ${err && err.stack ? err.stack : err}\n`);
+    process.exitCode = 1;
+  });
 }

@@ -28,9 +28,13 @@ test('nonexistent spec path: exits nonzero and names the problem', () => {
   assert.match(stderr, new RegExp(missingPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
 });
 
-test('existing spec path with no checks yet: exits 0 (happy-path leg not yet implemented)', () => {
+// Superseded by T-9's wiring: the CLI now actually parses the spec, so a non-spec file (this
+// script itself — no "##" sections) is unparseable content and must fail closed (AC-10), not
+// pass. The happy-path exit-0 leg is now covered end-to-end by integration.test.mjs.
+test('an existing but non-spec path (no "##" sections) exits nonzero, never a pass (AC-10, wired at T-9)', () => {
   const result = spawnSync(process.execPath, [CLI, CLI]);
-  assert.equal(result.status, 0, result.stderr?.toString());
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr.toString(), /unparseable/i);
 });
 
 test('importing the module does not execute the CLI (main-guard regression)', () => {
