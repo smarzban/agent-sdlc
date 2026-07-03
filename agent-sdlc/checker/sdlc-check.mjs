@@ -2,9 +2,12 @@
 // Zero-dependency, bare Node ESM. Parses the CLI surface (spec path + repeatable --require) and
 // establishes the exit-code contract: any error path exits nonzero with a message on stderr
 // naming the problem; nothing here ever exits 0 on failure (fail-closed).
-import { parseArgs } from 'node:util';
+import { parseArgs, promisify } from 'node:util';
 import { existsSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
+import { execFile } from 'node:child_process';
+
+const execFileAsync = promisify(execFile);
 
 export function run(argv) {
   let parsed;
@@ -767,6 +770,139 @@ export function checkGreenBarEvidence(ledger) {
         type: 'finding',
         rule: 'green-bar-evidence',
         message: `${t.task} is marked done but has no captured green-bar evidence block`,
+        ids: [t.task],
+      });
+    }
+  }
+  return findings;
+}
+
+// --- Repo facts reader (T-6): git commit history, read-only --------------------------------
+//
+// readRepoFacts() is the ONLY component in this file that touches git: one async `execFile` call
+// over an argv array (no shell), read-only `git log` only (NC-1: local git only, no network — the
+// invoked git subcommand never talks to a remote). Mirrors the parsers' typed-failure discipline:
+// git absent or `repoPath` not a repo returns `{ ok: false, error: { path, problem } }` — it never
+// throws to top and never returns an empty-and-passing commit list (a spawn failure and "no
+// commits" must not be confused).
+//   success: { ok: true, commits }
+//   commits — one entry per commit, in `git log`'s own (newest-first) order — order is irrelevant
+//             to the ledger-vs-git rule below, which only counts: { id, message } (component
+//             contract's "commit list (id, message)"; `id` is the full commit hash).
+//   `taskIds` (optional, the component contract's "task IDs of interest") narrows the RETURNED
+//   list to commits whose message references at least one of them — a relevance filter only; it
+//   never changes what counts as a reference (that stays in the pure rule below, over whatever
+//   messages are returned) and never drops a commit that could matter (a commit referencing none
+//   of `taskIds` is, by definition, not evidence for any task the caller asked about).
+//
+// Commit records are read with `-z` (NUL record separator between commits) and `%x00` as the
+// intra-record field separator between hash and subject — verified against the `git log` docs
+// (`-z`: "Separate the commits with NULs instead of newlines"; `%x00` inserts a raw NUL byte in
+// `--format`) and empirically (`git log -z --format='%H%x00%s'` on git 2.53.0): the whole output
+// is one NUL-delimited stream, so splitting on `\0` and pairing consecutive fields recovers each
+// commit. A commit message cannot itself contain a NUL byte (git strips/rejects them), so this
+// delimiter can never be spoofed by message content — unlike a newline or comma-based format.
+const GIT_LOG_FORMAT = '%H%x00%s';
+const TASK_TOKEN_RE = /\bT-\d+\b/g;
+
+// Distinct T-N tokens appearing in a commit's SUBJECT LINE only (the `%s` readRepoFacts captures
+// via `git log --format=%H%x00%s` — the commit body is never read). Subject-only is the intended
+// scope for AC-4, not an oversight: the repo's commit convention puts the authoritative task scope
+// in the subject (`feat(T-N): …`); whole-message matching would be WORSE — a legitimately atomic
+// commit whose BODY mentions another task in prose ("supersedes T-3", "unlike T-2's approach")
+// would falsely read as multi-task and false-positive AC-4, blocking a good history. (Content
+// atomicity — whether the commit's diff touches only that task's files — is explicitly out of
+// AC-4's scope by design; it stays with build's review.) `\bT-\d+\b`'s `\d+` is greedy so it always
+// consumes the FULL run of digits before the trailing `\b` is checked — "T-1" can never match as a
+// prefix inside "T-12" (the same token-boundary class as the T-2 parser's ID regex).
+function distinctTaskTokens(message) {
+  const tokens = new Set();
+  TASK_TOKEN_RE.lastIndex = 0;
+  let m;
+  while ((m = TASK_TOKEN_RE.exec(message))) tokens.add(m[0]);
+  return tokens;
+}
+
+export async function readRepoFacts(repoPath, taskIds) {
+  let stdout;
+  try {
+    ({ stdout } = await execFileAsync(
+      'git',
+      ['-C', repoPath, 'log', '-z', `--format=${GIT_LOG_FORMAT}`],
+      { encoding: 'utf8' },
+    ));
+  } catch (err) {
+    // Covers both failure modes the contract names: git absent (ENOENT spawn error) and
+    // `repoPath` not a repo (git exits 128, "fatal: not a git repository ..."). Either way this
+    // is a typed failure, never a throw and never an empty `{ ok: true, commits: [] }`.
+    return { ok: false, error: { path: repoPath, problem: `git log failed: ${err.message}` } };
+  }
+
+  const fields = stdout.split('\0').filter((f) => f !== '');
+  const all = [];
+  for (let i = 0; i + 1 < fields.length; i += 2) {
+    all.push({ id: fields[i], message: fields[i + 1] });
+  }
+  const of = Array.isArray(taskIds) && taskIds.length > 0 ? new Set(taskIds) : null;
+  const commits = of
+    ? all.filter((c) => [...distinctTaskTokens(c.message)].some((tok) => of.has(tok)))
+    : all;
+  return { ok: true, commits };
+}
+
+// AC-4 — ledger-vs-git: for each `done` task, git history must contain EXACTLY ONE commit whose
+// SUBJECT LINE references EXACTLY that task ID (see distinctTaskTokens above for why subject-only
+// is the intended scope, not the whole commit message).
+//
+// Exact rule: map each commit's subject line to its distinct-token set (distinctTaskTokens above);
+// a done task T is backed iff exactly one commit's token set CONTAINS T, and that same commit's
+// token set is EXACTLY `{T}`. This is mechanically decidable — it supports NC-4's no-judgment
+// constraint, though it is not itself "the NC-4 rule" (NC-4 is the reviewer-checked constraint that
+// every shipped check has a deterministic oracle; this is one such oracle). Three ways to fail,
+// each its own finding naming T:
+//   - zero commits contain T                         -> "no commit references it";
+//   - more than one commit contains T                -> "N commits reference it" (ambiguous);
+//   - exactly one commit contains T, but its token
+//     set has other members too (a multi-task commit) -> that commit also names another task, so
+//     it cannot be "exactly that task ID"; found via the *same* commit, so this and the ">1
+//     commits" case are mutually exclusive per task.
+// A commit scoping two tasks (`feat(T-3, T-4): ...`) therefore fails BOTH T-3 and T-4 if both are
+// done (each sees its one matching commit's token set as `{T-3, T-4}`, not `{itself}`).
+//
+// Pure: no I/O (repoFacts is already the reader's resolved success model — same convention as
+// checkGreenBarEvidence(ledger) above, which assumes its parseLedger() input already succeeded;
+// a repoFacts failure is fail-closed CLI wiring, out of scope here per the plan — see T-9).
+// Exhaustive: every offending done task is reported, never just the first.
+export function checkLedgerVsGit(ledger, repoFacts) {
+  const findings = [];
+  for (const t of ledger.tasks) {
+    if (!/^done$/i.test(t.status)) continue;
+    const matches = repoFacts.commits.filter((c) => distinctTaskTokens(c.message).has(t.task));
+    if (matches.length === 0) {
+      findings.push({
+        type: 'finding',
+        rule: 'ledger-vs-git',
+        message: `${t.task} is marked done but no commit in git history references it`,
+        ids: [t.task],
+      });
+      continue;
+    }
+    if (matches.length > 1) {
+      findings.push({
+        type: 'finding',
+        rule: 'ledger-vs-git',
+        message: `${t.task} is marked done but ${matches.length} commits reference it (expected exactly one)`,
+        ids: [t.task],
+      });
+      continue;
+    }
+    const tokens = distinctTaskTokens(matches[0].message);
+    if (tokens.size > 1) {
+      const others = [...tokens].filter((tok) => tok !== t.task);
+      findings.push({
+        type: 'finding',
+        rule: 'ledger-vs-git',
+        message: `${t.task} is marked done but its one matching commit (${matches[0].id}) also references ${others.join(', ')} — a commit must reference exactly one task`,
         ids: [t.task],
       });
     }
