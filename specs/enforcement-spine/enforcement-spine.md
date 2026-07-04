@@ -228,6 +228,12 @@ committed-artifact pattern (review-gate ships its runnable `dist/` the same way)
 3. **Repo facts reader** — single responsibility: gather version-control facts. The only component
    that touches git: reads commit history (read-only) so the ledger check can match done-tasks to
    commits.
+   > **Superseded (2026-07-04, SMA-420 · checker-semantics PR):** the git-history walk this component
+   > describes was replaced by per-SHA verification of each done task's **ledger-recorded** commit
+   > (existence + reachability from HEAD + subject scope-position match); AC-4 was amended to match
+   > (see AC-4's amendment note). This section, the Data-Flow / Tech-Stack "repo facts reader" entries,
+   > and the T-6 plan text below record the 0.7.0 build **as originally shipped** — they are retained
+   > as the historical record, not the current implementation.
    *Contract:* in — repo path + the task IDs of interest; out — the commit list (id, message);
    errors — git absent or not-a-repo is a typed failure, not a pass.
 4. **Check suite** — single responsibility: judge the model. Pure rules (no I/O) over the parsed
