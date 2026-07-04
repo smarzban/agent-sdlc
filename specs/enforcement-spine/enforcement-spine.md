@@ -87,11 +87,15 @@ precedent, so it fails the "surprising without context" test.
 - **AC-3** — Given a plan in which a task carries neither a real AC reference nor an explicit
   `untraced` marker, the check fails and names the task; a task with an explicit `untraced` marker
   is surfaced as a coverage note, not a failure. *test-backed: unit.*
-- **AC-4** — Given a ledger that marks a task done, the check fails unless git history contains
-  exactly one commit referencing exactly that task ID; a done task with no matching commit, or a
-  commit referencing multiple task IDs, fails naming the task. (Content-atomicity — the commit
-  touches only that task's files — stays with build's review discipline; deciding file ownership
-  mechanically would require judgment.) *test-backed: integration (fixture repo).*
+- **AC-4** — Given a ledger that marks a task done, the check fails unless the task's
+  **ledger-recorded commit** exists in the repository AND that commit's subject-line scope position
+  references **exactly** that task ID; a done task with no recorded commit, a recorded commit not
+  found in the repo, or a recorded commit whose subject references a different or additional task,
+  fails naming the task. (The recorded commit is the ledger's `commit` column — the first
+  commit-SHA token in the cell; the "references exactly that task" relation is the `type(scope):`
+  scope-position match. Content-atomicity — the commit touches only that task's files — stays with
+  build's review discipline; deciding file ownership mechanically would require judgment.) *test-backed:
+  integration (fixture repo).* (amended 2026-07-04, SMA-420: recorded-commit model.)
 - **AC-5** — Given a ledger that claims the green bar passed without captured command output
   evidence, the check fails naming the claim. *test-backed: unit.*
 - **AC-6** — Given a provenance marker that is present but malformed (missing the source
