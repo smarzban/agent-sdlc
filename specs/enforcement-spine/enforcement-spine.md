@@ -239,9 +239,17 @@ committed-artifact pattern (review-gate ships its runnable `dist/` the same way)
    all N violations, never only the first) plus coverage notes, and derives the exit code.
    *Contract:* in — findings + notes; out — human-readable report text + exit code; errors — none.
 
-**Outside the checker (changed components):** the `gate`, `build`, and `ship` skill texts gain the
-invocation contract below; `build` additionally captures green-bar evidence blocks in its ledger;
-`ship` additionally writes the verification report and publishes the proof map in the PR body.
+### Outside the checker (changed components)
+
+The `gate`, `build`, and `ship` skill texts gain the invocation contract below; `build`
+additionally captures green-bar evidence blocks in its ledger; `ship` additionally writes the
+verification report and publishes the proof map in the PR body.
+
+1. **gate skill text** — gains the checker-invocation contract (invoke sdlc-check after the chain
+   walk; nonzero/crash = failed check = stop-and-ask; runtime absent = announced degraded fallback).
+2. **build skill text** — the invocation contract + captures green-bar evidence blocks in the ledger.
+3. **ship skill text** — the invocation contract + writes the verification report and publishes the
+   proof map in the PR body.
 
 ### Data contracts
 
@@ -302,9 +310,9 @@ run is a pure function of the artifact set + git history.
 | AC-12 | CLI shell |
 | AC-13 | check suite (+ verification-report contract) |
 | AC-14 | check suite (+ ADR-0001 linkage rule) |
-| AC-15 | gate/build/ship skill texts (invocation contract) |
-| AC-16 | gate/build/ship skill texts (invocation contract) |
-| AC-17 | gate/build/ship skill texts (invocation contract) |
+| AC-15 | gate skill text, build skill text, ship skill text (invocation contract) |
+| AC-16 | gate skill text, build skill text, ship skill text (invocation contract) |
+| AC-17 | gate skill text, build skill text, ship skill text (invocation contract) |
 | AC-18 | ship skill text (+ verification-report contract) |
 | NC-1 | CLI shell |
 | NC-2 | CLI shell |
@@ -461,8 +469,8 @@ main guard so tests import the module without executing it. Tests build their fi
   `agent-sdlc/skills/ship/SKILL.md` and `agent-sdlc/skills/ship/reference/finishing.md`: build
   the AC → proof map, write `specs/<feature>/verification-report.md`, run the checker pre-PR with
   the report required, publish the map in the PR body, record any human override in the PR body.
-  *Verification (prose):* re-read against AC-13/14 (wiring), AC-16, AC-18. *Component:* ship
-  skill text. *Deps:* T-9, T-11.
+  *Verification (prose):* re-read against AC-13/14 (wiring), AC-16, AC-18.
+  *Component:* ship skill text. *Deps:* T-9, T-11.
 
 ### Task-to-criterion coverage map
 

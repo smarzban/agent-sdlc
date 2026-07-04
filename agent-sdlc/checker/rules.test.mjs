@@ -414,13 +414,8 @@ test('the real enforcement-spine spec yields zero findings from all three rules 
   const text = readFileSync(specPath, 'utf8');
   // SMA-419 dropped the `/\bskill texts?\b/` allowlist that let this spec's "outside the checker"
   // skill-text citations (AC-15-18, T-10-12) resolve as non-dangling. The structured replacement is
-  // a `### Outside the checker (…)` subheading, and migrating THIS spec to it is T-2's job — until
-  // then those citations legitimately read as dangling. Gate the regression on the migrated form so
-  // it keeps full value once T-2 lands but never fails in the T-1↔T-2 window.
-  if (!/^###\s+.*outside the checker/im.test(text)) {
-    t.skip('enforcement-spine spec not yet migrated to the structured "### Outside the checker" grammar (SMA-420 / T-2)');
-    return;
-  }
+  // a `### Outside the checker (…)` subheading; T-2 migrated THIS spec to it, so the skill-text
+  // components are declared as real `C-ext-N` components and every citation resolves by name.
   const result = parseSpec(text, specPath);
   assert.equal(result.ok, true, 'the real spec must parse cleanly');
 
