@@ -57,8 +57,16 @@ must still exit 0 on the current repo and keep the full existing test suite gree
   resolve. *(Testable: a Component field citing `<real-component-name>` embedded in a longer word
   → unresolved → a dangling finding; the exact component name still resolves.)*
 - **AC-6** — No verdict change on well-formed input: the full existing checker test suite stays green
-  and `sdlc-check` still exits 0 on the current repo's enforcement-spine artifacts. *(Testable: the
-  suite passes; a real-repo run exits 0. Reviewer-checkable: no rule's happy-path verdict moved.)*
+  and `sdlc-check` still exits 0 on **this feature's own spec** (a well-formed spec that passed before
+  and after), with no rule's happy-path verdict altered by these changes. *(Testable: the suite
+  passes; `node agent-sdlc/checker/sdlc-check.mjs specs/checker-correctness/checker-correctness.md`
+  exits 0. Reviewer-checkable: no rule's happy-path verdict moved.)* **Scoping note:** running the
+  checker against `specs/enforcement-spine/` from a **feature branch** exits nonzero — its
+  ledger-vs-git rule scopes to `merge-base..HEAD` (the M-968 rev-range shipped in v0.7.0), which
+  legitimately excludes enforcement-spine's own task commits once they are behind the merge-base. That
+  is **pre-existing rev-range behavior, not a regression introduced here** (those artifacts validate
+  from a checkout where their commits are in range, e.g. `main`), so AC-6 is scoped to a spec whose
+  commits are in range for this branch.
 
 ## Design
 

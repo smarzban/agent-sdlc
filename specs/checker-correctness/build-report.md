@@ -33,6 +33,23 @@ isolation) before each commit.
 All four tasks done, green end to end, checker-corroborated. Branch `feat/checker-correctness` is
 ready. Next: `/agent-sdlc:ship`.
 
+## Review-gate — Round 1 (BLOCK → fixed)
+
+Panel: holistic ×4 (kimi-k2.7, glm-5.2, opus-4-8, gpt-5.5) + lenses (spec, security, subtle) + scan.
+Coverage 7/7 voted, 0 missing (three prose-wrapped `[]` non-votes re-run clean with a hardened
+array-only contract). Verdict: **BLOCK** on 1 medium; 2 lows advisory. All addressed (area-scoped, so
+the per-task ledger-vs-git count is untouched):
+
+- **MEDIUM (lens-spec) — AC-6 wording inaccurate.** AC-6 claimed exit 0 on the enforcement-spine
+  artifacts, but a feature branch exits 1 there (M-968 rev-range scoping, v0.7.0 — excludes those
+  commits behind the merge-base; not a regression from this PR). Fixed: reworded AC-6 to the actual
+  regression guard (suite green + checker exit 0 on *this* spec; enforcement-spine exit-nonzero on a
+  feature branch is pre-existing rev-range behavior), proof + PR body updated to match.
+- **LOW (holistic-codex) — `\b` dropped exact non-word-edge names** (`C++`, `.NET`). Upgraded
+  `\b…\b` → `(?<![A-Za-z0-9_])…(?![A-Za-z0-9_])` lookarounds (substring collision still rejected;
+  non-word-edge exact names now resolve). +1 regression test (`C++` resolves). Suite 141→142.
+- **LOW (lens-spec) — AC-6 proof** — same root as the medium, fixed together.
+
 ## Green-bar evidence
 
 ### T-1 (@ `4847729`)
