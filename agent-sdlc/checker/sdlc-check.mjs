@@ -601,7 +601,8 @@ export function parseLedger(text, file = '<unknown ledger file>') {
     return { ok: false, error: { file, problem: 'missing or empty ledger content' } };
   }
   const lines = text.split(/\r\n|\r|\n/);
-  const tasks = extractLedgerTasks(lines);
+  const { tasks, error } = extractLedgerTasks(lines);
+  if (error) return { ok: false, error: { file, problem: error.problem } };
   const evidence = extractLedgerEvidence(lines);
   if (tasks.length === 0 && evidence.length === 0) {
     return {
@@ -638,6 +639,11 @@ function extractLedgerTasks(lines) {
     if (j < lines.length && TABLE_SEPARATOR_RE.test(lines[j])) j += 1;
     while (j < lines.length && TABLE_ROW_RE.test(lines[j])) {
       const cells = splitTableCells(lines[j]);
+      // A data row with fewer cells than its header is malformed — fail closed with a typed error
+      // naming the offending line, never index past the row and throw a TypeError (AC-3).
+      if (cells.length < header.length) {
+        return { tasks, error: { problem: `ragged task ledger row (fewer cells than the header) at line ${j + 1}` } };
+      }
       const taskId = cells[col.task];
       if (/^T-\d+$/.test(taskId)) {
         tasks.push({
@@ -653,7 +659,7 @@ function extractLedgerTasks(lines) {
     }
     i = j;
   }
-  return tasks;
+  return { tasks };
 }
 
 // One entry per "### T-N (@ SHA)" heading, gathering every fenced code block up to the next
@@ -740,6 +746,14 @@ export function parseVerificationReport(text, file = '<unknown verification repo
     if (j < lines.length && TABLE_SEPARATOR_RE.test(lines[j])) j += 1;
     while (j < lines.length && TABLE_ROW_RE.test(lines[j])) {
       const cells = splitTableCells(lines[j]);
+      // A data row with fewer cells than its header is malformed — fail closed with a typed error
+      // naming the offending line, never index past the row and throw a TypeError (AC-3).
+      if (cells.length < header.length) {
+        return {
+          ok: false,
+          error: { file, problem: `ragged proof-map row (fewer cells than the header) at line ${j + 1}` },
+        };
+      }
       const criterion = cells[col.criterion];
       if (/^(AC|NC)-\d+$/.test(criterion)) {
         rows.push({

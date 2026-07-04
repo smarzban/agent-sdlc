@@ -446,6 +446,34 @@ test('parses real-shaped multi-task ledger evidence (grounded in the actual buil
   assert.match(result.evidence.find((e) => e.task === 'T-2').text, /# pass 24/);
 });
 
+test('a ragged ledger data row (fewer cells than the header) fails cleanly, never a thrown TypeError', () => {
+  const ledger = [
+    '## Task ledger',
+    '',
+    '| Task | Status | Commit | AC advanced | Notes |',
+    '| --- | --- | --- | --- | --- |',
+    '| T-1 | done | `823bc91` |',
+  ].join('\n');
+  const result = parseLedger(ledger, 'build-report.md');
+  assert.equal(result.ok, false);
+  assert.equal(result.error.file, 'build-report.md');
+  assert.match(result.error.problem, /ragged|fewer cells|malformed/i);
+  assert.match(result.error.problem, /5/); // names the 1-based line number of the offending row
+});
+
+test('a well-formed ledger row with an empty-but-present trailing cell is NOT ragged and still parses', () => {
+  const ledger = [
+    '## Task ledger',
+    '',
+    '| Task | Status | Commit | AC advanced | Notes |',
+    '| --- | --- | --- | --- | --- |',
+    '| T-2 | pending | — | AC-1 | |',
+  ].join('\n');
+  const result = parseLedger(ledger, 'build-report.md');
+  assert.equal(result.ok, true);
+  assert.equal(result.tasks.find((t) => t.task === 'T-2').status, 'pending');
+});
+
 // --- Verification-report parsing (T-3) ---
 
 test('missing verification-report content fails cleanly', () => {
@@ -488,6 +516,20 @@ test('parses a reviewer-checked proof-map row with its answered pass/fail questi
   const row = result.rows.find((r) => r.criterion === 'AC-15');
   assert.equal(row.type, 'reviewer-checked');
   assert.match(row.proof, /invocation point/);
+});
+
+test('a ragged verification-report data row (fewer cells than the header) fails cleanly, never a thrown TypeError', () => {
+  const report = [
+    '## Verification Report',
+    '| Criterion | Type | Proof |',
+    '| --- | --- | --- |',
+    '| AC-3 | test-backed |',
+  ].join('\n');
+  const result = parseVerificationReport(report, 'verification-report.md');
+  assert.equal(result.ok, false);
+  assert.equal(result.error.file, 'verification-report.md');
+  assert.match(result.error.problem, /ragged|fewer cells|malformed/i);
+  assert.match(result.error.problem, /4/); // names the 1-based line number of the offending row
 });
 
 test('a proof-map row with an empty proof cell still parses (empty proof, for T-13\'s rule to flag)', () => {
