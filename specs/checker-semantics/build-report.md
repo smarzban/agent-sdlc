@@ -43,6 +43,27 @@ AC-4 amended to the recorded-commit model; enforcement-spine now passes end-to-e
 All four tasks done, green end to end, checker-corroborated under the new rules. Branch
 `feat/checker-semantics` (off `feat/checker-correctness`, PR #2) is ready. Next: `/agent-sdlc:ship`.
 
+## Review-gate — Round 1 (BLOCK → fixed)
+
+Panel (no-ollama per maintainer steer): holistic ×2 (opus-4-8 + gpt-5.5) + 3 lenses (spec/security/
+subtle) + scan. Coverage 5/5 voted, 0 missing. Verdict **BLOCK** on 2 mediums; 1 low advisory. All
+addressed (area-scoped commits, so the recorded-commit rule is unaffected):
+
+- **MEDIUM (opus) — reachability fail-open.** `git show -s <sha>` resolved a stale/dangling pre-amend
+  SHA (unreachable from HEAD) → a done task passed against a commit not in the shipped history (the old
+  `git log` walk only saw reachable commits). Fixed (`e8accad`): `checkLedgerVsGit` now requires
+  `git merge-base --is-ancestor <sha> HEAD`; a found-but-unreachable SHA is a finding. False-pass
+  confirmed pre-fix. +2 tests.
+- **MEDIUM (lens-security) — unbounded git subprocesses.** One `git show` per done SHA, no cap/timeout.
+  Fixed (`e8accad`): per-command 10s timeout (fail-closed on kill) + `MAX_LEDGER_COMMITS=1000` cap
+  (fail-closed, skips the loop over-cap). +3 tests. (Low real-risk — trusted committed ledger — but
+  cheap defense-in-depth.)
+- **LOW (codex) — stale history-walk text in the enforcement-spine reference spec.** Fixed (`ae00c1d`):
+  a supersession note scoping the Design/Data-Flow/Tech-Stack/T-6 history-walk descriptions as the
+  0.7.0 as-shipped record. **Maintainer decision flagged:** full rewrite vs. the note approach taken.
+
+Suite 138→143. Both spec-checkers still exit 0. Round 2 = single-model verification (non-ollama).
+
 ## Design refinement (build-time)
 
 - **D6 (SMA-420, discovered in build) — recorded-commit is the FIRST SHA-shaped token in the ledger
