@@ -38,6 +38,12 @@ branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
    feature — nothing to compile or test yet), the baseline is **vacuously green**, not red — report
    it as such and proceed; the bar becomes binding from the first task that creates those paths
    onward. This is not a per-feature carve-out — do not re-derive it in a plan's Notes.
+   **Pin the agent-type roster here, once.** Resolve the implementer/reviewer/fixer agent types the
+   loop will dispatch before the per-task loop begins. If a declared type is unavailable, **announce
+   the substitution ONCE up front and record it in `build-report.md`** (e.g. `implementer →
+   general-purpose stand-in: <reason>`) — never rediscover the degradation per dispatch. A pinned
+   roster plus a single up-front announcement is deterministic; per-dispatch rediscovery is
+   improvisation that hides which agent actually did the work.
 3. **Ledger** open `build-report.md`. If it already exists, resume from it plus `git log` — never
    re-run a task already marked done. Re-doing completed work is the most expensive failure here.
    **When resuming an existing ledger, invoke the checker first** (resume invocation point, AC-15) —
@@ -72,6 +78,12 @@ branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
       per-test names, not a summary count that names no test.
    g. If Linear sync is enabled in `.agent-sdlc/config.json`, transition `T-N`'s issue via the
       `linear-sync` skill.
+
+   If a dispatched subagent **dies mid-task** (session/token limit, API error, crash), follow the
+   **subagent-death policy** — capture partial work → retry once with a fresh subagent → only then
+   conductor-takeover, with the deviation recorded in `build-report.md`
+   ([reference/subagent-loop.md](reference/subagent-loop.md)). A dead subagent is not a licence to
+   silently finish the task yourself.
 5. **Hand off** when every task is done and green: **invoke the checker again** (build-complete
    invocation point, AC-15) — same command as step 3 (`--require ledger`, never
    `--require verification-report`). Same interpretation: nonzero or a crash is a failed check →
@@ -86,8 +98,10 @@ The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and le
 
 ## Principles
 
-- **Conduct, do not perform.** The conductor never writes product code. Every change comes from a
-  subagent with a one-task brief. If you find yourself editing source directly, stop and dispatch.
+- **Conduct, do not perform.** The conductor never writes product code (the one sanctioned exception
+  is the recorded subagent-death takeover — see [reference/subagent-loop.md](reference/subagent-loop.md)).
+  Every change comes from a subagent with a one-task brief. If you find yourself editing source
+  directly, stop and dispatch.
 - **Plan source is irrelevant to the loop.** A plan ingested from Linear or a doc runs the identical
   per-task discipline — test-first, review, green bar, isolation, ledger. The adapter changes only how
   the plan arrives; if any rigour changes because of where it came from, that is a bug.
@@ -128,6 +142,8 @@ The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and le
 | "`sdlc-check` failed but the task looks fine, proceed anyway." | A failed checker run is a failed check — stop-and-ask. Proceeding needs an explicit, recorded human override. |
 | "I'll add the evidence block later, once more tasks land." | Evidence is captured from the first task, never deferred — a gap left for later is a hole the checker (AC-5/AC-14) will find. |
 | "The baseline is red because the target files don't exist yet — stop." | Absence of the declared paths is vacuous green, not red — greenfield has nothing to fail. Proceed; the bar binds once the paths exist. |
+| "The implementer agent type isn't available — I'll swap in a stand-in whenever I hit a dispatch." | Per-dispatch rediscovery is improvisation. Resolve the roster once at build start, announce the substitution up front, and record it in the ledger. |
+| "The subagent died mid-task — I'll just finish it myself and move on." | Not without the policy: capture the partial work, retry once fresh, only then conductor-take-over, and record the deviation. A silent takeover erases which agent did the work. |
 
 ## Red flags (stop and fix)
 
@@ -147,12 +163,16 @@ The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and le
   no recorded override.
 - The checker silently skipped when `node` was absent, instead of an announced degraded fallback.
 - The baseline halted on a greenfield absence instead of recording vacuous green.
+- An agent-type substitution discovered per-dispatch instead of pinned + announced at build start.
+- A dead subagent's work silently conductor-completed with no retry and no ledger record.
 
 ## Done when
 
 - Every `T-N` is implemented test-first, reviewed, and committed atomically, the green bar green
   (tests, lint, format-check) between each, and each commit verified to compile in isolation.
-- `build-report.md` records every task done with its SHA and `AC-N`; no task left in-progress.
+- `build-report.md` records every task done with its SHA and `AC-N`; no task left in-progress. Any
+  agent-type roster substitution and any subagent-death deviation (task, what died, what was
+  recovered, whether isolation held) is recorded there too.
 - Every done task carries a captured green-bar evidence block in `build-report.md`, present from the
   first task onward.
 - The checker corroborated at resume (if resuming) and at build-complete — or, for either point that
@@ -170,8 +190,10 @@ The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and le
   evidence block (fenced command + output tail, from the first task onward), and any
   deferred-shortcut ceilings (`SHORTCUT(T-N)`) the task left in the code, plus the checker's
   resume/build-complete corroboration result (pass, stop-and-ask with any recorded override, or an
-  announced degraded fallback). Mirrors `gate-report.md`'s role — process state beside the spec,
-  never inside it.
+  announced degraded fallback). It also carries the build-start **agent-type roster** and any
+  announced substitution, and any **subagent-death deviation** (which task, what died, what was
+  recovered, whether isolation was lost, whether conductor-takeover was reached). Mirrors
+  `gate-report.md`'s role — process state beside the spec, never inside it.
 
 ## Conventions
 

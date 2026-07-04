@@ -67,6 +67,27 @@ test) and `debugging.md` (stop-the-line: root cause, not symptom). Re-review aft
 the cycle to ~2–3 rounds**; if it still fails, the task is blocked — record it and raise it, do not
 grind.
 
+## Subagent death (a dispatch that dies mid-task)
+
+A dispatched subagent can die mid-task — a session/token limit, an API error, a crash — returning no
+diff or a truncated one. The response is a fixed sequence, not an improvisation:
+
+1. **Capture any partial work.** Salvage whatever the dead subagent left — a partial diff, a written
+   test, notes — into the workspace. Do not discard it; it may seed the retry.
+2. **Retry once with a fresh subagent.** Re-dispatch the same file brief to a new subagent (a died
+   session does not resume — fresh context). One retry, not a loop.
+3. **Only then, conductor-takeover.** If the retry also dies, the conductor may complete the task
+   itself — the one sanctioned exception to conduct-do-not-perform, because a stalled line is worse
+   than a localized, recorded deviation. Take over minimally.
+4. **Record the deviation in `build-report.md`.** Which task, what died (the failure subtype), what
+   partial work was recovered, whether isolation was lost, and whether step 3 (takeover) was reached.
+   A silent takeover with no ledger record is the exact failure this policy exists to prevent.
+
+A recovered or conductor-completed task clears the same gates as any other — the per-task review, the
+full green bar, and the staged-isolation check all still run before it commits. The roster pinned at
+build start (SKILL step 2) is what a retry re-dispatches against; a substitution already announced
+there is not re-announced per death.
+
 ## Commit (conductor, after the reviewer passes)
 
 The conductor — not a subagent — verifies the green bar green (runs the full declared set — compile,
