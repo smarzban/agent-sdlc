@@ -43,6 +43,20 @@ All four tasks done, checker-corroborated. agent-sdlc bumped to **0.8.0** (tag +
 the maintainer). Branch `feat/contract-visibility` (off `feat/build-gate-robustness`, PR #4) is ready.
 Next: `/agent-sdlc:ship`.
 
+## Review-gate — Round 1 (BLOCK → fixed)
+
+Panel (no-ollama): holistic ×2 (opus + gpt-5.5) + lens-spec + scan. Coverage 3/3 voted, 0 missing.
+opus + lens-spec clean; gpt-5.5 raised 1 medium + 2 low — all **accuracy** defects (fitting for a
+docs-accuracy PR), all fixed in `bdcbefe`:
+- **MEDIUM** — the architecture-design component-map doc overstated "independent resolution": the
+  checker scans the whole cell and flags dangling only when ZERO known components match, so a typo
+  beside a real name rides through. Doc corrected to describe the actual whole-cell behavior.
+- **LOW** — the spec's own AC-1 still said "non-wrapping" (T-1 had fixed the SKILL doc, not the spec);
+  corrected to the period-termination rule + the multi-word-name one-line caveat.
+- **LOW** — both manifests said "outside the checker" declarations "scope what the checker skips";
+  reworded — they make external `C-ext-N` components resolvable, not skipped.
+Suite stays 143 green; full pre-PR checker exit 0. Round 2 = single-model verification (small doc fixes).
+
 ## Green-bar evidence
 
 ### T-1 (@ `7854e6f`)
