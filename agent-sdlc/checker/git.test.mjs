@@ -15,7 +15,13 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { parseLedger, readCommitSubject, checkLedgerVsGit } from './sdlc-check.mjs';
+import {
+  parseLedger,
+  readCommitSubject,
+  checkLedgerVsGit,
+  checkLedgerCommitCap,
+  MAX_LEDGER_COMMITS,
+} from './sdlc-check.mjs';
 
 function makeRepo() {
   const dir = mkdtempSync(path.join(tmpdir(), 'sdlc-check-git-'));
@@ -53,16 +59,18 @@ function makeLedger(rows) {
   return result;
 }
 
-// Mirrors run()'s gather step: for each done task with a recorded SHA, read that commit's subject
-// via the reader into a `sha -> { found, subject }` map — the exact shape checkLedgerVsGit consumes.
+// Mirrors run()'s gather step: for each done task with a recorded SHA, read that commit via the
+// reader into a `sha -> { found, reachable, subject }` map — the exact shape checkLedgerVsGit
+// consumes. `reachable` (FIX 1) distinguishes a resolvable-but-orphaned SHA from a reachable one.
 async function gatherSubjects(dir, ledger) {
   const map = new Map();
   for (const t of ledger.tasks) {
     if (!/^done$/i.test(t.status) || !t.commit || map.has(t.commit)) continue;
     const res = await readCommitSubject(dir, t.commit);
-    if (res.ok) map.set(t.commit, { found: true, subject: res.subject });
-    else if (res.notFound) map.set(t.commit, { found: false, subject: null });
-    // res.unavailable (git absent / not a repo) is a systemic failure the CLI handles; not here.
+    if (res.ok) map.set(t.commit, { found: true, reachable: true, subject: res.subject });
+    else if (res.unreachable) map.set(t.commit, { found: true, reachable: false, subject: null });
+    else if (res.notFound) map.set(t.commit, { found: false, reachable: false, subject: null });
+    // res.unavailable (git absent / not a repo / timeout) is a systemic failure the CLI handles.
   }
   return map;
 }
@@ -272,4 +280,88 @@ test('a task not marked done is never checked, even with a missing/wrong recorde
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+// --- FIX 1 (reachability): a recorded SHA must be REACHABLE from HEAD, not merely resolvable ---
+//
+// `git show` resolves ANY object in the store — including a dangling pre-amend commit — so a ledger
+// recording a stale SHA that is not in the shipped history used to false-pass (a fail-open
+// regression from the old reachable-only `git log` walk). readCommitSubject now gates on
+// `git merge-base --is-ancestor <sha> HEAD` first: a resolvable-but-unreachable SHA → a finding.
+
+test('readCommitSubject on a resolvable-but-UNREACHABLE (pre-amend dangling) sha yields a typed unreachable', async () => {
+  const dir = makeRepo();
+  try {
+    const preAmend = commit(dir, 'a', 'feat(T-1): pre-amend');
+    execFileSync('git', ['commit', '--amend', '-q', '-m', 'feat(T-1): amended'], { cwd: dir });
+    // The pre-amend commit is now dangling but still resolvable by `git show` (the false-pass risk).
+    const shown = execFileSync('git', ['show', '-s', '--format=%s', preAmend, '--'], {
+      cwd: dir,
+      encoding: 'utf8',
+    }).trim();
+    assert.equal(shown, 'feat(T-1): pre-amend'); // still resolvable → exactly the fail-open the gate closes
+    const res = await readCommitSubject(dir, preAmend);
+    assert.equal(res.ok, false);
+    assert.equal(res.unreachable, true); // object exists but is not an ancestor of HEAD
+    assert.notEqual(res.notFound, true);
+    assert.notEqual(res.unavailable, true);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('FIX 1: a done task whose recorded commit is a pre-amend DANGLING sha fails as unreachable (not a silent pass)', async () => {
+  const dir = makeRepo();
+  try {
+    const preAmend = commit(dir, 'a', 'feat(T-1): pre-amend');
+    execFileSync('git', ['commit', '--amend', '-q', '-m', 'feat(T-1): amended'], { cwd: dir });
+    const ledger = makeLedger([{ id: 'T-1', commit: preAmend }]);
+    const findings = checkLedgerVsGit(ledger, await gatherSubjects(dir, ledger));
+    assert.equal(findings.length, 1);
+    assert.equal(findings[0].rule, 'ledger-vs-git');
+    assert.deepEqual(findings[0].ids, ['T-1']);
+    assert.match(findings[0].message, /not reachable from HEAD/);
+    assert.match(findings[0].message, /stale or orphaned/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// --- FIX 2 (bound the subprocesses): a cap on distinct recorded done commits ---
+//
+// The checker spawns one git subprocess per distinct done-task SHA. checkLedgerCommitCap refuses
+// (fail closed, one finding) above MAX_LEDGER_COMMITS BEFORE any lookup runs — the CLI skips the
+// per-SHA loop entirely when it fires, so no git subprocess is spawned. Tested directly (no git).
+
+test('FIX 2: an over-cap ledger (> MAX_LEDGER_COMMITS distinct done commits) yields a fail-closed cap finding', () => {
+  const rows = [];
+  for (let i = 1; i <= MAX_LEDGER_COMMITS + 1; i += 1) {
+    rows.push({ id: `T-${i}`, commit: i.toString(16).padStart(7, '0') }); // distinct 7-hex SHA-shaped tokens
+  }
+  const ledger = makeLedger(rows);
+  const finding = checkLedgerCommitCap(ledger);
+  assert.ok(finding, 'exceeding the cap must produce a finding');
+  assert.equal(finding.type, 'finding');
+  assert.equal(finding.rule, 'ledger-vs-git');
+  assert.deepEqual(finding.ids, ['ledger']);
+  assert.match(finding.message, /refusing to spawn unbounded git lookups/);
+  assert.match(finding.message, new RegExp(`more than ${MAX_LEDGER_COMMITS}`));
+});
+
+test('FIX 2: a ledger with exactly MAX_LEDGER_COMMITS distinct done commits is UNDER the cap (>, not >=)', () => {
+  const rows = [];
+  for (let i = 1; i <= MAX_LEDGER_COMMITS; i += 1) {
+    rows.push({ id: `T-${i}`, commit: i.toString(16).padStart(7, '0') });
+  }
+  const ledger = makeLedger(rows);
+  assert.equal(checkLedgerCommitCap(ledger), null); // exactly at the cap does not trip it
+});
+
+test('FIX 2: distinct SHAs are counted (not rows): many done tasks sharing one commit stay under the cap', () => {
+  const rows = [];
+  for (let i = 1; i <= MAX_LEDGER_COMMITS + 5; i += 1) {
+    rows.push({ id: `T-${i}`, commit: 'aaaaaaa' }); // all share ONE distinct SHA → distinct size 1
+  }
+  const ledger = makeLedger(rows);
+  assert.equal(checkLedgerCommitCap(ledger), null);
 });

@@ -119,39 +119,50 @@ export async function run(argv) {
   if (ledger) {
     results.push(...checkGreenBarEvidence(ledger));
 
-    // AC-4 option-(b): the ledger is the authoritative task↔commit link, so verify each done task's
-    // own RECORDED commit rather than re-deriving matches by walking git history. Read each distinct
-    // recorded SHA's subject once (the reader does the git I/O; checkLedgerVsGit stays pure over the
-    // resolved `sha -> { found, subject }` map). A done task with no recorded SHA (`t.commit` null)
-    // is handled inside the rule (AC-6 finding) — nothing to look up.
-    const doneTasks = ledger.tasks.filter((t) => /^done$/i.test(t.status));
-    const subjectsBySha = new Map();
-    let readerFailure = null;
-    for (const t of doneTasks) {
-      if (!t.commit || subjectsBySha.has(t.commit)) continue;
-      const res = await readCommitSubject(process.cwd(), t.commit);
-      if (res.ok) {
-        subjectsBySha.set(t.commit, { found: true, subject: res.subject });
-      } else if (res.notFound) {
-        subjectsBySha.set(t.commit, { found: false, subject: null });
-      } else {
-        // Fail-closed (## Design trust/failure boundaries): a systemic reader failure — git absent
-        // or `process.cwd()` not a repo — while the ledger's rules would run is itself a failed
-        // check, NEVER silently treated as "no facts" and skipped. Distinct from a per-SHA
-        // not-found (a real AC-4 finding the rule renders below).
-        readerFailure = res.error;
-        break;
-      }
-    }
-    if (readerFailure) {
-      results.push({
-        type: 'finding',
-        rule: 'ledger-vs-git',
-        message: `ledger present but git commit subjects unavailable: ${readerFailure.problem}`,
-        ids: ['ledger'],
-      });
+    // FIX 2: bound the git subprocesses. If the ledger records more distinct done-task commits than
+    // MAX_LEDGER_COMMITS, refuse to spawn the per-SHA lookups and fail closed with one finding —
+    // never the unbounded loop below.
+    const capFinding = checkLedgerCommitCap(ledger);
+    if (capFinding) {
+      results.push(capFinding);
     } else {
-      results.push(...checkLedgerVsGit(ledger, subjectsBySha));
+      // AC-4 option-(b): the ledger is the authoritative task↔commit link, so verify each done
+      // task's own RECORDED commit rather than re-deriving matches by walking git history. Read each
+      // distinct recorded SHA once (the reader does the git I/O; checkLedgerVsGit stays pure over
+      // the resolved `sha -> { found, reachable, subject }` map). A done task with no recorded SHA
+      // (`t.commit` null) is handled inside the rule (AC-6 finding) — nothing to look up.
+      const doneTasks = ledger.tasks.filter((t) => /^done$/i.test(t.status));
+      const subjectsBySha = new Map();
+      let readerFailure = null;
+      for (const t of doneTasks) {
+        if (!t.commit || subjectsBySha.has(t.commit)) continue;
+        const res = await readCommitSubject(process.cwd(), t.commit);
+        if (res.ok) {
+          subjectsBySha.set(t.commit, { found: true, reachable: true, subject: res.subject });
+        } else if (res.unreachable) {
+          // FIX 1: the object resolves but is not reachable from HEAD — found, but stale/orphaned.
+          subjectsBySha.set(t.commit, { found: true, reachable: false, subject: null });
+        } else if (res.notFound) {
+          subjectsBySha.set(t.commit, { found: false, reachable: false, subject: null });
+        } else {
+          // Fail-closed (## Design trust/failure boundaries): a systemic reader failure — git absent,
+          // `process.cwd()` not a repo, or a per-command timeout — while the ledger's rules would run
+          // is itself a failed check, NEVER silently treated as "no facts" and skipped. Distinct from
+          // a per-SHA not-found/unreachable (real AC-4 findings the rule renders below).
+          readerFailure = res.error;
+          break;
+        }
+      }
+      if (readerFailure) {
+        results.push({
+          type: 'finding',
+          rule: 'ledger-vs-git',
+          message: `ledger present but git commit subjects unavailable: ${readerFailure.problem}`,
+          ids: ['ledger'],
+        });
+      } else {
+        results.push(...checkLedgerVsGit(ledger, subjectsBySha));
+      }
     }
   }
 
@@ -1033,43 +1044,90 @@ export function checkGreenBarEvidence(ledger) {
 
 // --- Commit-subject reader (AC-4, option-(b)): read-only git, per recorded SHA -------------
 //
-// readCommitSubject() is the ONLY component in this file that touches git: one async `execFile`
-// call over an argv array (NO shell), read-only `git show -s --format=%s <sha> --` (NC-1: local git
-// only, no network — the invoked subcommand never talks to a remote; the trailing `--` and the
+// A per-git-command timeout (FIX 2 — bound the subprocesses): every git call carries a wall-clock
+// `timeout`; on expiry Node kills the child and rejects with `err.killed === true`, which
+// classifyGitError() maps to a systemic `unavailable` (fail-closed), never a silent pass or hang.
+const GIT_TIMEOUT_MS = 10_000;
+
+// Classifies a rejected git `execFile` error into either a systemic `unavailable` failure (the CLI
+// renders this fail-closed) or a plain nonzero exit `code` (the reader interprets per-subcommand).
+// A killed child (the per-command timeout above) and a spawn/repo failure (ENOENT / "not a git
+// repository") are BOTH systemic; anything else is a real subcommand exit whose numeric `code`
+// carries meaning (merge-base 1 = not-ancestor, 128 = bad object).
+function classifyGitError(err, repoPath) {
+  if (err.killed || err.signal) {
+    return {
+      kind: 'unavailable',
+      error: { path: repoPath, problem: `git command timed out after ${GIT_TIMEOUT_MS}ms: ${err.message}` },
+    };
+  }
+  if (err.code === 'ENOENT' || /not a git repository/i.test(String(err.stderr ?? ''))) {
+    return {
+      kind: 'unavailable',
+      error: { path: repoPath, problem: `git repository unavailable: ${err.message}` },
+    };
+  }
+  return { kind: 'code', code: typeof err.code === 'number' ? err.code : null };
+}
+//
+// readCommitSubject() is the ONLY component in this file that touches git: read-only `execFile`
+// calls over argv arrays (NO shell) — `git merge-base --is-ancestor <sha> HEAD` then
+// `git show -s --format=%s <sha> --` (NC-1: local git only, no network; the trailing `--` and the
 // argv form make option/pathspec injection impossible even for an attacker-shaped SHA). Mirrors
-// the parsers' typed-failure discipline — it never throws to top — with a THREE-way result so the
-// caller can tell a real defect from a systemic failure:
-//   success:            { ok: true, subject }        — the commit's subject line (`%s`, no body).
-//   unknown object:     { ok: false, notFound: true }— git ran but the SHA is not in this repo; a
+// the parsers' typed-failure discipline — it never throws to top — with a FOUR-way result:
+//   reachable ancestor: { ok: true, subject }         — the commit's subject line (`%s`, no body).
+//   exists, unreachable:{ ok: false, unreachable: true }— the object resolves but is NOT an ancestor
+//                                                       of HEAD (a stale/orphaned pre-amend/pre-rebase
+//                                                       SHA); a per-task AC-4 finding, NOT a pass.
+//   unknown object:     { ok: false, notFound: true } — git ran but the SHA is not in this repo; a
 //                                                       per-task AC-4 finding, NOT a crash.
 //   systemic failure:   { ok: false, unavailable: true, error: { path, problem } } — git absent
-//                                                       (ENOENT) or `repoPath` not a repo; the CLI
-//                                                       treats this as fail-closed (a lost check),
-//                                                       never a silent pass.
-// The two failure modes are distinguished up front (spawn ENOENT, or git's stable "not a git
-// repository" fatal) so an unknown-object 128 is never misread as a systemic failure or vice
-// versa. The commit BODY is never read (subject-only, `%s`), so a task ID mentioned in a body can
-// never masquerade as a scope reference.
+//                                                       (ENOENT), `repoPath` not a repo, or a
+//                                                       per-command timeout; the CLI treats this as
+//                                                       fail-closed (a lost check), never a pass.
+// FIX 1 (reachability, AC-4/AC-8): "exists in the repository" now means "exists AND is reachable
+// from HEAD". `git show` alone resolves ANY object in the store — including a dangling pre-amend
+// commit that is not in the shipped history — so a ledger recording a stale SHA used to false-pass
+// (a fail-open regression from the old reachable-only `git log` walk). `git merge-base
+// --is-ancestor <sha> HEAD` distinguishes the three cases in one read-only call: exit 0 reachable
+// ancestor, exit 1 object exists but not an ancestor, exit 128 bad object. The commit BODY is never
+// read (subject-only, `%s`), so a task ID mentioned in a body can never masquerade as a scope ref.
 export async function readCommitSubject(repoPath, sha) {
+  // Step 1 — reachability: `git merge-base --is-ancestor <sha> HEAD`.
+  let ancestorErr = null;
+  try {
+    await execFileAsync(
+      'git',
+      ['-C', repoPath, 'merge-base', '--is-ancestor', sha, 'HEAD'],
+      { encoding: 'utf8', timeout: GIT_TIMEOUT_MS },
+    );
+  } catch (err) {
+    ancestorErr = err;
+  }
+  if (ancestorErr) {
+    const c = classifyGitError(ancestorErr, repoPath);
+    if (c.kind === 'unavailable') return { ok: false, unavailable: true, error: c.error };
+    if (c.code === 1) return { ok: false, unreachable: true }; // exists but not an ancestor of HEAD
+    return { ok: false, notFound: true }; // 128 bad object (or any other nonzero) → not a resolvable commit
+  }
+  // Step 2 — reachable ancestor confirmed: read its subject (subject only, `%s`; body never read).
   try {
     const { stdout } = await execFileAsync(
       'git',
       ['-C', repoPath, 'show', '-s', '--format=%s', sha, '--'],
-      { encoding: 'utf8' },
+      { encoding: 'utf8', timeout: GIT_TIMEOUT_MS },
     );
     return { ok: true, subject: stdout.replace(/\r?\n$/, '') };
   } catch (err) {
-    // git binary absent, or `repoPath` is not a git repository → a systemic reader failure the
-    // caller renders fail-closed. Anything else (git ran, exited 128 "fatal: bad object <sha>") is
-    // an unknown object → a typed not-found the rule renders as a per-task finding.
-    if (err.code === 'ENOENT' || /not a git repository/i.test(String(err.stderr ?? ''))) {
-      return {
-        ok: false,
-        unavailable: true,
-        error: { path: repoPath, problem: `git repository unavailable: ${err.message}` },
-      };
-    }
-    return { ok: false, notFound: true };
+    const c = classifyGitError(err, repoPath);
+    if (c.kind === 'unavailable') return { ok: false, unavailable: true, error: c.error };
+    // A commit merge-base just confirmed reachable that then fails `git show` is anomalous; fail
+    // CLOSED as a systemic failure rather than silently pass or misreport it as a plain not-found.
+    return {
+      ok: false,
+      unavailable: true,
+      error: { path: repoPath, problem: `git show failed for a reachable commit ${sha}: ${err.message}` },
+    };
   }
 }
 
@@ -1103,6 +1161,34 @@ function distinctTaskTokens(message) {
   let m;
   while ((m = TASK_TOKEN_RE.exec(scope))) tokens.add(m[0]);
   return tokens;
+}
+
+// FIX 2 (bound the git subprocesses): the checker spawns one git subprocess per distinct done-task
+// recorded SHA. The ledger is a TRUSTED committed artifact, so this cap is defense-in-depth — a
+// ledger with an absurd number of distinct done commits would otherwise spawn unbounded lookups.
+// Above the cap, refuse to spawn and fail CLOSED with one finding rather than exhaust subprocesses.
+// Exported so the boundary is testable directly. (Per-command timeouts are the other half — see
+// GIT_TIMEOUT_MS on each git call.)
+export const MAX_LEDGER_COMMITS = 1000;
+
+// Returns a single fail-closed `ledger-vs-git` finding when the number of DISTINCT recorded commits
+// among done tasks exceeds MAX_LEDGER_COMMITS, else null. Counting distinct SHAs (not rows) matches
+// exactly the set the CLI would look up (two done tasks sharing a commit spawn one lookup). The CLI
+// consults this BEFORE the per-SHA loop and skips the loop entirely when it fires, so no git
+// subprocess is spawned when the cap is exceeded.
+export function checkLedgerCommitCap(ledger) {
+  const distinct = new Set(
+    ledger.tasks.filter((t) => /^done$/i.test(t.status) && t.commit).map((t) => t.commit),
+  );
+  if (distinct.size > MAX_LEDGER_COMMITS) {
+    return {
+      type: 'finding',
+      rule: 'ledger-vs-git',
+      message: `ledger records ${distinct.size} distinct done-task commits (more than ${MAX_LEDGER_COMMITS}) — refusing to spawn unbounded git lookups`,
+      ids: ['ledger'],
+    };
+  }
+  return null;
 }
 
 // AC-4 — ledger-vs-git (option-(b), SMA-420): the ledger is the AUTHORITATIVE task↔commit link, so
@@ -1143,6 +1229,18 @@ export function checkLedgerVsGit(ledger, subjectsBySha) {
         type: 'finding',
         rule: 'ledger-vs-git',
         message: `${t.task} is marked done but the ledger-recorded commit ${t.commit} for it was not found in the repo`,
+        ids: [t.task],
+      });
+      continue;
+    }
+    // FIX 1 (reachability): the object resolves but is NOT reachable from HEAD — a stale/orphaned
+    // commit (e.g. a pre-amend/pre-rebase SHA) that is not in the shipped history. Distinct from
+    // not-found above (`git show` would still resolve it) and its own AC-4 finding.
+    if (!entry.reachable) {
+      findings.push({
+        type: 'finding',
+        rule: 'ledger-vs-git',
+        message: `${t.task} is marked done but the ledger-recorded commit ${t.commit} for it is not reachable from HEAD (a stale or orphaned commit)`,
         ids: [t.task],
       });
       continue;
