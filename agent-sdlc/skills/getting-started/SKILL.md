@@ -73,6 +73,11 @@ Stated once here; the stage skills reference them by name rather than restating.
   APIs against official documentation, and record what you checked and when.
 - **Evidence before "done".** Claim a suite green, a task complete, or a PR ready only after running
   the check and reading its output — never from memory or expectation.
+- **Contracts in the body, depth in `reference/`.** Load-bearing contracts — artifact formats,
+  checker/invocation points, mandatory disciplines — live in the SKILL **body**; a `reference/` file
+  holds optional depth and mechanics. Where a reference doc IS load-bearing at a specific step, the
+  owning SKILL body **mandates reading it at that step**, not merely links it — an agent may
+  legitimately never open a doc that is only linked.
 
 ## Routing: project vs feature
 

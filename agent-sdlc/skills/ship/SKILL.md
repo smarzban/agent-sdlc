@@ -47,7 +47,9 @@ it stops and asks before changing anything — a PR is an outward artifact.
    already-committed `gate-report.md`/`build-report.md`; without this the pushed branch omits it and
    the worktree is left dirty). This all runs *before* `gh pr create`, distinct from the *post-PR*
    review-gate panel (step 7): sdlc-check is the mechanical spine, review-gate is the judgment panel,
-   both are real gates. (Mechanics + row grammar in [reference/finishing.md](reference/finishing.md).)
+   both are real gates. **Read [reference/finishing.md](reference/finishing.md) now, before writing
+   the verification report and opening the PR** — it is the load-bearing finishing contract: the PR
+   mechanics and the verification-report row grammar the checker parses.
 4. **Push** push the feature branch to the remote.
 5. **PR** open it with `gh pr create`. Synthesize the title and body from the spec — the `## Brief`
    summary, the `AC-N` list, the task→criterion coverage, any `SHORTCUT(T-N)` ceilings the build

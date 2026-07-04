@@ -27,10 +27,11 @@ branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
 ## The loop (the conductor's whole job)
 
 1. **Precondition** resolve the plan (input-resolution rule); if it came from an external source,
-   **ingest it first** — materialize `## Plan` + minimal trace links + the green bar, provenance-
-   marked, then run `/agent-sdlc:gate` inline (mechanics in
-   [reference/ingesting-plans.md](reference/ingesting-plans.md)). Confirm a ready-to-build verdict
-   exists for the plan in hand. Proceed only on a clean verdict; else stop.
+   **ingest it first** — **read [reference/ingesting-plans.md](reference/ingesting-plans.md) now,
+   before materializing anything** (it is the load-bearing ingest contract): materialize `## Plan` +
+   minimal trace links + the green bar, provenance-marked, then run `/agent-sdlc:gate` inline.
+   Confirm a ready-to-build verdict exists for the plan in hand. Proceed only on a clean verdict;
+   else stop.
 2. **Isolate** set up an isolated workspace (detect existing isolation → native worktree tool → `git
    worktree` fallback). Run the **green bar** once — the commands `## Tech Stack` declares (compile,
    test, lint, format-check): the baseline MUST be green before touching anything. **Vacuous-green
@@ -72,7 +73,10 @@ branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
    failed check (fail-closed) — **stop-and-ask**, do not resume task work; any human override must be
    recorded in `build-report.md` (who/what, why continuing despite the failed check). Runtime absent
    → write an **announced degraded fallback** line into `build-report.md` now — never a silent skip.
-4. **For each task `T-N`, in dependency order:**
+4. **For each task `T-N`, in dependency order** (before the first dispatch, **read
+   [reference/subagent-loop.md](reference/subagent-loop.md) now** — it is the load-bearing dispatch
+   contract: the dispatch mechanics, the three subagent briefs, the bounded fix cycle, and the
+   subagent-death policy):
    a. Dispatch the **implementer** subagent with a file brief for `T-N` only.
    b. Dispatch the **reviewer** subagent on the resulting diff.
    c. If the reviewer finds Critical/Important issues, dispatch a **fixer** and re-review (bounded).
