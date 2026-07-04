@@ -73,13 +73,19 @@ a hard test, that is a red flag (see below).
 5. **Quantify** replace every degree-claiming adjective with a threshold, or cut it.
 6. **Assign verification type** tag each criterion test-backed (with kind-of-oracle) or
    reviewer-checked (with axis + pass/fail question + justification).
-7. **Make non-goals checkable** restate the idea's non-goals as explicit negative criteria
+7. **Pin relational terms** for every criterion a **mechanical rule** will consume, define each
+   relational term it uses — carries / references / reaches / linked / history / reachable / matches
+   / exactly-one — in the glossary (`CONTEXT.md`) or inline in the criterion, **before the section is
+   settled**. Name the exact relation ("referenced = appears in the commit subject's `type(scope):`
+   scope position", "reachable = an ancestor of HEAD"), not a loose verb — a rule and the author must
+   read it the same way.
+8. **Make non-goals checkable** restate the idea's non-goals as explicit negative criteria
    (out-of-bounds / won't-do) so over-engineering is itself a detectable violation.
-8. **Build the verification map** one row per criterion: criterion -> kind-of-oracle, or
+9. **Build the verification map** one row per criterion: criterion -> kind-of-oracle, or
    criterion -> review axis. Every criterion appears exactly once.
-9. **Settle and write** present the criteria in sections scaled to count, get approval, write the
-   artifact.
-10. **Hand off** tell the user it is ready for the design stage. Do not start design yourself. If
+10. **Settle and write** present the criteria in sections scaled to count, get approval, write the
+    artifact.
+11. **Hand off** tell the user it is ready for the design stage. Do not start design yourself. If
     Linear sync is enabled in `.agent-sdlc/config.json`, also perform this stage's action via the
     `linear-sync` skill.
 
@@ -105,6 +111,7 @@ a hard test, that is a red flag (see below).
 | "I'll make it reviewer-checked so I don't have to think about a test." | Reviewer-checked needs a justification for why it cannot be automated. Dodging effort is not one. |
 | "This criterion covers several things, but they're related." | Related is not atomic. Split it; one verdict each. |
 | "The design will clarify this criterion." | Backwards. Criteria are the contract design is held to. If a criterion needs the design to be meaningful, it is a design constraint, not an acceptance criterion. |
+| "The verb is obvious." | Obvious to you, ambiguous to the rule — "references" meant scope-position, not any mention. Pin it or the checker and the author disagree. |
 | "Let me also note the architecture here while it's fresh." | That is the next stage. Keep this tech-agnostic. |
 
 ## Red flags (stop and fix)
@@ -115,6 +122,10 @@ a hard test, that is a red flag (see below).
 - A criterion you could not point to a diff line for, or write a failing test against, even in
   principle.
 - You are describing how it works, not what must be true.
+- A criterion states a relation a mechanical rule will decide (carries / references / reaches /
+  history…) with the term left to interpretation — two readers or implementations can diverge. The
+  enforcement spine shipped three such defects from one root: "carries", "referencing", and "which
+  history" were each under-specified, and each let a checker and its author disagree. Pin the term.
 - The verification map has a criterion with no oracle and no axis, or a criterion listed twice.
 
 ## Done when
