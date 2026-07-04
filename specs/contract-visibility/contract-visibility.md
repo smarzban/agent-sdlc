@@ -36,8 +36,9 @@ Prose + manifests only; no checker code changes.
 
 - **AC-1** — Each artifact-producing stage's SKILL body **documents the exact checker grammar** it must
   emit: architecture-design (the `### Components` numbered bold list AND the `### Outside the checker`
-  external list); plan (the period-terminated, non-wrapping asterisk-emphasized Advances / Component /
-  Deps trace fields + the coverage-map 2nd-column-header rule + literal `T-N` rows); build (the `## Task ledger`
+  external list); plan (the period-terminated asterisk-emphasized Advances / Component / Deps trace
+  fields — capture wraps freely, only a multi-word component NAME must stay on one line — plus the
+  coverage-map 2nd-column-header rule + literal `T-N` rows); build (the `## Task ledger`
   table + `### T-N (@ SHA)` fenced evidence); ship (the `Criterion | Type | Proof` map with
   substring-in-evidence proofs). *(Reviewer-checkable: each named grammar element appears in the owning
   SKILL body.)*

@@ -163,7 +163,10 @@ literally. Emit these exact shapes or the links parse as zero:
   real component name no longer resolves. **`none` is the only null marker** (exact, lowercased, no
   trailing text).
 - **Criterion -> component map:** a table whose **2nd-column header matches `/component/i`**; each
-  cell cites component name(s) — comma-separate several so each resolves independently.
+  cell cites component name(s). The row is non-dangling if **at least one** known component name
+  appears anywhere in the cell — the checker scans the whole cell, it does **not** validate each
+  comma-separated name independently. So a typo beside a real name is **not** caught: name every
+  component correctly (a mis-typed name rides through unflagged as long as a valid one is present).
 
 ## Two levels: project vs feature
 
