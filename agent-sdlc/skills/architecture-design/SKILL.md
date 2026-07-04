@@ -143,6 +143,28 @@ The `## Design` section of `specs/<feature>/<feature>.md`, containing only:
 
 No concrete stack, no plan, no tasks. Those are later stages.
 
+## Checker grammar (what `sdlc-check` parses — emit exactly this)
+
+The gate/build/ship checker resolves the criterion -> component chain by parsing this section
+literally. Emit these exact shapes or the links parse as zero:
+
+- **Components are a numbered, bold-lead list** under a `### Components` subheading (the exact word;
+  `### Component` also matches): `1. **Name** — responsibility.` A *bulleted* list (`- **Name**`)
+  parses as **zero** components — the leading number is load-bearing. Each entry's ordinal becomes
+  its `C-N` id.
+- **Components that change but aren't numbered here** (e.g. a `gate`/`build`/`ship` skill text) go
+  under a `### Outside the checker` subheading (matched `/outside the checker/i`; a trailing
+  parenthetical like "(changed components)" is fine) as the same numbered bold-lead list — its
+  entries become real external components (`C-ext-N`), resolvable by name. There is **no string
+  escape-hatch**: a component cited but neither numbered nor declared here is a dangling-reference
+  finding.
+- **Component citations resolve by an anchored, whole-name match** of the component NAME (in a plan's
+  `*Component:*` field or a Criterion -> Component map row) — a dangling name that merely *contains* a
+  real component name no longer resolves. **`none` is the only null marker** (exact, lowercased, no
+  trailing text).
+- **Criterion -> component map:** a table whose **2nd-column header matches `/component/i`**; each
+  cell cites component name(s) — comma-separate several so each resolves independently.
+
 ## Two levels: project vs feature
 
 Same skill, two scopes, decided in step 2.

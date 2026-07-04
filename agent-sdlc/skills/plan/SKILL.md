@@ -112,6 +112,28 @@ The `## Plan` section of `specs/<feature>/<feature>.md`, containing only:
 
 No product code. Build executes the tasks via red-green-refactor.
 
+## Checker grammar (what `sdlc-check` parses — emit exactly this)
+
+The gate walks the trace links by parsing the `## Plan` literally. Emit these exact shapes or the
+links parse as zero (the retro that motivated this: a plan written to this skill's *prose* shape drew
+33 format findings / 0 links):
+
+- **Trace fields are asterisk-emphasized and period-terminated:**
+  `*Advances:* <ids>. *Component:* <name>. *Deps:* <ids>.` Every field ends with a literal `.` — a
+  field with **no terminating period is dropped**, and a missing period **swallows the following
+  field** into the previous value. (Period-terminated **capture** tolerates wrapping — the value may
+  span lines, since the period, not the line break, is what closes it — as do `AC-N`/`T-N` id
+  citations. But a multi-word `*Component:*` **name must stay on one line**: it is resolved by an
+  anchored whole-name match with a literal space, which a line break won't satisfy, so a wrapped
+  multi-word component name silently reads as **dangling**.) `*Advances:*`/`*Deps:*` cite `AC-N`/`T-N`
+  ids; `*Component:*` cites a component name, or `none`.
+- **Task-to-criterion coverage map:** a table whose **2nd-column header matches
+  `/advanced by|component/i`** — a literal `Task(s)` header parses as **zero** links. The 1st-column
+  cell must be a bare id (`AC-N`); rows need **literal `T-N` tokens** (prose like "all tasks" traces
+  nothing).
+- **IDs are defined at a bold-lead** — `**AC-N**`, `**T-N**` — distinct from a plain-text citation. A
+  slash-run citation (`AC-1/2/3`) expands to each id.
+
 ## Conventions
 
 - Lives as the `## Plan` section of `specs/<feature>/<feature>.md`. Kept out of the repo's product `docs/`.

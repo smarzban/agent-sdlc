@@ -214,6 +214,27 @@ The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and le
   recovered, whether isolation was lost, whether conductor-takeover was reached). Mirrors
   `gate-report.md`'s role — process state beside the spec, never inside it.
 
+## Checker grammar (what `sdlc-check` parses — emit exactly this)
+
+The resume/build-complete checker reads `build-report.md` literally. Emit these shapes or a rule
+mis-fires:
+
+- **Task ledger:** a `## Task ledger` table; columns are looked up by header **name**
+  (case-insensitive) — `Task`, `Status`, `Commit`, `AC advanced`, `Notes` — not by position. A
+  `done` status is what triggers the evidence and ledger-vs-git rules. The **`Commit` cell records
+  the task's own commit SHA**; the first SHA-shaped token in the cell is authoritative (a trailing
+  annotation like `` `4ddd29e` (+corrective `d3c4275`) `` is tolerated).
+- **Green-bar evidence:** one ``### T-N (@ `SHA`)`` heading per done task, each with **at least one
+  non-empty fenced code block**. A done task with no block, or an empty one, is an unbacked-claim
+  finding. The block must capture the **per-test names** (e.g. `node --test`'s `ok N - <name>`
+  lines), not just summary counts — ship's AC-14 matches a proof-map test identifier as a substring
+  of this text.
+- **Ledger-vs-git (recorded-commit model):** for each done task the recorded SHA must **exist, be
+  reachable from HEAD, and its subject's scope position reference exactly that task** — so commit as
+  `feat(T-N): …` (the task in the `type(scope):` parens). A commit whose scope names another task, or
+  names several (`feat(T-3, T-4): …`), fails. A task mentioned only in commit *prose* (after the
+  colon) is ignored — only the scope position counts.
+
 ## Conventions
 
 - Reads the `## Plan` and `## Tech Stack` sections of `specs/<feature>/<feature>.md` (the latter for

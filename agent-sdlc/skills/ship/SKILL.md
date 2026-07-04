@@ -145,6 +145,18 @@ it stops and asks before changing anything — a PR is an outward artifact.
   review-gate verdict comment.
 - No other new files in the repo; ship's remaining output is the PR and the review, not a document.
 
+## Checker grammar (what `sdlc-check` parses — emit exactly this)
+
+The pre-PR checker reads `verification-report.md` literally (the full row grammar + a worked example
+are in [reference/finishing.md](reference/finishing.md)):
+
+- **Proof map:** a `Criterion | Type | Proof` table, **one row per defined `AC-N`** (an `NC-N` row is
+  optional — the checker doesn't require one). A missing row, or an empty `Proof` cell, is a finding.
+- **A `test-backed` row's proof must substring-appear in the ledger's captured green-bar evidence**
+  (name-appearance). **Proof cells split on commas**, so a test whose name itself contains a comma
+  must be cited by a **comma-free fragment** that appears verbatim in the evidence — otherwise the
+  split fabricates identifiers that never match.
+
 ## Conventions
 
 - Reads `build-report.md` and the spec; references `AC-N` and the feature branch. When no ledger

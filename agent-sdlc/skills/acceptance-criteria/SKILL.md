@@ -138,6 +138,16 @@ The `## Acceptance Criteria` section of `specs/<feature>/<feature>.md`, containi
 
 No design, no stack, no tasks. Those are later stages.
 
+## Checker grammar (what `sdlc-check` parses — emit exactly this)
+
+Downstream, the gate/ship checker parses this section literally:
+
+- **Each criterion id is defined at a bold-lead** — `**AC-1**`, `**AC-2**` — the same handle the
+  design map, plan, and proof map cite. The checker parses **only `AC`/`C`/`T` prefixes** as ids: an
+  `NC-N` negative criterion is **prose** from its view, so it is never required to carry a proof-map
+  row (nor traced). Keep negative criteria as `NC-N` precisely so they stay out of the mechanical
+  coverage set; use `AC-N` for anything the checker must hold the build to.
+
 ## Conventions
 
 - Lives as the `## Acceptance Criteria` section of `specs/<feature>/<feature>.md`, between
