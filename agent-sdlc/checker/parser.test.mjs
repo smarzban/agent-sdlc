@@ -193,6 +193,67 @@ test('an exact component name whose own edges are non-word chars still resolves 
   assert.equal(componentTrace.unresolvedComponent, null);
 });
 
+test('a structured "Outside the checker" subheading defines real components with C-ext-N ids that resolve by name (SMA-419, AC-1)', () => {
+  const spec = [
+    '## Design',
+    '### Outside the checker (changed components)',
+    '1. **gate skill text** — the gate SKILL.md prose, not a numbered component.',
+    '',
+    '## Plan',
+    '- **T-1 — Wire it.** Detail. *Advances:* AC-1. *Component:* gate skill text. *Deps:* none.',
+  ].join('\n');
+  const result = parseSpec(spec, 'x.md');
+  assert.equal(result.ok, true);
+  const ext = result.components.find((c) => c.name === 'gate skill text');
+  assert.ok(ext, 'expected an external component named "gate skill text"');
+  assert.equal(ext.id, 'C-ext-1');
+  const componentTrace = result.traces.find((t) => t.from === 'T-1' && t.kind === 'component');
+  assert.ok(componentTrace.refs.includes('C-ext-1'), 'the external component must resolve by name');
+  assert.equal(componentTrace.unresolvedComponent, null);
+});
+
+test('inside "### Components" and outside "### Outside the checker" lists both start at 1. but get distinct namespaces (C-1 vs C-ext-1), both resolve (SMA-419, AC-2)', () => {
+  const spec = [
+    '## Design',
+    '### Components',
+    '1. **Reporter** — the numbered component.',
+    '',
+    '### Outside the checker (changed components)',
+    '1. **gate skill text** — the gate SKILL.md prose.',
+    '',
+    '## Plan',
+    '- **T-1 — Build reporter.** Detail. *Advances:* AC-1. *Component:* Reporter. *Deps:* none.',
+    '- **T-2 — Touch the gate.** Detail. *Advances:* AC-2. *Component:* gate skill text. *Deps:* none.',
+  ].join('\n');
+  const result = parseSpec(spec, 'x.md');
+  assert.equal(result.ok, true);
+  const inside = result.components.find((c) => c.name === 'Reporter');
+  const outside = result.components.find((c) => c.name === 'gate skill text');
+  assert.equal(inside.id, 'C-1');
+  assert.equal(outside.id, 'C-ext-1');
+  assert.notEqual(inside.id, outside.id, 'the two lists must not collide');
+  const t1 = result.traces.find((t) => t.from === 'T-1' && t.kind === 'component');
+  const t2 = result.traces.find((t) => t.from === 'T-2' && t.kind === 'component');
+  assert.ok(t1.refs.includes('C-1') && t1.unresolvedComponent === null, 'Reporter resolves to C-1');
+  assert.ok(t2.refs.includes('C-ext-1') && t2.unresolvedComponent === null, 'gate skill text resolves to C-ext-1');
+});
+
+test('an unrelated "###" subheading after "### Outside the checker" stops absorbing its list items (mode reset, SMA-419)', () => {
+  const spec = [
+    '## Design',
+    '### Outside the checker (changed components)',
+    '1. **gate skill text** — the gate SKILL.md prose.',
+    '',
+    '### Data flow',
+    '1. **Not a component** — just a numbered note under an unrelated subheading.',
+  ].join('\n');
+  const result = parseSpec(spec, 'x.md');
+  assert.equal(result.ok, true);
+  assert.ok(result.components.find((c) => c.name === 'gate skill text'));
+  assert.equal(result.components.find((c) => c.name === 'Not a component'), undefined,
+    'a list under an unrelated subheading must not be parsed as components');
+});
+
 test('captures a coverage-map table row as a trace reference (citing site + cited IDs)', () => {
   const spec = [
     '## Plan',

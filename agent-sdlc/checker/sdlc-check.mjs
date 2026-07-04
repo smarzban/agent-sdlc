@@ -232,6 +232,11 @@ export async function run(argv) {
 
 const ID_DEFINITION_RE = /\*\*(AC|C|T)-(\d+)\b/g;
 const COMPONENT_LIST_ITEM_RE = /^\s*(\d+)\.\s+\*\*([^*]+)\*\*/;
+// The Design's structured "outside the checker" component list (SMA-419) — a `###` subheading
+// whose text matches this (tolerating a trailing parenthetical like "(changed components)"). Its
+// numbered entries are REAL components, assigned a distinct `C-ext-N` id namespace so an external
+// list starting at `1.` never collides with an inside `### Components` `C-1`.
+const OUTSIDE_CHECKER_HEADING_RE = /outside the checker/i;
 const SECTION_HEADING_RE = /^##(?!#)\s+(.+?)\s*$/;
 const SUBHEADING_RE = /^###\s+(.+?)\s*$/;
 const TOP_BULLET_RE = /^-\s+\*\*/;
@@ -316,26 +321,36 @@ function extractSections(lines) {
   return sections.map((s) => ({ name: s.name, line: s.line, body: s.bodyLines.join('\n') }));
 }
 
-// A component is DEFINED as a numbered, bolded-lead list entry under a "### Components"
-// subheading (the exact grammar of `## Design`'s "1. **CLI shell** — ..." list) — scoped to that
-// subheading so an unrelated numbered/bold list elsewhere (e.g. "1. **Mechanical promises...") is
-// never mistaken for a component.
+// A component is DEFINED as a numbered, bolded-lead list entry under one of two Design subheadings,
+// scoped to that subheading so an unrelated numbered/bold list elsewhere (e.g. "1. **Mechanical
+// promises...") is never mistaken for a component:
+//   - `### Components` — the exact grammar of `## Design`'s "1. **CLI shell** — ..." list; entries
+//     get `C-N` ids from their own ordinal ('inside' mode).
+//   - `### Outside the checker (…)` — the structured declaration (SMA-419) of components that change
+//     but are not numbered `### Components` (e.g. the `gate`/`build`/`ship` skill texts); entries
+//     get `C-ext-N` ids from their own ordinal ('outside' mode), a distinct namespace so an external
+//     list starting at `1.` never collides with an inside `C-1`.
+// A non-matching `###` subheading resets the mode to null, so a later unrelated subheading never
+// keeps absorbing list items (the existing scoping guarantee, preserved).
 function extractComponents(sections) {
   const components = [];
   for (const section of sections) {
     const bodyLines = section.body.split('\n');
-    let inComponents = false;
+    let mode = null; // 'inside' | 'outside' | null
     bodyLines.forEach((line, i) => {
       const heading = SUBHEADING_RE.exec(line);
       if (heading) {
-        inComponents = /^components?$/i.test(heading[1].trim());
+        const text = heading[1].trim();
+        if (/^components?$/i.test(text)) mode = 'inside';
+        else if (OUTSIDE_CHECKER_HEADING_RE.test(text)) mode = 'outside';
+        else mode = null;
         return;
       }
-      if (!inComponents) return;
+      if (!mode) return;
       const item = COMPONENT_LIST_ITEM_RE.exec(line);
       if (item) {
         components.push({
-          id: `C-${item[1]}`,
+          id: mode === 'outside' ? `C-ext-${item[1]}` : `C-${item[1]}`,
           name: item[2].trim(),
           section: section.name,
           line: section.line + i + 1,
@@ -426,16 +441,16 @@ function splitTopBullets(bodyLines) {
   return blocks;
 }
 
-// A *Component:* field value that names nothing (`none`, the field's established null marker —
-// mirrors *Advances:*/*Deps:* fields, which are silently empty of refs the same way) or that cites
-// a pipeline-stage *skill text* (agent-sdlc's own convention — see CLAUDE.md/AC-15-18 — for a
-// "component" that is a `gate`/`build`/`ship` SKILL.md rather than a numbered `### Components`
-// entry, e.g. "gate skill text") is not a dangling citation, just outside the numbered component
-// list's own vocabulary. Scoped narrowly (an exact phrase check) so it can't blanket-launder an
-// arbitrary made-up name — "MissingWidget" doesn't match either escape hatch.
+// A *Component:* field value of `none` is the field's established null marker (mirrors
+// *Advances:*/*Deps:* fields, which are silently empty of refs the same way) — not a dangling
+// citation. This is the ONLY non-dangling value: a "component outside the numbered `### Components`
+// list" (e.g. a `gate`/`build`/`ship` skill text) is no longer a string escape hatch here — it must
+// be declared as a real component under a `### Outside the checker (…)` subheading, which
+// extractComponents parses into a resolvable `C-ext-N` component (SMA-419 dropped the former
+// `/\bskill texts?\b/` allowlist). Any other name that resolves to no defined component (numbered
+// or external) is a genuine dangling citation.
 function isNonDanglingComponentValue(raw) {
-  const lower = raw.toLowerCase();
-  return lower === 'none' || /\bskill texts?\b/.test(lower);
+  return raw.toLowerCase() === 'none';
 }
 
 function extractFieldTraces(section, componentsByName) {
@@ -526,8 +541,9 @@ function extractTableTraces(section, componentsByName) {
               line: section.line + j + 1,
             });
           } else if (isComponentMap && !isNonDanglingComponentValue(cells[1])) {
-            // A component-map row that resolved to nothing and isn't a recognized non-dangling value
-            // (`none` / a `skill text` reference) is a dangling component citation — carry it as an
+            // A component-map row that resolved to nothing and isn't the `none` null marker is a
+            // dangling component citation (an "outside the checker" component now resolves as a real
+            // C-ext-N, so it never reaches here) — carry it as an
             // empty-refs trace with `unresolvedComponent`, mirroring extractFieldTraces' shape so
             // checkTraceIntegrity's dangling-component arm flags it. Empty `refs` keeps it harmless
             // to buildTaskAcLinks / coverage (both iterate `refs`).
