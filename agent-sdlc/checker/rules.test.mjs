@@ -126,6 +126,86 @@ test('a task citing a component by a name that DOES match a defined component yi
   assert.deepEqual(checkTraceIntegrity(m), []);
 });
 
+// SMA-418 (T-1): the TABLE path must be symmetric with the *Component:* field path above. A
+// Criterion-to-component MAP row citing a component by name that resolves to no defined component
+// was silently dropped (extractTableTraces only pushed when refs.size > 0), so trace-integrity had
+// nothing to flag — the same gap H1 closed for the field path, one table over.
+
+test('a component-map row citing a name that matches no defined component yields a trace-integrity finding naming it', () => {
+  const m = model([
+    '## Design',
+    '### Components',
+    '1. **Gizmo** — does gizmo things.',
+    '',
+    '## Acceptance Criteria',
+    '### Criterion-to-component map',
+    '| Criterion | Component |',
+    '| --- | --- |',
+    '| AC-5 | MissingWidget |',
+    '- **AC-5** — realized only by a component map row.',
+  ]);
+  const findings = checkTraceIntegrity(m);
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].type, 'finding');
+  assert.equal(findings[0].rule, 'trace-integrity');
+  assert.ok(findings[0].message.includes('MissingWidget'));
+  assert.deepEqual(findings[0].ids, ['AC-5']);
+});
+
+test('a component-map row citing a name that DOES match a defined component yields no trace-integrity finding', () => {
+  const m = model([
+    '## Design',
+    '### Components',
+    '1. **Widget** — does widget things.',
+    '',
+    '## Acceptance Criteria',
+    '### Criterion-to-component map',
+    '| Criterion | Component |',
+    '| --- | --- |',
+    '| AC-5 | Widget |',
+    '- **AC-5** — realized by a real component.',
+  ]);
+  assert.deepEqual(checkTraceIntegrity(m), []);
+});
+
+test('a component-map row citing a recognized non-dangling value (skill text / none) yields no trace-integrity finding', () => {
+  const m = model([
+    '## Design',
+    '### Components',
+    '1. **Gizmo** — does gizmo things.',
+    '',
+    '## Acceptance Criteria',
+    '### Criterion-to-component map',
+    '| Criterion | Component |',
+    '| --- | --- |',
+    '| AC-5 | gate skill text |',
+    '| AC-6 | none |',
+    '- **AC-5** — realized by a pipeline-stage skill.',
+    '- **AC-6** — realized by nothing concrete.',
+  ]);
+  assert.deepEqual(checkTraceIntegrity(m), []);
+});
+
+test('a coverage ("Advanced by") map row citing a dangling task is NOT reported as a dangling component (task-ID values, not components)', () => {
+  const m = model([
+    '## Acceptance Criteria',
+    '- **AC-1** — first criterion.',
+    '',
+    '## Plan',
+    '### Task-to-criterion coverage map',
+    '| Criterion | Advanced by |',
+    '| --- | --- |',
+    '| AC-1 | T-99 |',
+    '',
+    '- **T-1 — Do it.** Detail. *Advances:* AC-1. *Component:* none. *Deps:* none.',
+  ]);
+  const findings = checkTraceIntegrity(m);
+  // Exactly the dangling TASK ref T-99 (via the refs loop), and NOT a bogus "dangling component"
+  // finding — a coverage table's second-column values are task IDs, never components.
+  assert.deepEqual(findings.map((f) => f.ids[0]), ['T-99']);
+  assert.ok(findings.every((f) => !/component/.test(f.message) || f.message.includes('T-99')));
+});
+
 // --- AC-2: forward coverage ---
 
 test('an AC reached by no task yields a finding naming it', () => {

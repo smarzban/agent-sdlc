@@ -492,6 +492,11 @@ function extractTableTraces(section, componentsByName) {
     let j = i + 1;
     if (j < bodyLines.length && TABLE_SEPARATOR_RE.test(bodyLines[j])) j += 1;
     const isTraceTable = header.length >= 2 && /advanced by|component/i.test(header[1]);
+    // A component-citing map (2nd column "Component") cites a component by name — so a row citing a
+    // name that resolves to nothing is a DANGLING component, symmetric with the *Component:* field
+    // path (SMA-418). A coverage map ("Advanced by") cites task IDs, never components, so it can
+    // never produce a dangling component here — only a component map can.
+    const isComponentMap = header.length >= 2 && /component/i.test(header[1]);
     while (j < bodyLines.length && TABLE_ROW_RE.test(bodyLines[j])) {
       if (isTraceTable) {
         const cells = splitTableCells(bodyLines[j]);
@@ -506,6 +511,21 @@ function extractTableTraces(section, componentsByName) {
               table: header[1],
               refs: [...refs],
               raw: cells[1],
+              line: section.line + j + 1,
+            });
+          } else if (isComponentMap && !isNonDanglingComponentValue(cells[1])) {
+            // A component-map row that resolved to nothing and isn't a recognized non-dangling value
+            // (`none` / a `skill text` reference) is a dangling component citation — carry it as an
+            // empty-refs trace with `unresolvedComponent`, mirroring extractFieldTraces' shape so
+            // checkTraceIntegrity's dangling-component arm flags it. Empty `refs` keeps it harmless
+            // to buildTaskAcLinks / coverage (both iterate `refs`).
+            traces.push({
+              from: fromId,
+              kind: 'map-row',
+              table: header[1],
+              refs: [],
+              raw: cells[1],
+              unresolvedComponent: cells[1],
               line: section.line + j + 1,
             });
           }
@@ -781,10 +801,12 @@ export function checkTraceIntegrity(model) {
         ids: [ref],
       });
     }
-    // H1: a *Component:* field that cites a component by NAME and resolves to nothing (no C-N
-    // token, no name match — see extractFieldTraces) is just as dangling as an unresolved ID ref
-    // above, but never reaches `trace.refs` at all, so it needs its own arm here.
-    if (trace.kind === 'component' && trace.unresolvedComponent) {
+    // H1 + SMA-418: a component citation by NAME that resolves to nothing (no C-N token, no name
+    // match) is just as dangling as an unresolved ID ref above, but never reaches `trace.refs` at
+    // all, so it needs its own arm here. Fires for ANY trace carrying `unresolvedComponent` — a
+    // *Component:* field (kind 'component', extractFieldTraces) OR a Criterion-to-component map row
+    // (kind 'map-row', extractTableTraces); only component-ish traces ever set it, so this is safe.
+    if (trace.unresolvedComponent) {
       findings.push({
         type: 'finding',
         rule: 'trace-integrity',
