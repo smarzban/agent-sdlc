@@ -177,6 +177,22 @@ test('the exact component name still resolves as its own word, even inside surro
   assert.equal(componentTrace.unresolvedComponent, null);
 });
 
+test('an exact component name whose own edges are non-word chars still resolves (lookaround anchoring, AC-5)', () => {
+  const spec = [
+    '## Design',
+    '### Components',
+    '1. **C++** — the native core.',
+    '',
+    '## Plan',
+    '- **T-1 — Build it.** Detail. *Advances:* AC-1. *Component:* C++. *Deps:* none.',
+  ].join('\n');
+  const result = parseSpec(spec, 'x.md');
+  assert.equal(result.ok, true);
+  const componentTrace = result.traces.find((t) => t.from === 'T-1' && t.kind === 'component');
+  assert.ok(componentTrace.refs.includes('C-1'), 'the exact name C++ must resolve');
+  assert.equal(componentTrace.unresolvedComponent, null);
+});
+
 test('captures a coverage-map table row as a trace reference (citing site + cited IDs)', () => {
   const spec = [
     '## Plan',

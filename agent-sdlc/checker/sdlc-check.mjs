@@ -394,16 +394,16 @@ function escapeRegExp(s) {
 function resolveComponentRefs(text, componentsByName) {
   const ids = [];
   for (const [name, id] of componentsByName) {
-    // Anchored, whole-word match: a dangling name that merely CONTAINS a real component name as a
+    // Anchored, whole-name match: a dangling name that merely CONTAINS a real component name as a
     // substring (e.g. "Gateway" containing "Gate") must not resolve. Names can carry regex
     // metacharacters (`-`, `.`, `+`, `(`), so escape before building the boundary regex. Keys are
     // already lowercased; the 'i' flag makes the match robust either way (NC-3: zero-dep).
-    // Known boundary: `\b` only anchors at a word/non-word transition, so a name that STARTS or
-    // ENDS with a non-word char (hypothetical `C++`) can't form the boundary and won't resolve.
-    // Harmless for every current component name (all word-terminal); fail-closed anyway — such a
-    // name reads as unresolved → flagged as a dangling component (a blocking false-positive, never
-    // a silent pass). Documented latent edge, not a live defect.
-    if (new RegExp(`\\b${escapeRegExp(name)}\\b`, 'i').test(text)) ids.push(id);
+    // Explicit non-word lookarounds (not `\b`): `\b` only fires at a word/non-word transition, so a
+    // name whose OWN edge is a non-word char (`C++`, `.NET`) never forms the boundary and would fail
+    // to resolve. Anchoring on the surrounding text instead — no word char immediately before/after
+    // the name — resolves such names while still rejecting substring collisions (after "Gate" in
+    // "Gateway" comes `w`, a word char → lookahead fails → no match).
+    if (new RegExp(`(?<![A-Za-z0-9_])${escapeRegExp(name)}(?![A-Za-z0-9_])`, 'i').test(text)) ids.push(id);
   }
   return ids;
 }
