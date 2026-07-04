@@ -22,11 +22,15 @@ conductor-takeover, with every deviation recorded in the ledger.
 
 Gate check 4 verifies the green bar is *concrete* (no placeholders) but not that it *runs*. In the
 enforcement-spine build the declared bar `node --test agent-sdlc/checker/` exited 1 as written (a bad
-invocation) yet passed the gate; the autonomous build then halted at its baseline on a correct repo.
-**Fix (gate skill):** the gate **executes each declared green-bar command once** (respecting the
-vacuous-green rule when target paths don't yet exist) and fails with the command's actual output when a
-declared command is unrunnable. Runnability is mechanically decidable (a deterministic exit-code
-oracle — NC-4 compatible).
+invocation) yet passed the gate; the autonomous build then halted at its baseline on a correct repo,
+with no clear signal that the *declaration* was the problem. **Fix (build baseline — see D1, revised
+after review):** the **build baseline** (which already executes the green bar in the isolated
+workspace) runs each declared command, respects vacuous-green, and **distinguishes an unrunnable
+command (a mis-declared command → STOP and route the fix to techstack, with the actual output) from a
+genuinely-red repo from vacuous-green** — turning the confusing halt into an actionable diagnostic.
+The **gate and `sdlc-check` stay read-only**: a review-gate panel showed executing arbitrary
+spec-declared commands in a read-only stage is a code-execution/side-effect surface (esp. with
+start-anywhere external plans), so execution stays where side-effects are expected and isolated.
 
 Scope is exactly these two issues. No product code changes; the checker itself is untouched.
 
@@ -42,13 +46,21 @@ Scope is exactly these two issues. No product code changes; the checker itself i
   any partial work, retry once with a fresh subagent, and only then conductor-takeover — with the
   deviation recorded in the ledger. *(Reviewer-checkable: the policy is stated as a deterministic
   sequence, not left to improvisation.)*
-- **AC-3** — The gate **executes each declared green-bar command once** and fails the gate (with the
-  command's actual output) when a declared command is unrunnable — runnability, not just concreteness.
-  *(Reviewer-checkable: gate check 4 mandates executing the bar, not only checking it is concrete.)*
-- **AC-4** — The gate's runnability dry-run **respects the vacuous-green rule**: when a command's target
-  paths do not yet exist, it is vacuously green (skipped), and the bar binds once the paths exist —
-  consistent with the 0.7.0 build-baseline rule. *(Reviewer-checkable: the vacuous-green carve-out is
-  stated so a greenfield spec is not falsely failed.)*
+- **AC-3** — The **build baseline** (where the green bar is already executed in the isolated
+  workspace) **executes each declared green-bar command once** and, on a nonzero exit, **distinguishes
+  an unrunnable command** (a mis-declared/bad-form command — STOP and route the fix back to techstack,
+  the green-bar owner, with the command's actual output) **from a genuinely-red repo** (a real failure
+  — the normal red-baseline stop) **from vacuously-green** (targets absent — skip). This turns the
+  "autonomous build halts confusingly on a correct repo" case into an actionable diagnostic.
+  *(Reviewer-checkable: the build baseline mandates executing each command and separating unrunnable
+  from red from vacuous, with the unrunnable case routed to techstack.)*
+- **AC-4** — Execution stays where side-effects are expected and isolated: the **build baseline** runs
+  the commands (respecting the **vacuous-green rule** — targets absent → skip, binds once they exist),
+  while the **gate and `sdlc-check` remain read-only** — no read-only stage executes arbitrary
+  spec-declared commands (a code-execution/side-effect surface, sharpened by start-anywhere plans that
+  may be external). The gate check-4 change is limited to a note that runnability is verified at the
+  build baseline. *(Reviewer-checkable: the gate stays read-only per its HARD-GATE; the vacuous-green
+  carve-out is stated; no arbitrary command runs in a read-only stage.)*
 - **AC-5** — No regression to the existing pipeline: the two skill edits are internally consistent with
   the existing checker-invocation wiring (they do not contradict gate check 6 or the build loop), the
   full checker suite stays green, and `sdlc-check` exits 0 on this feature's own spec. *(Reviewer-checkable
@@ -65,20 +77,27 @@ files, not numbered checker components.
 ### Outside the checker (changed components)
 
 1. **build skill text** — `agent-sdlc/skills/build/SKILL.md` (+ `reference/subagent-loop.md`): gains
-   the start-of-build agent-roster pinning and the subagent-death policy (AC-1, AC-2).
-2. **gate skill text** — `agent-sdlc/skills/gate/SKILL.md`: gains the green-bar runnability dry-run in
-   check 4 (AC-3, AC-4).
+   the start-of-build agent-roster pinning and the subagent-death policy (AC-1, AC-2), AND the
+   green-bar **runnability diagnostic** at the isolated build baseline (AC-3, AC-4).
+2. **gate skill text** — `agent-sdlc/skills/gate/SKILL.md`: check 4 keeps verifying the bar is
+   *concrete* and adds a one-line note that *runnability* is verified at the build baseline — the gate
+   stays **read-only** (AC-4).
 
 ### Design decisions (flagged for maintainer ratification)
 
-- **D1 — SMA-425 lives in the GATE skill (prose), not in `sdlc-check`.** The issue says "the gate *or*
-  sdlc-check." I chose the gate: executing declared commands belongs where execution already happens
-  (the agent-driven gate/build), and keeping `sdlc-check` **read-only / no-write** preserves its
-  NC-1/NC-2 trust properties (a checker that shells out arbitrary declared commands is a much larger,
-  side-effecting trust surface). The oracle is still deterministic (run each command, read its exit
-  code), so it is mechanically decidable per the issue. **If the maintainer prefers a stronger,
-  checker-enforced dry-run mode, that is a clean follow-up** (a dedicated opt-in `sdlc-check` verb, not
-  a change to the read-only default).
+- **D1 — SMA-425 runnability lives at the BUILD BASELINE, not in the gate or `sdlc-check` (revised
+  after review-gate R1).** The issue says "the gate *or* sdlc-check." A review-gate panel (2 HIGH
+  security findings, both models) showed that making a **read-only** stage (gate OR checker) execute
+  arbitrary spec-declared commands is a genuine code-execution/side-effect surface — a mis-declared or
+  malicious `## Tech Stack` command could mutate the repo or exfiltrate secrets, and with the
+  **start-anywhere** feature the plan/spec may be external/attacker-controlled. So execution stays where
+  it is already done, isolated, and expected: the **build baseline** (build/SKILL.md step 2 runs the
+  green bar in the isolated workspace). The build baseline is enhanced to **distinguish an unrunnable
+  command from a red repo from vacuous-green** and route an unrunnable command back to techstack. The
+  gate and `sdlc-check` stay strictly read-only. **This is a deliberate deviation from the issue's
+  literal "the gate should execute," justified by the security findings — flagged for maintainer
+  ratification.** ("Deterministic" is honest here: a nonzero baseline exit always STOPS; the
+  unrunnable-vs-red label is a routing hint, not the stop decision.)
 - **D2 — the death policy is bounded (retry once, then takeover).** A single fresh-subagent retry before
   conductor-takeover balances isolation against progress; unbounded retries would stall an autonomous
   run. Every deviation is recorded so the loss of isolation is visible, never silent.
@@ -100,19 +119,23 @@ Two atomic tasks, one per skill text. Verification is a conformance re-read (rev
 checker suite staying green — these are prose edits with no test harness (mirrors enforcement-spine's
 T-10/T-11/T-12 skill-wiring tasks).
 
-- **T-1 — Build skill hardening: roster pinning + subagent-death policy (SMA-424).** Edit
-  `agent-sdlc/skills/build/SKILL.md` (and `reference/subagent-loop.md`): add, to the loop, a
-  start-of-build step that resolves + pins the agent-type roster (announce any substitution once,
-  record it in the ledger); and a stated subagent-death policy (capture partial → retry once fresh →
-  conductor-takeover, each deviation recorded). *Verification (prose):* re-read against AC-1/AC-2.
-  *Advances:* AC-1, AC-2, AC-5. *Component:* build skill text. *Files:*
-  `agent-sdlc/skills/build/SKILL.md`, `agent-sdlc/skills/build/reference/subagent-loop.md`.
-- **T-2 — Gate green-bar runnability dry-run (SMA-425).** Edit `agent-sdlc/skills/gate/SKILL.md`: extend
-  check 4 so the gate executes each declared green-bar command once (vacuous-green-aware) and fails
-  with the command's actual output when a command is unrunnable; add the matching checklist step,
-  red-flag, and rationalization rows. *Verification (prose):* re-read against AC-3/AC-4.
-  *Advances:* AC-3, AC-4, AC-5. *Component:* gate skill text. *Files:*
-  `agent-sdlc/skills/gate/SKILL.md`.
+- **T-1 — Build skill: roster pinning + subagent-death policy + green-bar runnability diagnostic
+  (SMA-424 + SMA-425's execution home).** Edit `agent-sdlc/skills/build/SKILL.md` (and
+  `reference/subagent-loop.md`): (a) a start-of-build step that resolves + pins the agent-type roster
+  (announce any substitution once, record in the ledger); (b) a subagent-death policy (capture partial
+  → retry once fresh → conductor-takeover, each deviation recorded); (c) enhance the **step-2 baseline**
+  (which already runs the green bar in the isolated workspace) to run each declared command, respect
+  vacuous-green, and **distinguish an unrunnable command (STOP + route to techstack with the output)
+  from a genuinely-red repo from vacuous-green**. *Verification (prose):* re-read against AC-1/AC-2/AC-3
+  and AC-4's build half. *Advances:* AC-1, AC-2, AC-3, AC-4, AC-5. *Component:* build skill text.
+  *Files:* `agent-sdlc/skills/build/SKILL.md`, `agent-sdlc/skills/build/reference/subagent-loop.md`.
+- **T-2 — Gate stays read-only; runnability is at the build baseline (SMA-425 gate half).** Edit
+  `agent-sdlc/skills/gate/SKILL.md`: check 4 keeps verifying the bar is *concrete* and adds a one-line
+  note that *runnability* is verified at the build baseline (not executed in the read-only gate); the
+  gate's read-only HARD-GATE is preserved. *Verification (prose):* re-read against AC-4's read-only
+  half. *Advances:* AC-4, AC-5. *Component:* gate skill text. *Files:* `agent-sdlc/skills/gate/SKILL.md`.
 
-AC-5 is a cross-cutting regression guard advanced by both tasks (each keeps the checker suite green and
-the spec checker exiting 0).
+AC-5 is a cross-cutting regression guard advanced by both tasks. **Note (review-gate R1 pivot):** the
+runnability EXECUTION moved from the gate (T-2, reverted) to the build baseline (T-1) after two HIGH
+security findings — keeping every read-only stage read-only. The commits reflect this as review-round
+fixes over the original T-1/T-2.
