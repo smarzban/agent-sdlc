@@ -26,10 +26,13 @@ function gitInit(dir) {
   execFileSync('git', ['config', 'user.name', 'Fixture'], { cwd: dir });
 }
 
+// Commits and returns the new commit's full SHA — option-(b) verifies the ledger's RECORDED SHA
+// against the repo, so a fixture ledger must record the ACTUAL commit hash (see happyLedger).
 function gitCommit(dir, filename, message) {
   writeFileSync(path.join(dir, filename), `${message}\n`);
   execFileSync('git', ['add', filename], { cwd: dir });
   execFileSync('git', ['commit', '-q', '-m', message], { cwd: dir });
+  return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: dir, encoding: 'utf8' }).trim();
 }
 
 function treeHash(dir) {
@@ -71,20 +74,26 @@ const HAPPY_SPEC = [
   '- **T-1 — Build the widget.** Detail. *Advances:* AC-1. *Component:* Widget. *Deps:* none.',
 ].join('\n');
 
-const HAPPY_LEDGER = [
-  '## Task ledger',
-  '',
-  '| Task | Status | Commit | AC advanced | Notes |',
-  '| --- | --- | --- | --- | --- |',
-  '| T-1 | done | `abc1234` | AC-1 | |',
-  '',
-  '### T-1 (@ `abc1234`)',
-  '',
-  '```',
-  '$ node --test agent-sdlc/checker/*.test.mjs',
-  'ok 1 - widget builds correctly',
-  '```',
-].join('\n');
+// Option-(b): the ledger records the ACTUAL commit SHA of the done task's `feat(T-1):` commit, so
+// the ledger-vs-git rule (which looks up that recorded SHA and checks its subject scope) passes.
+// `sha` defaults to a placeholder for the not-a-repo fail-closed test, where the SHA is irrelevant
+// (the reader fails systemically before any lookup).
+function happyLedger(sha = 'abc1234') {
+  return [
+    '## Task ledger',
+    '',
+    '| Task | Status | Commit | AC advanced | Notes |',
+    '| --- | --- | --- | --- | --- |',
+    `| T-1 | done | \`${sha}\` | AC-1 | |`,
+    '',
+    `### T-1 (@ \`${sha}\`)`,
+    '',
+    '```',
+    '$ node --test agent-sdlc/checker/*.test.mjs',
+    'ok 1 - widget builds correctly',
+    '```',
+  ].join('\n');
+}
 
 const HAPPY_REPORT = [
   '## Verification',
@@ -121,8 +130,8 @@ test('AC-7 happy path: a fully valid fixture (spec + ledger + report + matching 
   const dir = makeRepoDir();
   try {
     gitInit(dir);
-    gitCommit(dir, 'a', 'feat(T-1): implement widget');
-    const specPath = writeSpecTree(dir, { spec: HAPPY_SPEC, ledger: HAPPY_LEDGER, report: HAPPY_REPORT });
+    const sha = gitCommit(dir, 'a', 'feat(T-1): implement widget');
+    const specPath = writeSpecTree(dir, { spec: HAPPY_SPEC, ledger: happyLedger(sha), report: HAPPY_REPORT });
     const result = runCli([specPath], { cwd: dir });
     assert.equal(result.status, 0, result.stderr);
     assert.match(result.stdout, /all checks passed/i);
@@ -137,8 +146,8 @@ test('AC-7 mid-chain-entry variant: well-formed provenance + untraced marker exi
   const dir = makeRepoDir();
   try {
     gitInit(dir);
-    gitCommit(dir, 'a', 'feat(T-1): implement widget');
-    const specPath = writeSpecTree(dir, { spec: VARIANT_SPEC, ledger: HAPPY_LEDGER, report: HAPPY_REPORT });
+    const sha = gitCommit(dir, 'a', 'feat(T-1): implement widget');
+    const specPath = writeSpecTree(dir, { spec: VARIANT_SPEC, ledger: happyLedger(sha), report: HAPPY_REPORT });
     const result = runCli([specPath], { cwd: dir });
     assert.equal(result.status, 0, result.stderr);
     assert.match(result.stdout, /Notes \(1\):/);
@@ -158,8 +167,8 @@ test('--require verification-report with the file absent exits nonzero, naming t
   const dir = makeRepoDir();
   try {
     gitInit(dir);
-    gitCommit(dir, 'a', 'feat(T-1): implement widget');
-    const specPath = writeSpecTree(dir, { spec: HAPPY_SPEC, ledger: HAPPY_LEDGER });
+    const sha = gitCommit(dir, 'a', 'feat(T-1): implement widget');
+    const specPath = writeSpecTree(dir, { spec: HAPPY_SPEC, ledger: happyLedger(sha) });
     const result = runCli([specPath, '--require', 'verification-report'], { cwd: dir });
     assert.notEqual(result.status, 0);
     assert.match(result.stdout, /verification-report/);
@@ -212,8 +221,8 @@ test('AC-11/NC-2: a full run leaves the fixture tree byte-identical (no file cre
   const dir = makeRepoDir();
   try {
     gitInit(dir);
-    gitCommit(dir, 'a', 'feat(T-1): implement widget');
-    const specPath = writeSpecTree(dir, { spec: HAPPY_SPEC, ledger: HAPPY_LEDGER, report: HAPPY_REPORT });
+    const sha = gitCommit(dir, 'a', 'feat(T-1): implement widget');
+    const specPath = writeSpecTree(dir, { spec: HAPPY_SPEC, ledger: happyLedger(sha), report: HAPPY_REPORT });
     const before = treeHash(dir);
     const result = runCli([specPath], { cwd: dir });
     assert.equal(result.status, 0, result.stderr);
@@ -240,8 +249,8 @@ test('AC-12/NC-1(b): the CLI completes under a minimal env (PATH only — enough
   const dir = makeRepoDir();
   try {
     gitInit(dir);
-    gitCommit(dir, 'a', 'feat(T-1): implement widget');
-    const specPath = writeSpecTree(dir, { spec: HAPPY_SPEC, ledger: HAPPY_LEDGER, report: HAPPY_REPORT });
+    const sha = gitCommit(dir, 'a', 'feat(T-1): implement widget');
+    const specPath = writeSpecTree(dir, { spec: HAPPY_SPEC, ledger: happyLedger(sha), report: HAPPY_REPORT });
     // Minimal env: PATH only (enough for the OS to resolve `git`; no other var, no proxy/network
     // config, nothing that could route a request anywhere). Combined with (a) above — no
     // non-stdlib import exists to reach out over a network in the first place — this evidences
@@ -277,11 +286,12 @@ test('fail-closed: a ledger present but the run directory is not a git repo exit
   const dir = makeRepoDir();
   try {
     // Deliberately no gitInit(dir): the ledger names a done task, so the ledger-vs-git rule would
-    // run, but there is no git history to check it against.
-    const specPath = writeSpecTree(dir, { spec: HAPPY_SPEC, ledger: HAPPY_LEDGER, report: HAPPY_REPORT });
+    // run, but the run directory is not a git repo — the per-SHA reader fails systemically
+    // (unavailable), which the CLI surfaces fail-closed, never a silent pass.
+    const specPath = writeSpecTree(dir, { spec: HAPPY_SPEC, ledger: happyLedger(), report: HAPPY_REPORT });
     const result = runCli([specPath], { cwd: dir });
-    assert.notEqual(result.status, 0, 'a repo-facts failure must never silently pass');
-    assert.match(result.stdout, /repo facts/i);
+    assert.notEqual(result.status, 0, 'a systemic reader failure must never silently pass');
+    assert.match(result.stdout, /commit subjects unavailable/i);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

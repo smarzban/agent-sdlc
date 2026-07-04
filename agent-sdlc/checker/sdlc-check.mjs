@@ -1,13 +1,15 @@
 // sdlc-check — enforcement-spine CLI shell (T-9: full pipeline wiring).
 // Zero-dependency, bare Node ESM. Wires: parse the spec (always required) -> read the ledger and
-// verification report when present (siblings of the spec file) -> read repo facts when the ledger
-// needs them -> run every rule the artifacts present support -> format the report -> print + set
-// process.exitCode. Rules AUTO-SCOPE to the artifacts present (## Design): no ledger -> ledger
-// rules don't run; no verification report -> proof-map rules don't run. `--require <artifact>`
-// flips a missing artifact into a finding instead of a silent skip. Every error path exits
-// nonzero with a message naming the problem; nothing here ever exits 0 on failure (fail-closed) —
-// a parse failure, a repo-facts failure while the ledger's rules would run, and any internal throw
-// (caught at the main guard below) all exit nonzero, never 0.
+// verification report when present (siblings of the spec file) -> for each done ledger task, read
+// its ledger-RECORDED commit subject from git (per-SHA `readCommitSubject`) so the ledger-vs-git
+// rule can verify the recorded commit exists and matches -> run every rule the artifacts present
+// support -> format the report -> print + set process.exitCode. Rules AUTO-SCOPE to the artifacts
+// present (## Design): no ledger -> ledger rules don't run; no verification report -> proof-map
+// rules don't run. `--require <artifact>` flips a missing artifact into a finding instead of a
+// silent skip. Every error path exits nonzero with a message naming the problem; nothing here ever
+// exits 0 on failure (fail-closed) — a parse failure, a systemic git-reader failure while the
+// ledger's rules would run (git absent / not a repo -> a fail-closed `ledger-vs-git` finding, never
+// a silent pass), and any internal throw (caught at the main guard below) all exit nonzero, never 0.
 import { parseArgs, promisify } from 'node:util';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -117,20 +119,39 @@ export async function run(argv) {
   if (ledger) {
     results.push(...checkGreenBarEvidence(ledger));
 
-    const doneTaskIds = ledger.tasks.filter((t) => /^done$/i.test(t.status)).map((t) => t.task);
-    const repoFacts = await readRepoFacts(process.cwd(), doneTaskIds);
-    if (!repoFacts.ok) {
-      // Fail-closed (## Design trust/failure boundaries; plan T-9 note): a repo-facts failure
-      // while the ledger's rules would run is itself a failed check — NEVER silently treated as
-      // "no facts" and skipped.
+    // AC-4 option-(b): the ledger is the authoritative task↔commit link, so verify each done task's
+    // own RECORDED commit rather than re-deriving matches by walking git history. Read each distinct
+    // recorded SHA's subject once (the reader does the git I/O; checkLedgerVsGit stays pure over the
+    // resolved `sha -> { found, subject }` map). A done task with no recorded SHA (`t.commit` null)
+    // is handled inside the rule (AC-6 finding) — nothing to look up.
+    const doneTasks = ledger.tasks.filter((t) => /^done$/i.test(t.status));
+    const subjectsBySha = new Map();
+    let readerFailure = null;
+    for (const t of doneTasks) {
+      if (!t.commit || subjectsBySha.has(t.commit)) continue;
+      const res = await readCommitSubject(process.cwd(), t.commit);
+      if (res.ok) {
+        subjectsBySha.set(t.commit, { found: true, subject: res.subject });
+      } else if (res.notFound) {
+        subjectsBySha.set(t.commit, { found: false, subject: null });
+      } else {
+        // Fail-closed (## Design trust/failure boundaries): a systemic reader failure — git absent
+        // or `process.cwd()` not a repo — while the ledger's rules would run is itself a failed
+        // check, NEVER silently treated as "no facts" and skipped. Distinct from a per-SHA
+        // not-found (a real AC-4 finding the rule renders below).
+        readerFailure = res.error;
+        break;
+      }
+    }
+    if (readerFailure) {
       results.push({
         type: 'finding',
-        rule: 'repo-facts',
-        message: `ledger present but repo facts unavailable: ${repoFacts.error.problem}`,
+        rule: 'ledger-vs-git',
+        message: `ledger present but git commit subjects unavailable: ${readerFailure.problem}`,
         ids: ['ledger'],
       });
     } else {
-      results.push(...checkLedgerVsGit(ledger, repoFacts));
+      results.push(...checkLedgerVsGit(ledger, subjectsBySha));
     }
   }
 
@@ -271,6 +292,18 @@ const UNTRACED_RE = /AC:\s*untraced\b\s*(?:\(([^)]*)\))?/gi;
 const LEDGER_EVIDENCE_HEADING_RE = /^###\s+(T-\d+)\s*\(@\s*`?([^`)]*?)`?\s*\)/;
 const HEADING_RE = /^#{1,6}\s+/;
 const FENCE_LINE_RE = /^```/;
+// Ledger commit cell → the authoritative task commit is the FIRST SHA-shaped token in the cell
+// (D6). A real ledger cell is not always a bare SHA: the enforcement-spine T-6 cell is
+// "`4ddd29e` (+corrective `d3c4275`)" — the leading `4ddd29e` is the task commit, the trailing
+// annotation is ignored. Backticks are non-word chars, so `\b` finds the SHA whether or not the
+// cell is backtick-wrapped. A cell with no SHA-shaped token (e.g. the "—" no-commit marker) yields
+// null (→ the rule's "records no commit" finding, AC-6).
+const COMMIT_SHA_RE = /\b[0-9a-f]{7,64}\b/;
+
+function extractFirstSha(cell) {
+  const m = COMMIT_SHA_RE.exec(cell);
+  return m ? m[0] : null;
+}
 
 export function parseSpec(text, file = '<unknown spec file>') {
   if (typeof text !== 'string' || text.trim() === '') {
@@ -677,7 +710,7 @@ function extractLedgerTasks(lines) {
         tasks.push({
           task: taskId,
           status: (cells[col.status] || '').trim(),
-          commit: col.commit >= 0 ? cells[col.commit].replace(/`/g, '').trim() : null,
+          commit: col.commit >= 0 ? extractFirstSha(cells[col.commit]) : null,
           acAdvanced: col.ac >= 0 ? cells[col.ac].trim() : null,
           notes: col.notes >= 0 ? cells[col.notes].trim() : null,
           line: j + 1,
@@ -998,32 +1031,48 @@ export function checkGreenBarEvidence(ledger) {
   return findings;
 }
 
-// --- Repo facts reader (T-6): git commit history, read-only --------------------------------
+// --- Commit-subject reader (AC-4, option-(b)): read-only git, per recorded SHA -------------
 //
-// readRepoFacts() is the ONLY component in this file that touches git: one async `execFile` call
-// over an argv array (no shell), read-only `git log` only (NC-1: local git only, no network — the
-// invoked git subcommand never talks to a remote). Mirrors the parsers' typed-failure discipline:
-// git absent or `repoPath` not a repo returns `{ ok: false, error: { path, problem } }` — it never
-// throws to top and never returns an empty-and-passing commit list (a spawn failure and "no
-// commits" must not be confused).
-//   success: { ok: true, commits }
-//   commits — one entry per commit, in `git log`'s own (newest-first) order — order is irrelevant
-//             to the ledger-vs-git rule below, which only counts: { id, message } (component
-//             contract's "commit list (id, message)"; `id` is the full commit hash).
-//   `taskIds` (optional, the component contract's "task IDs of interest") narrows the RETURNED
-//   list to commits whose message references at least one of them — a relevance filter only; it
-//   never changes what counts as a reference (that stays in the pure rule below, over whatever
-//   messages are returned) and never drops a commit that could matter (a commit referencing none
-//   of `taskIds` is, by definition, not evidence for any task the caller asked about).
-//
-// Commit records are read with `-z` (NUL record separator between commits) and `%x00` as the
-// intra-record field separator between hash and subject — verified against the `git log` docs
-// (`-z`: "Separate the commits with NULs instead of newlines"; `%x00` inserts a raw NUL byte in
-// `--format`) and empirically (`git log -z --format='%H%x00%s'` on git 2.53.0): the whole output
-// is one NUL-delimited stream, so splitting on `\0` and pairing consecutive fields recovers each
-// commit. A commit message cannot itself contain a NUL byte (git strips/rejects them), so this
-// delimiter can never be spoofed by message content — unlike a newline or comma-based format.
-const GIT_LOG_FORMAT = '%H%x00%s';
+// readCommitSubject() is the ONLY component in this file that touches git: one async `execFile`
+// call over an argv array (NO shell), read-only `git show -s --format=%s <sha> --` (NC-1: local git
+// only, no network — the invoked subcommand never talks to a remote; the trailing `--` and the
+// argv form make option/pathspec injection impossible even for an attacker-shaped SHA). Mirrors
+// the parsers' typed-failure discipline — it never throws to top — with a THREE-way result so the
+// caller can tell a real defect from a systemic failure:
+//   success:            { ok: true, subject }        — the commit's subject line (`%s`, no body).
+//   unknown object:     { ok: false, notFound: true }— git ran but the SHA is not in this repo; a
+//                                                       per-task AC-4 finding, NOT a crash.
+//   systemic failure:   { ok: false, unavailable: true, error: { path, problem } } — git absent
+//                                                       (ENOENT) or `repoPath` not a repo; the CLI
+//                                                       treats this as fail-closed (a lost check),
+//                                                       never a silent pass.
+// The two failure modes are distinguished up front (spawn ENOENT, or git's stable "not a git
+// repository" fatal) so an unknown-object 128 is never misread as a systemic failure or vice
+// versa. The commit BODY is never read (subject-only, `%s`), so a task ID mentioned in a body can
+// never masquerade as a scope reference.
+export async function readCommitSubject(repoPath, sha) {
+  try {
+    const { stdout } = await execFileAsync(
+      'git',
+      ['-C', repoPath, 'show', '-s', '--format=%s', sha, '--'],
+      { encoding: 'utf8' },
+    );
+    return { ok: true, subject: stdout.replace(/\r?\n$/, '') };
+  } catch (err) {
+    // git binary absent, or `repoPath` is not a git repository → a systemic reader failure the
+    // caller renders fail-closed. Anything else (git ran, exited 128 "fatal: bad object <sha>") is
+    // an unknown object → a typed not-found the rule renders as a per-task finding.
+    if (err.code === 'ENOENT' || /not a git repository/i.test(String(err.stderr ?? ''))) {
+      return {
+        ok: false,
+        unavailable: true,
+        error: { path: repoPath, problem: `git repository unavailable: ${err.message}` },
+      };
+    }
+    return { ok: false, notFound: true };
+  }
+}
+
 const TASK_TOKEN_RE = /\bT-\d+\b/g;
 
 // Conventional-commit header: `type(scope): …` (optionally `type(scope)!: …`). Captures group 1 =
@@ -1033,7 +1082,7 @@ const TASK_TOKEN_RE = /\bT-\d+\b/g;
 const COMMIT_HEADER_RE = /^\s*\w+(?:\(([^)]*)\))?!?:/;
 
 // Distinct T-N tokens appearing in a commit's SUBJECT LINE's SCOPE POSITION only — the `type(scope):`
-// parens — not the whole subject (the `%s` readRepoFacts captures via `git log --format=%H%x00%s`;
+// parens — not the whole subject (the `%s` readCommitSubject captures via `git show -s --format=%s`;
 // the commit body is never read either way). This is a corrective narrowing of the original
 // subject-wide match (T-6): the repo's commit convention puts the authoritative task in the scope
 // (`feat(T-N): …`), while docs/chore/area commits use an area scope (`docs(enforcement-spine): …`)
@@ -1056,173 +1105,64 @@ function distinctTaskTokens(message) {
   return tokens;
 }
 
-// M-968 (AC-4 scoping fix): resolves the repo's default-branch ref, read-only, no network. Tried
-// in order — the first that resolves wins:
-//   1. `symbolic-ref refs/remotes/origin/HEAD` — the remote's OWN recorded default (e.g. resolves
-//      to `origin/main`); this is the authoritative source when a remote is configured.
-//   2. the literal `origin/main`, then local `main`, then local `master` — each verified to
-//      actually exist via `rev-parse --verify --quiet` before being trusted; never assume a name
-//      resolves just because it's conventional.
-// Verified empirically against git 2.53.0: `symbolic-ref --quiet` exits 1 (no stdout) when no
-// `origin/HEAD` is recorded; `rev-parse --verify --quiet <ref>` exits non-zero silently (no stderr
-// noise) when `<ref>` doesn't exist. Returns `null` (never throws) when nothing resolves — the
-// caller treats that as "default branch undeterminable" and falls back to the full-history walk.
-async function resolveDefaultBranch(repoPath) {
-  try {
-    const { stdout } = await execFileAsync(
-      'git',
-      ['-C', repoPath, 'symbolic-ref', '--quiet', 'refs/remotes/origin/HEAD'],
-      { encoding: 'utf8' },
-    );
-    const short = stdout.trim().replace(/^refs\/remotes\//, '');
-    if (short) return short;
-  } catch {
-    // no origin, or origin/HEAD isn't recorded locally (`git remote set-head` never ran) — fall
-    // through to the static candidates below.
-  }
-  for (const candidate of ['origin/main', 'main', 'master']) {
-    try {
-      await execFileAsync('git', ['-C', repoPath, 'rev-parse', '--verify', '--quiet', candidate], {
-        encoding: 'utf8',
-      });
-      return candidate;
-    } catch {
-      // candidate doesn't exist in this repo — try the next one.
-    }
-  }
-  return null;
-}
-
-// M-968: computes the `<mergeBase>..HEAD` rev-range that scopes readRepoFacts to THIS feature's
-// commits — bounding the walk instead of it defaulting to HEAD's entire ancestor history (the
-// confirmed bug: task IDs T-1..T-N restart per feature, so an unbounded walk collides two
-// features' `feat(T-N):` commits into one false "N commits reference it" AC-4 finding).
+// AC-4 — ledger-vs-git (option-(b), SMA-420): the ledger is the AUTHORITATIVE task↔commit link, so
+// for each `done` task this verifies the task's OWN ledger-RECORDED commit — no git-history walk.
+// The recorded SHA (the first SHA-shaped token in the commit cell, extracted at parse time into
+// `t.commit`; see extractFirstSha) must (a) exist in the repo and (b) have a subject whose scope
+// position references EXACTLY that task. Looking up a recorded SHA individually is why the old
+// walk's cross-feature collision is structurally gone: task IDs restarting per feature can no
+// longer be confused — a task's link is the specific commit the ledger names, not "some commit that
+// mentions T-N somewhere in history".
 //
-// Fail-safe by construction, never by a special case: returns `null` (→ full-history fallback,
-// the strictly WIDER scope — it can only over-count and produce a finding, never silently pass) in
-// every case where a genuine feature-vs-default split can't be established:
-//   - no default branch resolves (no origin, no local main/master)          — resolveDefaultBranch
-//     returns null;
-//   - `merge-base HEAD <default>` fails (unrelated histories / detached HEAD with no common
-//     ancestor / a single-commit repo)                                     — caught below;
-//   - `merge-base` SUCCEEDS but equals HEAD's own commit — i.e. HEAD *is* (or is an ancestor of)
-//     the resolved default branch, not a diverged feature branch (verified empirically: checking
-//     out the same branch the candidate resolves to gives `merge-base HEAD <default> == HEAD`).
-//     Scoping to `<mergeBase>..HEAD` here would silently give an EMPTY range (mergeBase excludes
-//     itself) — an under-count, the unsafe direction — so this is folded into "undeterminable" too.
-async function computeRevRange(repoPath) {
-  const defaultBranch = await resolveDefaultBranch(repoPath);
-  if (!defaultBranch) return null;
-  let headSha;
-  let mergeBase;
-  try {
-    ({ stdout: headSha } = await execFileAsync('git', ['-C', repoPath, 'rev-parse', 'HEAD'], {
-      encoding: 'utf8',
-    }));
-    ({ stdout: mergeBase } = await execFileAsync(
-      'git',
-      ['-C', repoPath, 'merge-base', 'HEAD', defaultBranch],
-      { encoding: 'utf8' },
-    ));
-  } catch {
-    return null; // no common ancestor, empty repo, or another merge-base failure
-  }
-  headSha = headSha.trim();
-  mergeBase = mergeBase.trim();
-  if (!mergeBase || mergeBase === headSha) return null;
-  return `${mergeBase}..HEAD`;
-}
-
-export async function readRepoFacts(repoPath, taskIds) {
-  let stdout;
-  // M-968: scope the walk to this feature's own commits (`<mergeBase>..HEAD`) rather than HEAD's
-  // entire ancestor history, whenever a default branch + merge-base can be established; otherwise
-  // fall back to the prior unscoped full-history walk (fail-safe — see computeRevRange above).
-  const range = await computeRevRange(repoPath);
-  const logArgs = ['-C', repoPath, 'log'];
-  if (range) logArgs.push(range);
-  logArgs.push('-z', `--format=${GIT_LOG_FORMAT}`);
-  try {
-    ({ stdout } = await execFileAsync('git', logArgs, { encoding: 'utf8' }));
-  } catch (err) {
-    // Covers both failure modes the contract names: git absent (ENOENT spawn error) and
-    // `repoPath` not a repo (git exits 128, "fatal: not a git repository ..."). Either way this
-    // is a typed failure, never a throw and never an empty `{ ok: true, commits: [] }`.
-    return { ok: false, error: { path: repoPath, problem: `git log failed: ${err.message}` } };
-  }
-
-  // SMA-421 nit 2: pair (hash, subject) POSITIONALLY. `git log -z --format=%H%x00%s` ends with a
-  // trailing NUL, so split('\0') yields 2N tokens plus one trailing '' (odd length). Drop ONLY that
-  // single trailing terminator empty — NEVER filter interior empties, since a commit with an empty
-  // subject is a legitimate '' token in subject position and filtering it would shift every later
-  // pair by one (mis-pairing later hashes with the wrong subjects).
-  const fields = stdout.split('\0');
-  if (fields.length % 2 === 1 && fields[fields.length - 1] === '') fields.pop();
-  const all = [];
-  for (let i = 0; i + 1 < fields.length; i += 2) {
-    all.push({ id: fields[i], message: fields[i + 1] });
-  }
-  const of = Array.isArray(taskIds) && taskIds.length > 0 ? new Set(taskIds) : null;
-  const commits = of
-    ? all.filter((c) => [...distinctTaskTokens(c.message)].some((tok) => of.has(tok)))
-    : all;
-  return { ok: true, commits };
-}
-
-// AC-4 — ledger-vs-git: for each `done` task, git history must contain EXACTLY ONE commit whose
-// SUBJECT LINE'S SCOPE POSITION references EXACTLY that task ID (see distinctTaskTokens above for
-// why scope-position — not the whole subject, and not the whole commit message — is the intended
-// source).
-//
-// Exact rule: map each commit's subject line to its distinct-token set (distinctTaskTokens above);
-// a done task T is backed iff exactly one commit's token set CONTAINS T, and that same commit's
-// token set is EXACTLY `{T}`. This is mechanically decidable — it supports NC-4's no-judgment
-// constraint, though it is not itself "the NC-4 rule" (NC-4 is the reviewer-checked constraint that
-// every shipped check has a deterministic oracle; this is one such oracle). Three ways to fail,
-// each its own finding naming T:
-//   - zero commits contain T                         -> "no commit references it";
-//   - more than one commit contains T                -> "N commits reference it" (ambiguous);
-//   - exactly one commit contains T, but its token
-//     set has other members too (a multi-task commit) -> that commit also names another task, so
-//     it cannot be "exactly that task ID"; found via the *same* commit, so this and the ">1
-//     commits" case are mutually exclusive per task.
-// A commit scoping two tasks (`feat(T-3, T-4): ...`) therefore fails BOTH T-3 and T-4 if both are
-// done (each sees its one matching commit's token set as `{T-3, T-4}`, not `{itself}`).
-//
-// Pure: no I/O (repoFacts is already the reader's resolved success model — same convention as
-// checkGreenBarEvidence(ledger) above, which assumes its parseLedger() input already succeeded;
-// a repoFacts failure is fail-closed CLI wiring, out of scope here per the plan — see T-9).
+// `subjectsBySha` is a `sha -> { found, subject }` map the CLI pre-resolves via readCommitSubject
+// (the git I/O is at the CLI edge; this rule is pure over the resolved map — same convention as
+// checkGreenBarEvidence(ledger)). Four ways to fail, each its own finding naming the task:
+//   - no recorded SHA (`t.commit` null — an empty/"—" commit cell)  -> "records no commit" (AC-6);
+//   - the recorded SHA is not in the repo (`found: false`)          -> "was not found in the repo";
+//   - its subject's scope does not contain the task                 -> "does not reference it";
+//   - its subject's scope contains the task AND others (multi-task) -> "also references <others>".
+// A commit scoping two tasks (`feat(T-3, T-4): ...`) recorded for both therefore fails BOTH (each
+// sees its recorded commit's token set as `{T-3, T-4}`, not `{itself}`).
 // Exhaustive: every offending done task is reported, never just the first.
-export function checkLedgerVsGit(ledger, repoFacts) {
+export function checkLedgerVsGit(ledger, subjectsBySha) {
   const findings = [];
   for (const t of ledger.tasks) {
     if (!/^done$/i.test(t.status)) continue;
-    const matches = repoFacts.commits.filter((c) => distinctTaskTokens(c.message).has(t.task));
-    if (matches.length === 0) {
+    if (!t.commit) {
       findings.push({
         type: 'finding',
         rule: 'ledger-vs-git',
-        message: `${t.task} is marked done but no commit in git history references it`,
+        message: `${t.task} is marked done but the ledger records no commit for it`,
         ids: [t.task],
       });
       continue;
     }
-    if (matches.length > 1) {
+    const entry = subjectsBySha.get(t.commit);
+    if (!entry || !entry.found) {
       findings.push({
         type: 'finding',
         rule: 'ledger-vs-git',
-        message: `${t.task} is marked done but ${matches.length} commits reference it (expected exactly one)`,
+        message: `${t.task} is marked done but the ledger-recorded commit ${t.commit} for it was not found in the repo`,
         ids: [t.task],
       });
       continue;
     }
-    const tokens = distinctTaskTokens(matches[0].message);
+    const tokens = distinctTaskTokens(entry.subject);
+    if (!tokens.has(t.task)) {
+      findings.push({
+        type: 'finding',
+        rule: 'ledger-vs-git',
+        message: `${t.task} is marked done but its ledger-recorded commit ${t.commit} does not reference it (subject: "${entry.subject}")`,
+        ids: [t.task],
+      });
+      continue;
+    }
     if (tokens.size > 1) {
       const others = [...tokens].filter((tok) => tok !== t.task);
       findings.push({
         type: 'finding',
         rule: 'ledger-vs-git',
-        message: `${t.task} is marked done but its one matching commit (${matches[0].id}) also references ${others.join(', ')} — a commit must reference exactly one task`,
+        message: `${t.task} is marked done but its ledger-recorded commit ${t.commit} also references ${others.join(', ')} — a commit must reference exactly one task`,
         ids: [t.task],
       });
     }
@@ -1392,7 +1332,7 @@ export function formatReport(results) {
 // for undefined (e.g. `node -e '...'`, no script file) since pathToFileURL() throws on non-string
 // input.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  // Any internal throw (a rejected promise from run() — the async work is readRepoFacts) exits
+  // Any internal throw (a rejected promise from run() — the async work is readCommitSubject) exits
   // nonzero: the CLI shell's exit contract has no error path that exits 0.
   run(process.argv.slice(2)).catch((err) => {
     process.stderr.write(`sdlc-check: unexpected internal error: ${err && err.stack ? err.stack : err}\n`);
