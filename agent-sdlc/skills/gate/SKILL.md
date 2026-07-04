@@ -40,21 +40,10 @@ a verdict: ready to build, or not.
    each reviewer-checked criterion has a named review axis; the design's criterion-to-component map
    and the plan stage's task-to-criterion map are both complete. The project's **green bar** — the
    runnable commands that define a passing build (compile, test, lint, format-check) — is declared
-   and concrete (no placeholders), so build inherits one definition of "green". Then **dry-run it
-   for runnability**: execute each declared green-bar command once and read its exit code + output.
-   Concrete is not the same as runnable — a malformed command (right shape, bad invocation) passes
-   concreteness yet halts the autonomous build the moment it runs. **Vacuous-green carve-out** (the
-   0.7.0 build-baseline rule): if a command's target paths do not yet exist — a greenfield feature
-   with nothing to compile or test yet — it is **vacuously green**; skip it, do not fail (the bar
-   binds once those paths exist), and say so. But a command that is genuinely **unrunnable** — a
-   nonzero exit about the command's *form* on a repo where its target exists (e.g. `node --test
-   agent-sdlc/checker/` exiting 1 as a bad invocation) — is a **failed check**: report it **with the
-   command's actual output** and block the verdict (a Critical, exactly like a failed check 6).
-   And a command that *runs* fine but reports **real failures** on existing code (a genuinely RED
-   suite exiting nonzero) is likewise a real finding — the repo isn't green — **not** a vacuous-green
-   skip and never ignored. Fail-closed, and distinguish an unrunnable command from a vacuously-green skip. If a command
-   cannot be executed at all in this environment, **degrade loud** like check 6 — state it explicitly
-   in the report, never silently skip.
+   and concrete (no placeholders), so build inherits one definition of "green". Concreteness is all
+   the gate checks here — *runnability* (does each declared command actually run?) is executed and
+   diagnosed at the **build baseline** (build stage), where the workspace is isolated and side-effects
+   are expected. The gate never executes declared commands: it stays read-only.
 5. **Hygiene.** No unresolved TBDs, placeholders, or "decide later" markers remain.
 6. **Mechanical corroboration.** After checks 1–5, run the bundled checker as a second, automated
    witness to the same chain: `sdlc-check specs/<feature>/<feature>.md`
@@ -75,24 +64,18 @@ a verdict: ready to build, or not.
    hand-authored) and where the chain was entered; treat explicitly `untraced` links as entry
    artifacts to surface, not defects to block on.
 4. **Run checks 1–5** mechanically, not by impression. The value of this gate is the literal walk.
-5. **Dry-run the green bar (check 4 runnability)** after confirming the bar is concrete, execute each
-   declared green-bar command once and read its exit code + output. A command whose target paths don't
-   exist yet is vacuously green — announce the skip, don't fail. A command that is unrunnable (a
-   form-level nonzero exit where the target exists) is a Critical failed check — record its actual
-   output and block the verdict. If a command can't run in this environment at all, write the
-   degraded-fallback line now so it can't be dropped later. Never mark the bar runnable un-run.
-6. **Run the checker (check 6)** invoke `sdlc-check` over the spec when `node` is present. A nonzero
+5. **Run the checker (check 6)** invoke `sdlc-check` over the spec when `node` is present. A nonzero
    exit or a crash is a failed check — do not issue *ready to build*; treat it as a stop-and-ask, and
    if a human explicitly overrides it, record the override in `gate-report.md` (who/what, and why the
    verdict proceeded despite the failed check). `node` absent -> write the degraded-fallback line into
    the report now, so it can't be dropped later.
-7. **Severity-rate each finding** Critical (blocks build), High (blocks build), Medium, Low. A failed
-   checker run (check 6) rates Critical, as does an unrunnable declared green-bar command (check 4).
-8. **Route each finding** name the owning stage that should fix it (criteria, design, techstack, or
+6. **Severity-rate each finding** Critical (blocks build), High (blocks build), Medium, Low. A failed
+   checker run (check 6) rates Critical.
+7. **Route each finding** name the owning stage that should fix it (criteria, design, techstack, or
    plan) and a suggested next action.
-9. **State the verdict** ready to build only if there are no Critical or High findings AND check 6
+8. **State the verdict** ready to build only if there are no Critical or High findings AND check 6
    did not fail (or its failure was explicitly overridden and the override is recorded).
-10. **Write `gate-report.md`** and stop. Do not fix anything. If Linear sync is enabled in
+9. **Write `gate-report.md`** and stop. Do not fix anything. If Linear sync is enabled in
    `.agent-sdlc/config.json`, also post the gate's status update + report via the `linear-sync` skill.
 
 ## Principles
@@ -118,7 +101,6 @@ a verdict: ready to build, or not.
 | "It obviously hangs together, skip the chain walk." | The mechanical walk is the entire value. Impressions miss the orphan task and the uncovered criterion. |
 | "Downgrade this so the build can start." | Severity is honest or the gate is decoration. Block on Critical and High. |
 | "No need to name the owning stage." | A finding with no owner does not get fixed. Route it. |
-| "The bar is concrete, no need to run it." | Concrete ≠ runnable — a malformed command passes concreteness and halts the autonomous build at baseline. Dry-run it. |
 | "The checker isn't installed here, just skip check 6." | `node` absent is a degraded fallback, announced in the report — not a silent skip. |
 | "sdlc-check failed but the manual walk looked fine, issue ready to build anyway." | A failed checker run is a failed check — stop-and-ask. Proceeding needs an explicit, recorded human override. |
 
@@ -128,8 +110,6 @@ a verdict: ready to build, or not.
 - A criterion with no task passed as acceptable.
 - A "ready to build" verdict issued with a Critical or High finding open.
 - A "ready to build" verdict with no green bar declared — build then has no shared definition of "green".
-- A "ready to build" verdict with a declared green-bar command never executed for runnability (only
-  checked concrete) — nor announced as vacuously green or as a degraded skip.
 - Findings stated as impressions rather than located in a specific artifact.
 - An `untraced` link or a materialized section silently dropped from the report — a mid-chain entry
   passed off as a fully-traced chain (the same failure as silently dropping review coverage).
@@ -141,9 +121,6 @@ a verdict: ready to build, or not.
 - The full chain has been walked for every criterion.
 - All six checks have run, including the checker's mechanical corroboration — or, when `node` was
   absent, a loud degraded fallback is recorded in its place.
-- The declared green bar was dry-run for runnability (check 4) — each command executed and passed, or
-  its outcome announced (vacuously green where targets don't exist yet, or a degraded skip where it
-  couldn't run) — and any unrunnable command blocked the verdict as a Critical with its output shown.
 - A failed checker run either blocked the verdict or was overridden with the override recorded.
 - Every finding is severity-rated, located, owner-named, and given a next action.
 - A clear verdict is stated.

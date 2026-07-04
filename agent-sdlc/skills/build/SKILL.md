@@ -38,6 +38,22 @@ branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
    feature — nothing to compile or test yet), the baseline is **vacuously green**, not red — report
    it as such and proceed; the bar becomes binding from the first task that creates those paths
    onward. This is not a per-feature carve-out — do not re-derive it in a plan's Notes.
+   **Classify each declared command's baseline result** (this is where *runnability* is diagnosed —
+   the gate stayed read-only and never ran these; the isolated workspace is where side-effects belong):
+   - **vacuous-green** — the command's target paths don't exist yet → skip (the rule just above).
+   - **runs & passes** → green; proceed.
+   - **nonzero exit** → **STOP** (as today) — but read the command's output and label *which* kind,
+     because the label routes the fix:
+     - **unrunnable command** — the declared command is malformed / bad-form (e.g. the enforcement-spine
+       `node --test agent-sdlc/checker/` bare-directory invocation): the failure is about the command's
+       *form*, not the code. This is a **green-bar DECLARATION defect** — STOP, show the command's
+       **actual output**, and route the fix back to **`techstack`** (the green-bar owner), not a
+       misleading "the repo is red" halt. Record it in `build-report.md`.
+     - **genuinely-red repo** — the command runs fine but reports real failures on existing code: the
+       normal red-baseline stop (the repo isn't green) — STOP and fix the code, as today.
+   The **deterministic** part is fixed: a nonzero baseline exit *always* STOPS. The unrunnable-vs-red
+   label is only a routing hint (which stage owns the fix), decided by reading the command's output; it
+   never changes the stop decision, so the baseline stays deterministic.
    **Pin the agent-type roster here, once.** Resolve the implementer/reviewer/fixer agent types the
    loop will dispatch before the per-task loop begins. If a declared type is unavailable, **announce
    the substitution ONCE up front and record it in `build-report.md`** (e.g. `implementer →
@@ -142,6 +158,7 @@ The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and le
 | "`sdlc-check` failed but the task looks fine, proceed anyway." | A failed checker run is a failed check — stop-and-ask. Proceeding needs an explicit, recorded human override. |
 | "I'll add the evidence block later, once more tasks land." | Evidence is captured from the first task, never deferred — a gap left for later is a hole the checker (AC-5/AC-14) will find. |
 | "The baseline is red because the target files don't exist yet — stop." | Absence of the declared paths is vacuous green, not red — greenfield has nothing to fail. Proceed; the bar binds once the paths exist. |
+| "The baseline is red, must be my code." | First check the command itself ran — a malformed green-bar command is a techstack declaration bug, not red code; route it there. |
 | "The implementer agent type isn't available — I'll swap in a stand-in whenever I hit a dispatch." | Per-dispatch rediscovery is improvisation. Resolve the roster once at build start, announce the substitution up front, and record it in the ledger. |
 | "The subagent died mid-task — I'll just finish it myself and move on." | Not without the policy: capture the partial work, retry once fresh, only then conductor-take-over, and record the deviation. A silent takeover erases which agent did the work. |
 
@@ -163,6 +180,8 @@ The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and le
   no recorded override.
 - The checker silently skipped when `node` was absent, instead of an announced degraded fallback.
 - The baseline halted on a greenfield absence instead of recording vacuous green.
+- A baseline halt blamed on "red code" when the declared command was actually unrunnable — the
+  declaration was never checked.
 - An agent-type substitution discovered per-dispatch instead of pinned + announced at build start.
 - A dead subagent's work silently conductor-completed with no retry and no ledger record.
 
