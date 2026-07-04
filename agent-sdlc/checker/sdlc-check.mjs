@@ -1123,7 +1123,13 @@ export async function readRepoFacts(repoPath, taskIds) {
     return { ok: false, error: { path: repoPath, problem: `git log failed: ${err.message}` } };
   }
 
-  const fields = stdout.split('\0').filter((f) => f !== '');
+  // SMA-421 nit 2: pair (hash, subject) POSITIONALLY. `git log -z --format=%H%x00%s` ends with a
+  // trailing NUL, so split('\0') yields 2N tokens plus one trailing '' (odd length). Drop ONLY that
+  // single trailing terminator empty — NEVER filter interior empties, since a commit with an empty
+  // subject is a legitimate '' token in subject position and filtering it would shift every later
+  // pair by one (mis-pairing later hashes with the wrong subjects).
+  const fields = stdout.split('\0');
+  if (fields.length % 2 === 1 && fields[fields.length - 1] === '') fields.pop();
   const all = [];
   for (let i = 0; i + 1 < fields.length; i += 2) {
     all.push({ id: fields[i], message: fields[i + 1] });

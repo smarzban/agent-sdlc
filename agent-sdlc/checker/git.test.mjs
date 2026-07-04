@@ -76,6 +76,72 @@ test('readRepoFacts on a real repo returns the commit list (id, message)', async
   }
 });
 
+// SMA-421 nit 2: `git log -z --format=%H%x00%s` ends with a trailing NUL, so split('\0') yields
+// 2N tokens plus one trailing '' (odd total). A commit with an EMPTY subject is a legitimate ''
+// token in subject position. The old `.filter((f) => f !== '')` dropped it, shifting every later
+// (hash, subject) pair by one — so a middle empty-subject commit mis-paired the outer commits'
+// hashes with the wrong subjects. This pins positional pairing: each hash keeps ITS OWN subject.
+test('readRepoFacts positionally pairs (hash, subject): a middle empty-subject commit does not shift later pairs', async () => {
+  const dir = makeRepo();
+  try {
+    commit(dir, 'a', 'feat(T-1): first');
+    // The middle commit has an EMPTY subject (empty %s field in the -z stream).
+    execFileSync('git', ['commit', '-q', '--allow-empty', '--allow-empty-message', '-m', ''], {
+      cwd: dir,
+    });
+    commit(dir, 'b', 'feat(T-2): second');
+
+    const h1 = execFileSync('git', ['rev-parse', 'HEAD~2'], { cwd: dir, encoding: 'utf8' }).trim();
+    const hMid = execFileSync('git', ['rev-parse', 'HEAD~1'], { cwd: dir, encoding: 'utf8' }).trim();
+    const h2 = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: dir, encoding: 'utf8' }).trim();
+
+    const facts = await readRepoFacts(dir); // no taskIds filter — get every commit
+    assert.equal(facts.ok, true);
+    assert.equal(facts.commits.length, 3);
+
+    // Build id -> message and assert each hash is paired with ITS OWN subject (no shift).
+    const byId = new Map(facts.commits.map((c) => [c.id, c.message]));
+    assert.equal(byId.get(h1), 'feat(T-1): first');
+    assert.equal(byId.get(hMid), ''); // empty subject survives as ''
+    assert.equal(byId.get(h2), 'feat(T-2): second');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// SMA-421 nit 2, boundary case: the OLDEST (last-listed) commit has the empty subject. `git log`
+// emits newest-first, so this commit is LAST in the -z stream — its empty %s field lands immediately
+// before the single trailing NUL terminator, so the stream ends `<hash>\0\0`. This is the exact
+// `fields.pop()` boundary: the fix must drop ONLY the one trailing terminator empty and keep the
+// oldest commit's own empty subject as its ''. A stray extra `.pop()` (or the old blanket filter)
+// would either swallow the oldest's subject or mis-pair the terminator — this pins that it doesn't.
+test('readRepoFacts positionally pairs (hash, subject): the OLDEST commit having an empty subject exercises the trailing-terminator boundary', async () => {
+  const dir = makeRepo();
+  try {
+    // The FIRST (oldest) commit has an EMPTY subject — its %s lands last in the newest-first stream.
+    execFileSync('git', ['commit', '-q', '--allow-empty', '--allow-empty-message', '-m', ''], {
+      cwd: dir,
+    });
+    commit(dir, 'a', 'feat(T-1): first');
+    commit(dir, 'b', 'feat(T-2): second');
+
+    const hOldest = execFileSync('git', ['rev-parse', 'HEAD~2'], { cwd: dir, encoding: 'utf8' }).trim();
+    const h1 = execFileSync('git', ['rev-parse', 'HEAD~1'], { cwd: dir, encoding: 'utf8' }).trim();
+    const h2 = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: dir, encoding: 'utf8' }).trim();
+
+    const facts = await readRepoFacts(dir); // no taskIds filter — get every commit
+    assert.equal(facts.ok, true);
+    assert.equal(facts.commits.length, 3); // trailing terminator dropped, oldest's empty subject kept
+
+    const byId = new Map(facts.commits.map((c) => [c.id, c.message]));
+    assert.equal(byId.get(hOldest), ''); // oldest's own empty subject survives as ''
+    assert.equal(byId.get(h1), 'feat(T-1): first');
+    assert.equal(byId.get(h2), 'feat(T-2): second');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 // --- checkLedgerVsGit: the four AC-4 cases + the T-1/T-12 boundary ---
 
 test('a done task with no commit referencing it fails naming the task', async () => {
