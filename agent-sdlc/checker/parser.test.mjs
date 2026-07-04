@@ -145,6 +145,38 @@ test('resolves a Component citation by name to its synthetic C-N id', () => {
   assert.ok(componentTrace.refs.includes('C-1'));
 });
 
+test('a dangling component name that merely contains a real component name as a substring does NOT resolve (anchored, AC-5)', () => {
+  const spec = [
+    '## Design',
+    '### Components',
+    '1. **Gate** — the merge gate.',
+    '',
+    '## Plan',
+    '- **T-1 — Build the gateway.** Detail. *Advances:* AC-1. *Component:* Gateway. *Deps:* none.',
+  ].join('\n');
+  const result = parseSpec(spec, 'x.md');
+  assert.equal(result.ok, true);
+  const componentTrace = result.traces.find((t) => t.from === 'T-1' && t.kind === 'component');
+  assert.equal(componentTrace.refs.includes('C-1'), false, 'Gateway must not resolve to Gate');
+  assert.equal(componentTrace.unresolvedComponent, 'Gateway');
+});
+
+test('the exact component name still resolves as its own word, even inside surrounding prose (AC-5)', () => {
+  const spec = [
+    '## Design',
+    '### Components',
+    '1. **Gate** — the merge gate.',
+    '',
+    '## Plan',
+    '- **T-1 — Wire it.** Detail. *Advances:* AC-1. *Component:* the Gate skill text. *Deps:* none.',
+  ].join('\n');
+  const result = parseSpec(spec, 'x.md');
+  assert.equal(result.ok, true);
+  const componentTrace = result.traces.find((t) => t.from === 'T-1' && t.kind === 'component');
+  assert.ok(componentTrace.refs.includes('C-1'), 'the exact name Gate must still resolve');
+  assert.equal(componentTrace.unresolvedComponent, null);
+});
+
 test('captures a coverage-map table row as a trace reference (citing site + cited IDs)', () => {
   const spec = [
     '## Plan',

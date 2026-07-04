@@ -387,11 +387,23 @@ function extractIdRefs(text) {
 // kinds only — an *Advances:*/*Deps:* field is a plain ID citation, and applying substring
 // name-matching there would let a component name mentioned in passing (e.g. "Reporter") inject a
 // false C-ref.
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function resolveComponentRefs(text, componentsByName) {
-  const lower = text.toLowerCase();
   const ids = [];
   for (const [name, id] of componentsByName) {
-    if (lower.includes(name)) ids.push(id);
+    // Anchored, whole-word match: a dangling name that merely CONTAINS a real component name as a
+    // substring (e.g. "Gateway" containing "Gate") must not resolve. Names can carry regex
+    // metacharacters (`-`, `.`, `+`, `(`), so escape before building the boundary regex. Keys are
+    // already lowercased; the 'i' flag makes the match robust either way (NC-3: zero-dep).
+    // Known boundary: `\b` only anchors at a word/non-word transition, so a name that STARTS or
+    // ENDS with a non-word char (hypothetical `C++`) can't form the boundary and won't resolve.
+    // Harmless for every current component name (all word-terminal); fail-closed anyway — such a
+    // name reads as unresolved → flagged as a dangling component (a blocking false-positive, never
+    // a silent pass). Documented latent edge, not a live defect.
+    if (new RegExp(`\\b${escapeRegExp(name)}\\b`, 'i').test(text)) ids.push(id);
   }
   return ids;
 }
