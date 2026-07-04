@@ -37,7 +37,7 @@ must still exit 0 on the current repo and keep the full existing test suite gree
 
 - **AC-1** — A component/coverage map-row that cites a component by a name resolving to **no** defined
   component (and not a recognized non-dangling value) yields a `trace-integrity` finding naming the
-  dangling component — symmetric with the `*Component:*` field path. *(Testable: a spec fixture with
+  dangling component — symmetric with the Component field path. *(Testable: a spec fixture with
   such a map-row → a finding whose message names the component. Reviewer-checkable: the table path and
   field path now share dangling-component enforcement.)*
 - **AC-2** — A map-row citing a **recognized** non-dangling component value (a `skill text` reference
@@ -54,7 +54,7 @@ must still exit 0 on the current repo and keep the full existing test suite gree
   two normal ones → each commit's hash pairs with its own subject.)*
 - **AC-5** — `resolveComponentRefs` resolves a component name only on a **whole-word (anchored)**
   match, so a dangling name that merely **contains** a real component name as a substring does not
-  resolve. *(Testable: a `*Component:*` field citing `<real-component-name>` embedded in a longer word
+  resolve. *(Testable: a Component field citing `<real-component-name>` embedded in a longer word
   → unresolved → a dangling finding; the exact component name still resolves.)*
 - **AC-6** — No verdict change on well-formed input: the full existing checker test suite stays green
   and `sdlc-check` still exits 0 on the current repo's enforcement-spine artifacts. *(Testable: the
@@ -97,27 +97,28 @@ Four atomic tasks, one per fix, each test-first against the **sdlc-check** compo
   `unresolvedComponent` set (field or map-row). *Failing test first:* a spec fixture with a
   component-map row citing a nonexistent component → a `trace-integrity` finding naming it; a
   `skill text` row and a resolvable row → no finding.
-  *Advances:* AC-1, AC-2. *Component:* sdlc-check. *Files:* `agent-sdlc/checker/sdlc-check.mjs`,
+  *Advances:* AC-1, AC-2, AC-6. *Component:* sdlc-check. *Files:* `agent-sdlc/checker/sdlc-check.mjs`,
   `agent-sdlc/checker/rules.test.mjs`, `agent-sdlc/checker/parser.test.mjs`.
 - **T-2 — Ragged-row typed parse failure (SMA-421 nit 1).** Detect a data row with fewer cells than
   its header in the ledger task table and the verification-report proof-map table, and return a typed
   parse failure (`{ ok: false, error: { file, problem } }` naming the offending line) instead of
   indexing past the row and throwing. *Failing test first:* a ragged ledger row and a ragged proof-map
   row each return `ok:false` and do not throw.
-  *Advances:* AC-3. *Component:* sdlc-check. *Files:* `agent-sdlc/checker/sdlc-check.mjs`,
+  *Advances:* AC-3, AC-6. *Component:* sdlc-check. *Files:* `agent-sdlc/checker/sdlc-check.mjs`,
   `agent-sdlc/checker/parser.test.mjs`.
 - **T-3 — Positional NUL pairing in readRepoFacts (SMA-421 nit 2).** Replace the empty-field filter
   with positional pairing: drop only the single trailing empty produced by `-z`'s terminator (an odd
   final element), never an interior empty subject. *Failing test first:* a temp repo with an
   empty-subject commit between two normal ones → each hash pairs with its own subject.
-  *Advances:* AC-4. *Component:* sdlc-check. *Files:* `agent-sdlc/checker/sdlc-check.mjs`,
+  *Advances:* AC-4, AC-6. *Component:* sdlc-check. *Files:* `agent-sdlc/checker/sdlc-check.mjs`,
   `agent-sdlc/checker/git.test.mjs`.
 - **T-4 — Anchored component-name resolution (SMA-421 nit 3).** Anchor `resolveComponentRefs` to a
   whole-word match (escaped, case-insensitive) so a substring collision no longer resolves.
-  *Failing test first:* a `*Component:*` field citing a real component name embedded in a longer word
+  *Failing test first:* a Component field citing a real component name embedded in a longer word
   → unresolved (dangling finding); the exact name still resolves.
-  *Advances:* AC-5. *Component:* sdlc-check. *Files:* `agent-sdlc/checker/sdlc-check.mjs`,
+  *Advances:* AC-5, AC-6. *Component:* sdlc-check. *Files:* `agent-sdlc/checker/sdlc-check.mjs`,
   `agent-sdlc/checker/parser.test.mjs`.
 
-AC-6 is a cross-cutting regression guard, discharged by every task keeping the full suite green and a
-real-repo run exiting 0 — no task of its own.
+AC-6 is a cross-cutting regression guard — every task advances it (each must keep the full suite
+green; a real-repo run must still exit 0), so it carries no task of its own but is reached by all
+four.
