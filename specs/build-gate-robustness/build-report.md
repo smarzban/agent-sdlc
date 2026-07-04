@@ -40,6 +40,25 @@ verified clean); +1 Minor clarity polish (red-suite-on-existing-code is a real f
 Both tasks done, checker-corroborated. Branch `feat/build-gate-robustness` (off `feat/checker-semantics`,
 PR #3) is ready. Next: `/agent-sdlc:ship`.
 
+## Review-gate — Round 1 (BLOCK → design pivot)
+
+Panel (no-ollama): holistic ×2 (opus + gpt-5.5) + lens-security + lens-spec + scan. Coverage 3/5 voted,
+1 missing (lens-spec opus non-vote, surfaced in the Coverage line). Verdict **BLOCK** on a design flaw
+both models caught: my SMA-425 implementation made the **read-only gate execute arbitrary declared
+commands** — 2 HIGH security findings (code-execution/side-effect surface, sharpened by start-anywhere
+external plans) + mediums (unreconciled read-only invariant; "deterministic oracle" overclaim;
+gate-report didn't record the dry-run) + a low (checklist double-run).
+
+**Pivot (both HIGH findings' recommendation): keep every read-only stage read-only; move runnability
+EXECUTION to the build baseline.** Commits `d5c55a2` (reverted the gate check-4 execution → gate is
+read-only again with a note pointing to the build baseline; added the runnability diagnostic to
+build/SKILL.md step 2's isolated baseline: unrunnable command → techstack declaration defect, distinct
+from red-repo and vacuous-green) + `1b0b746` (spec + proof-map reworded: AC-3/AC-4 now build-baseline +
+gate-read-only; D1 revised with the security rationale). **This deliberately deviates from the issue's
+literal "the gate should execute" — flagged in the PR body for maintainer ratification.** Suite stays
+143 green; full pre-PR checker exit 0; the gate executes no declared command. Round 2 = a two-model
+verification (the pivot was a large/risky fix — escalated beyond single-model).
+
 ## Green-bar evidence
 
 ### T-1 (@ `9169a75`)
