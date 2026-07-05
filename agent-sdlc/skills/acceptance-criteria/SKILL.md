@@ -100,8 +100,8 @@ is no auto-tracing: pick that task and name the AC in its `*Advances:*`.
 
 - **The bar is non-negotiable.** A criterion that fails any of the five tests is not done being
   written.
-- **Recommend, don't just ask.** Every question carries your proposed answer and the alternatives,
-  per the system-wide rule. The user decides.
+- **Recommend, don't just ask** — per the recommend-and-alternatives rule (getting-started's shared
+  operating rules). The user decides.
 - **Tech-agnostic.** WHAT and WHY only. The moment you reach for a class name or a library, you
   have drifted into design.
 - **Code over questions.** If the repo answers it, read it instead of asking.

@@ -129,6 +129,17 @@ file, **no ephemeral mode**. The upgrade is always available; when unsure, upgra
         └── build-report.md  ← build output (the resumable ledger)
 ```
 
+### Spec lifecycle
+
+A **feature spec** (`specs/<feature>/<feature>.md`) is an **immutable snapshot** — once shipped it is
+not edited; `ship` stamps a one-line **status header** at the top (status · version · date) recording
+what was built. `specs/overview.md` is **living** — its project-tier `## Overview` · `## Architecture`
+· `## Tech Stack` are updated as the project evolves. Each feature's **design stage owns updating
+`## Architecture`** (in `overview.md`) on a material change: a new feature that reshapes the north-star
+updates the living architecture there, never by rewriting a shipped feature spec. This matters more
+under **start-anywhere** — old specs are now load-bearing inputs, so a shipped spec must stay a
+faithful snapshot of what was built.
+
 ## Where to start
 
 - A new app, vague idea: start at **`idea`**, project level.
