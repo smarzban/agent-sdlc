@@ -8,9 +8,9 @@ between each — and `ship` opens the reviewed PR.
 
 Test and deploy are the next stages downstream, extending the same chain.
 
-The bundle also ships two standalone documentation skills — `writing-readmes` and
-`writing-repo-docs` — for the downstream job of documenting what you build. They sit outside the
-pipeline spine and can be used on their own, on any repo.
+The bundle also ships three standalone documentation skills — `writing-readmes`,
+`writing-repo-docs`, and `writing-technical-docs` — for the downstream job of documenting what you
+build. They sit outside the pipeline spine and can be used on their own, on any repo.
 
 ## The idea
 
@@ -56,13 +56,15 @@ gate, the per-task TDD loop, and traceability are never skipped; a missing upstr
 
 ## Documentation skills
 
-Two skills outside the pipeline, for documenting a codebase. They are source-grounded (every
+Three skills outside the pipeline, for documenting a codebase. They are source-grounded (every
 concrete claim is checked against the actual code) and adapt their structure to the repo's type.
+They split by depth: the front door, the essentials, the internals.
 
 | Skill | What it does |
 | --- | --- |
 | `writing-readmes` | Write/overhaul a project's front-door `README.md` — leads with what/why, keeps a lean quickstart distinct from full install, links out to deeper docs instead of inlining them. |
-| `writing-repo-docs` | Write/overhaul full repository documentation — a landing index + quickstart + install + usage + technical/internals, shaped to the repo type. |
+| `writing-repo-docs` | The essentials a repo needs to be usable and contributable — landing index + quickstart + install + comprehensive per-feature usage + running-it-locally + contributing/community-health files, plus at most a light architecture overview. |
+| `writing-technical-docs` | Full maintainer-grade internals — architecture with design rationale, data models, per-subsystem pages with invariants, the security model, and a complete module/API reference under a coverage-ledger contract (every exported symbol documented or explicitly excluded). |
 
 ## Layout
 
@@ -82,8 +84,9 @@ agent-sdlc/
     ├── ship/                          ← SKILL.md + reference/finishing.md
     ├── getting-started/SKILL.md
     ├── linear-sync/                   ← SKILL.md + reference/mapping.md (optional engine)
-    ├── writing-readmes/SKILL.md       ← documentation skill
-    └── writing-repo-docs/SKILL.md     ← documentation skill
+    ├── writing-readmes/SKILL.md       ← documentation skill (front door)
+    ├── writing-repo-docs/SKILL.md     ← documentation skill (repo essentials)
+    └── writing-technical-docs/SKILL.md ← documentation skill (full internals)
 ```
 
 A run produces, per feature:

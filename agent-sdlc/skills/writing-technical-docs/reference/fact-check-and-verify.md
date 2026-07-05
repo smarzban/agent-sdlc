@@ -46,7 +46,7 @@ links to in-page anchors that don't exist.
 
 ## 3. Fact-check pass — fresh eyes (Phase 5)
 
-Re-read the docs against the source as if you didn't write them. The
+Re-read the technical docs against the source as if you didn't write them. The
 author's eye skips the wrong constant it just typed; a second pass catches it.
 
 **If a subagent / second agent is available, dispatch an adversarial fact-check.**
@@ -59,6 +59,13 @@ style. Cite the source file you checked against."* Then fix every confirmed erro
 This is the highest-leverage step: in practice a fresh fact-check pass finds real
 errors (a tuple documented as a set, a session lifetime that was never actually
 configured, a default the code doesn't use) that otherwise ship as authoritative.
+
+## 3b. Coverage check (Phase 5)
+
+Here the verification pass has a fourth leg: **close the coverage ledger.**
+Diff the inventoried surface (exports, data models, entry points) against the reference
+tree — see `depth-and-coverage.md` for the ledger rules and a check-script sketch. Every
+flagged item is documented, excluded-with-reason, or the work is not done.
 
 ## 4. Placeholder scan (Phase 5)
 
@@ -80,6 +87,7 @@ that was removed). When that happens:
 ## Done criteria
 
 - Every concrete claim traced to source.
+- The coverage ledger is closed (every inventoried item documented or excluded with a reason).
 - 0 broken internal links.
 - Fact-check pass run (ideally a second-agent adversarial pass); all confirmed
   errors fixed.

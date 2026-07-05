@@ -31,7 +31,8 @@ traceability spine that runs through it.
 | `build` | Execute the plan test-first, one subagent per task, to a green branch. |
 | `ship` | Open a PR from the spec and hand it to review-gate. |
 | `writing-readmes` | Write/overhaul a project's front-door `README.md`. |
-| `writing-repo-docs` | Write/overhaul full source-grounded repository documentation. |
+| `writing-repo-docs` | The source-grounded essentials a repo needs — install, usage, running locally, contributing + community-health files. |
+| `writing-technical-docs` | Full maintainer-grade internals — architecture + rationale, data models, invariants, and a complete module/API reference under a coverage contract. |
 
 ## Plugin: `review-gate`
 
@@ -92,7 +93,7 @@ skills/                              ← repo root = a marketplace for two tools
 │   ├── .claude-plugin/plugin.json
 │   ├── .cursor-plugin/plugin.json
 │   ├── README.md
-│   └── skills/<name>/SKILL.md        ← 12 skills
+│   └── skills/<name>/SKILL.md        ← 13 skills
 └── review-gate/                      ← plugin 2 — review gate + audit (Claude only)
     ├── .claude-plugin/plugin.json
     ├── src/ · dist/ · bin/           ← deterministic CLI spine (dist committed)

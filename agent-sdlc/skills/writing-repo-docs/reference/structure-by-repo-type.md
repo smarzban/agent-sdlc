@@ -6,6 +6,11 @@ these are the shapes, not literal required filenames. Always include a top-level
 `README.md` index that routes each audience to its starting point, and a
 `quickstart.md`.
 
+Scope reminder: this skill produces the **essentials** — use, install/operate,
+contribute. Deep internals (design rationale, data models, per-subsystem pages,
+the full API/module reference) are `writing-technical-docs`; the essentials tree
+carries at most a light `architecture.md` overview that links there.
+
 ## Default skeleton
 
 ```
@@ -13,37 +18,45 @@ docs/
   README.md          what it is + "who starts where" + full index
   quickstart.md      fastest path to a first working result
   install/           setup + configuration reference + (if applicable) deploy/ops
-  usage/             how to USE each feature — for consumers of the thing
-  technical/         how it WORKS and WHY — architecture + per-subsystem
+  usage/             how to USE each feature — comprehensive, one file per feature/task
+  development.md     running it locally: clone -> deps -> run -> test -> common tasks
+  architecture.md    (optional) LIGHT one-page overview -> links to technical docs
+
+repo root:
+  CONTRIBUTING.md    contributor front door (conventions from git log + CI, not a template)
+  SECURITY.md        vuln-reporting channel (public repos; confirm channel with owner)
+  CHANGELOG.md       only if a release process exists
+  .github/           issue/PR templates — offer; owner decision
 ```
 
 (Put the tree directly under `docs/`. If the repo already uses `docs/` for
 something else, nest under a clearly-named subfolder instead.)
 
-The three audiences map to the three subtrees:
+The audiences map:
 - **use** → `usage/` (or `users/`)
 - **install / operate** → `install/`
-- **build / maintain** → `technical/`
+- **contribute** → `development.md` + `CONTRIBUTING.md`
 
 A given repo may collapse or drop subtrees. Decide from Phase 1.
 
 ## Library / SDK
 
 Consumers are programmers calling an API; there is nothing to "deploy".
+The public API surface *is* usage — so a `reference/` for the exported API
+belongs here, in the essentials (verify signatures against the code).
 
 ```
 README.md          what it is, install one-liner, a 6-line example
 quickstart.md      install + import + the canonical first call
 usage/             task-oriented how-to per capability; common recipes; gotchas
-reference/         the API surface (modules/classes/functions, params, returns, raises)
+reference/         the PUBLIC API surface (modules/classes/functions, params, returns, raises)
 concepts/          the mental model — key abstractions and how they fit
-technical/         internals + architecture + extension points + contributing
+development.md     clone -> deps -> build -> test (feeds CONTRIBUTING.md)
 ```
 
 - Drop `install/` as a subtree; a single install/import page is enough.
-- `reference/` (API) is the heart. Generate it from the actual exported surface;
-  verify signatures against the code.
 - Versioning/compat notes matter more here than for apps.
+- Internals, extension architecture, and the why live in the technical docs.
 
 ## CLI tool
 
@@ -54,7 +67,7 @@ usage/
   commands.md      per-command reference (args, flags, exit codes, stdin/stdout)
   recipes.md       real workflows chaining commands
 install/           install methods + config files / env
-technical/         architecture + how to add a command
+development.md     clone -> deps -> run from source -> test
 ```
 
 - Verify command names, args, flags, and defaults against the CLI definition
@@ -70,10 +83,11 @@ install/
   configuration.md full env/config reference (verify names + defaults vs source)
   auth.md          auth modes / credentials (if any)
   deployment.md    Docker/compose/k8s, reverse proxy/TLS, scaling
-  production.md     hardening checklist
+  production.md    hardening checklist
 usage/             the API: endpoints/resources, auth headers, examples, errors
-technical/         architecture, data flow, storage, the request lifecycle, internals
 operations/        backups, logging/observability, upgrades/migrations
+development.md     run it locally for development + test
+architecture.md    (optional, light) the components + main flows -> technical docs
 ```
 
 - The endpoint inventory must match the actual route definitions.
@@ -90,16 +104,14 @@ README.md          what it is + who-starts-where + index
 quickstart.md      shortest path to a running instance
 install/           multi-path install, config reference, auth, production, upgrading
 users/             how-to per feature, written for people (not programmers)
-technical/         architecture + one page per subsystem, with the WHY + the invariants
+development.md     contributor path: run the stack locally, seed data, test
+architecture.md    (optional, light) system map -> technical docs
 ```
 
 - `users/` = end-user how-to (sign in, the core workflow, each feature, settings,
   admin/owner tasks, integrations, troubleshooting/FAQ).
-- `technical/` = a `README.md` module map + architecture + one focused page per
-  subsystem (data layer, API layer, auth/RBAC, the core engine, integrations,
-  config, CLI, security model, development discipline).
-- Surface the load-bearing invariants and security model explicitly — they're the
-  things a maintainer most needs and most easily breaks.
+- The per-subsystem pages, invariants, and security model belong to the
+  technical docs — `architecture.md` here only maps the territory and links.
 
 ## Framework
 
@@ -108,8 +120,8 @@ README.md          what it is + philosophy
 quickstart.md      scaffold + first app
 guides/            task-oriented (routing, data, auth, testing, deploy…)
 concepts/          the core abstractions and lifecycle
-reference/         the API surface
-technical/         internals + how to extend / write plugins
+reference/         the public API surface
+development.md     contribute to the framework itself
 ```
 
 ## Monorepo / multi-package
@@ -117,13 +129,16 @@ technical/         internals + how to extend / write plugins
 - A **top-level** `docs/README.md` that maps the packages and how they relate.
 - Then a `docs/<package>/` subtree per package, each following the matching
   type above. Don't try to document everything in one flat tree.
+- One CONTRIBUTING.md at the root; per-package `development.md` only when the
+  dev flows genuinely differ.
 
 ## Choosing the audience split
 
-- **Only maintainers** read it (internal tool, no external consumers) → mostly
-  `technical/`, a short quickstart, skip `users/`.
+- **Only maintainers** read it (internal tool, no external consumers) → a short
+  quickstart + `development.md`; most of the value is in the technical docs —
+  recommend `writing-technical-docs` instead.
 - **Programmers consume it** (library/framework) → `reference/` + `usage/` +
-  `concepts/`; `technical/` is internals/contributing.
+  `concepts/`.
 - **Operators deploy it** (service/app) → a real `install/` + `operations/`.
 - **End users click it** (app) → a real `users/` in plain language.
 
