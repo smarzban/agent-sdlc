@@ -80,18 +80,29 @@ branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
    a. Dispatch the **implementer** subagent with a file brief for `T-N` only.
    b. Dispatch the **reviewer** subagent on the resulting diff.
    c. If the reviewer finds Critical/Important issues, dispatch a **fixer** and re-review (bounded).
-   d. Verify the **green bar** is green — run the full declared set (compile, test, lint,
-      format-check), read the output (verification-before-completion). Not just tests: lint or
-      format drift caught now is a clean commit; caught later is a reactive scramble. **Capture this
-      run** as the task's green-bar evidence — the command line(s) plus the output, verbatim,
-      including the **per-test listing** (e.g. `node --test`'s `ok N - <name>` lines), not just
-      summary counts — those names are what ship's AC-14 linkage matches against.
+   d. Verify the **green bar** is green — the **conductor itself runs** the full declared set
+      (compile, test, lint, format-check) after the reviewer passes / before the commit, and reads
+      the output (verification-before-completion). Not just tests: lint or format drift caught now
+      is a clean commit; caught later is a reactive scramble. **Capture that run's actual output**
+      as the task's green-bar evidence — the command line(s) plus the output, piped/pasted verbatim
+      — a **harness-captured fact**, *never* a transcription of the subagent's reported `Tests N
+      passed` summary or count. Two holes this closes: **(i) trust-the-subagent** — a subagent can
+      report a false count, so the recorded count must be the conductor's *own* observed run, not
+      the subagent's word; **(ii) summary-only degradation** — transcription drifts to summaries,
+      losing the per-test names AC-14 needs. So the captured block is the **per-test listing** (e.g.
+      `node --test`'s `ok N - <name>` lines), not summary counts — those names are what ship's
+      AC-14 linkage matches against. **Bounded for large suites:** cap the block to a tail, but
+      retain the per-test names of any test the proof map will cite; if a full per-task listing is
+      impractical, the fallback is a build-complete comprehensive block carrying the full per-test
+      listing — per-task capture stays the norm. (Vacuous-green and staged-isolation handling below
+      are unchanged.)
    e. Commit: one atomic commit for the task, reflecting the reviewed code. Verify it compiles **in
       isolation** — run the bar against the staged snapshot (`git stash --keep-index
       --include-untracked` → bar → pop), not just the working tree: an under-staged commit can pass a
       working-tree check yet fail to build on checkout.
    f. Update `build-report.md`: `T-N` done, the commit SHA, the `AC-N` it advanced, and the captured
-      green-bar evidence as a fenced block beside the task — from the first task onward, never
+      green-bar evidence as a fenced block beside the task — **the conductor's own run output (step
+      4d), not a restatement of what the subagent said** — from the first task onward, never
       deferred. This is the write side the checker's evidence-presence (AC-5) and
       name-appearance-linkage (AC-14) checks read: a test-backed proof-map row's cited test
       identifier must literally appear in this text (ADR-0001) — so the block must record the
@@ -146,9 +157,12 @@ The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and le
   green after bounded fixes: record it blocked and ask. Do not paper over an unsettled plan.
 - **Review at two scales.** Every task gets a cheap reviewer subagent here; the whole PR gets the
   heavy `review-gate` once, at ship. Both are real gates; neither replaces the other.
-- **Evidence is captured text, never a checkbox.** Each green-bar run is recorded verbatim — the
-  command plus its output tail — beside the task, from the first task onward. A task marked done
-  with no evidence block is not done.
+- **Evidence is captured text, never a checkbox — and it is the conductor's OWN run.** Each
+  green-bar run is recorded verbatim — the command plus its output tail (the per-test listing,
+  bounded) — beside the task, from the first task onward. The recorded output is the conductor's own
+  post-review run, never a transcription of the subagent's reported count: a subagent's self-report
+  is not evidence (trust-the-subagent), and a transcribed summary loses the per-test names AC-14
+  needs (summary-only degradation). A task marked done with no evidence block is not done.
 - **Corroborate at resume and at hand-off.** The checker is a second, mechanical witness to the
   ledger/trace/commits so far — run it before continuing after a break and again before ship. A
   nonzero exit or a crash is a failed check, not noise.
@@ -169,6 +183,7 @@ The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and le
 | "The checker isn't installed here, just skip resume/build-complete." | `node` absent is a degraded fallback, announced in `build-report.md` — not a silent skip. |
 | "`sdlc-check` failed but the task looks fine, proceed anyway." | A failed checker run is a failed check — stop-and-ask. Proceeding needs an explicit, recorded human override. |
 | "I'll add the evidence block later, once more tasks land." | Evidence is captured from the first task, never deferred — a gap left for later is a hole the checker (AC-5/AC-14) will find. |
+| "The subagent already ran the tests and reported them green — I'll record its count." | A subagent's self-report is not evidence. The conductor runs the declared command itself and records that run's actual per-test output — a false or summarized count is exactly the hole this closes. |
 | "The baseline is red because the target files don't exist yet — stop." | Absence of the declared paths is vacuous green, not red — greenfield has nothing to fail. Proceed; the bar binds once the paths exist. |
 | "The baseline is red, must be my code." | First check the command itself ran — a malformed green-bar command is a techstack declaration bug, not red code; route it there. |
 | "The implementer agent type isn't available — I'll swap in a stand-in whenever I hit a dispatch." | Per-dispatch rediscovery is improvisation. Resolve the roster once at build start, announce the substitution up front, and record it in the ledger. |
@@ -189,6 +204,8 @@ The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and le
 - An ingested/external plan built without an inline gate verdict, or with fabricated `AC-N` trace
   links instead of an honest `untraced` mark.
 - A task marked done with no captured green-bar evidence block.
+- A green-bar evidence block that is a transcribed subagent summary or a bare `# pass N` count
+  rather than the conductor's own captured per-test run.
 - Proceeded to the next task at resume, or to ship at build-complete, while `sdlc-check` failed with
   no recorded override.
 - The checker silently skipped when `node` was absent, instead of an announced degraded fallback.
@@ -208,7 +225,8 @@ The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and le
   agent-type roster substitution and any subagent-death deviation (task, what died, what was
   recovered, whether isolation held) is recorded there too.
 - Every done task carries a captured green-bar evidence block in `build-report.md`, present from the
-  first task onward.
+  first task onward — the **conductor's own captured green-bar run** (per-test listing, bounded),
+  not a transcribed subagent report.
 - The checker corroborated at resume (if resuming) and at build-complete — or, for either point that
   lacked a runtime, an announced degraded fallback is recorded in its place. A failed checker run
   either blocked the loop or was overridden with the override recorded.
