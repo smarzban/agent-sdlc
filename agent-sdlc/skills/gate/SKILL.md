@@ -31,7 +31,13 @@ a verdict: ready to build, or not.
    criteria), a task whose upstream link is explicitly `untraced` is **not** an orphan — record it in
    the mid-chain-entry coverage note (loud, never a silent pass) rather than flagging it Critical.
    Still flag a genuine gap (a criterion that exists but reaches no task) and any *fabricated* link (a
-   trace to an `AC-N` that does not exist).
+   trace to an `AC-N` that does not exist). **In-stack fast-path:** when `## Tech Stack` declares the
+   single **No new products — reuses the declared stack** form (feature level, zero new products), the
+   gate **recognizes** that declaration as satisfying the component -> product link for **all** the
+   feature's components at once — a declared claim the walk honours, not a coverage gap and not an
+   orphan (same as it honours a materialized section or an `untraced` link). This is a **gate-walk
+   recognition, not a new `sdlc-check` rule**: `sdlc-check` does not walk component -> product at all,
+   so it neither parses nor enforces this form — the recognition lives only in the gate's chain walk.
 2. **Consistency.** Terminology matches `CONTEXT.md` across all artifacts, and the artifacts do not
    contradict each other (a criterion the design ignores, a task that fights the design, a product
    the design did not call for).

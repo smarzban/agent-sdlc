@@ -145,7 +145,15 @@ level), containing only:
 - **Green bar** (project level): the exact commands that define a passing build — compile/build,
   test, lint, format-check, typecheck (whichever the stack has) — each runnable as written, so the
   gate, build, and review share one definition of "green".
-- **Component-to-product map** kind -> product, one row each.
+- **Component-to-product map** kind -> product, one row each. **In-stack fast-path** (feature level,
+  zero new products): when the feature introduces **no new product or dependency** at all, the map
+  may collapse to a single declared line instead of an every-row-`existing` boilerplate map —
+  **No new products — reuses the declared stack** (green bar: `<commands>`). This one declared claim
+  **satisfies the component -> product link for ALL of the feature's components at once** — it is a
+  *declared claim the gate still walks*, never an omission or a skipped section, and the green bar
+  must still be named (the runnable commands that define "green" for this feature). Valid only when
+  genuinely zero new products/dependencies are introduced; if even one new product is added, the
+  normal per-component choices apply.
 - **Unverified / flagged** anything not confirmed against current docs.
 - **Glossary terms touched** mirrored into `CONTEXT.md`.
 
