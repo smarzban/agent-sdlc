@@ -43,7 +43,15 @@ a verdict: ready to build, or not.
    and concrete (no placeholders), so build inherits one definition of "green". Concreteness is all
    the gate checks here — *runnability* (does each declared command actually run?) is executed and
    diagnosed at the **build baseline** (build stage), where the workspace is isolated and side-effects
-   are expected. The gate never executes declared commands: it stays read-only.
+   are expected. The gate never executes declared commands: it stays read-only. **Load-bearing library
+   claims** in `## Tech Stack` must each be `verified-by-probe` (a probe ran, output kept + referenced)
+   or explicitly `asserted` — an `asserted` (or untagged) load-bearing claim is a **finding routed to
+   techstack**. The gate checks the **tag and the kept probe output's presence and shape ONLY — it
+   never runs the probe and never authenticates its history**: a `verified-by-probe` tag plus a
+   referenced, shaped output present -> the claim is treated as probed; an `asserted` or untagged
+   load-bearing claim -> a finding; the gate does not and cannot re-verify the probe's truth
+   (consistency-not-truth, ADR-0001). The probe itself runs at techstack/spike time — interactive,
+   human-in-loop — never in the gate.
 5. **Hygiene.** No unresolved TBDs, placeholders, or "decide later" markers remain.
 6. **Mechanical corroboration.** After checks 1–5, run the bundled checker as a second, automated
    witness to the same chain: `sdlc-check specs/<feature>/<feature>.md`
@@ -110,6 +118,8 @@ a verdict: ready to build, or not.
 - A criterion with no task passed as acceptable.
 - A "ready to build" verdict issued with a Critical or High finding open.
 - A "ready to build" verdict with no green bar declared — build then has no shared definition of "green".
+- A "ready to build" verdict issued with a load-bearing library claim left `asserted` (or untagged) —
+  an unprobed load-bearing claim passed off as settled.
 - Findings stated as impressions rather than located in a specific artifact.
 - An `untraced` link or a materialized section silently dropped from the report — a mid-chain entry
   passed off as a fully-traced chain (the same failure as silently dropping review coverage).
@@ -119,6 +129,8 @@ a verdict: ready to build, or not.
 ## Done when
 
 - The full chain has been walked for every criterion.
+- Load-bearing library claims in `## Tech Stack` are each `verified-by-probe` (tag + referenced kept
+  output present) or the `asserted` ones are surfaced as findings.
 - All six checks have run, including the checker's mechanical corroboration — or, when `node` was
   absent, a loud degraded fallback is recorded in its place.
 - A failed checker run either blocked the verdict or was overridden with the override recorded.
