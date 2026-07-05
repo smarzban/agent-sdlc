@@ -231,6 +231,16 @@ export async function run(argv) {
 //                top-level-bullet ownership as a trace field: { from, reason, raw, section, line }.
 //                `reason` is `''` when no parenthetical is given (still recorded, never dropped) —
 //                T-4's rule renders this as a coverage note rather than a dangling-reference failure.
+//   acVerification — (SMA-465a) a Map<acId, 'reviewer-checked'|'test-backed'|null> classifying each
+//                defined AC by the verification-type of its OWN bullet block (first definition site
+//                wins). Detection is DECLARATION-FIRST: an authoritative `Verification type: **X**`
+//                declaration in the block wins, so a topic-word mention of the OTHER type in the AC's
+//                prose never flips it; only when the block carries no such declaration does it fall
+//                back to a loose `reviewer-checked` / `test-backed` keyword scan (older spec forms
+//                that lead with the bare type word). `null` when the block states neither type. Pure
+//                over `sections`, never throws (mirrors the parser discipline) — checkForwardCoverage
+//                reads it to sharpen the reviewer-checked unreached-AC hint (D2: parsed from the spec,
+//                not the report).
 
 // --- Ledger (build-report.md) — task table + green-bar evidence blocks (T-3) ----------------
 //
@@ -345,8 +355,50 @@ export function parseSpec(text, file = '<unknown spec file>') {
 
   const provenance = extractProvenanceMarkers(sections);
   const untraced = extractUntracedMarkers(sections);
+  const acVerification = extractAcVerification(sections);
 
-  return { ok: true, sections, ids, components, traces, provenance, untraced };
+  return { ok: true, sections, ids, components, traces, provenance, untraced, acVerification };
+}
+
+// SMA-465a — per-AC verification type: classify each defined AC by the verification-type of its OWN
+// top-level-bullet block, reusing splitTopBullets + ID_DEFINITION_RE so a type mention in a
+// neighbouring AC's block is never misattributed. Detection is DECLARATION-FIRST: the AC's
+// authoritative `Verification type: **X**` declaration wins, so a topic-word mention of the OTHER
+// type in the AC's own prose (e.g. a test-backed AC whose statement discusses "reviewer-checked")
+// never flips it; the loose `reviewer-checked` / `test-backed` keyword scan is only a FALLBACK, used
+// when the block carries no such declaration (older spec forms that lead with the bare type word,
+// e.g. `*(Reviewer-checked — axis …)*`). Pure over `sections`, never throws: ragged/empty input just
+// yields fewer (or no) entries. Returns Map<acId, 'reviewer-checked'|'test-backed'|null> — first
+// definition site wins; `null` when a block states neither type. Read at gate/build time by
+// checkForwardCoverage (D2: the report is ship's artifact and often absent, so the type is read from
+// the AC block's own declaration/keyword text — available whenever the rule runs).
+export function extractAcVerification(sections) {
+  const types = new Map();
+  for (const section of sections) {
+    const blocks = splitTopBullets(section.body.split('\n'));
+    for (const block of blocks) {
+      const blockText = block.lines.join('\n');
+      ID_DEFINITION_RE.lastIndex = 0;
+      const owner = ID_DEFINITION_RE.exec(blockText);
+      if (!owner || owner[1] !== 'AC') continue; // only AC-owning blocks; first site wins below
+      const id = `${owner[1]}-${owner[2]}`;
+      if (types.has(id)) continue;
+      // Prefer the authoritative "Verification type: **X**" declaration (a topic-word mention of the
+      // other type in the AC's prose must not flip it); fall back to a loose keyword scan only when the
+      // AC carries no such declaration (older spec forms lead with the bare type word).
+      const decl = /verification type:\s*\*{0,2}\s*(reviewer[-\s]?checked|test[-\s]?backed)/i.exec(blockText);
+      let type = null;
+      if (decl) {
+        type = /reviewer/i.test(decl[1]) ? 'reviewer-checked' : 'test-backed';
+      } else if (/reviewer[-\s]?checked/i.test(blockText)) {
+        type = 'reviewer-checked';
+      } else if (/test[-\s]?backed/i.test(blockText)) {
+        type = 'test-backed';
+      }
+      types.set(id, type);
+    }
+  }
+  return types;
 }
 
 function extractSections(lines) {
@@ -947,17 +999,30 @@ function buildTaskAcLinks(model) {
 
 // AC-2 — forward coverage: every defined AC-N must be reached by at least one task, per the
 // shared task<->criterion link relation (buildTaskAcLinks) above.
+//
+// SMA-465a: a reviewer-checked AC still needs a carrying task (it is NOT auto-traced — NC-1), a
+// counter-intuitive rule that bit an operator twice. When the unreached AC is reviewer-checked, the
+// finding APPENDS a carrying-task hint pointing at the *Advances:* fix; a test-backed / type-unknown
+// AC keeps the base message byte-for-byte. Guarded against a missing `acVerification` (a hand-built
+// model without the field) so this can never throw.
 export function checkForwardCoverage(model) {
   const acIds = model.ids.filter((i) => i.kind === 'AC').map((i) => i.id);
   const reached = new Set(buildTaskAcLinks(model).map((l) => l.ac));
   return acIds
     .filter((ac) => !reached.has(ac))
-    .map((ac) => ({
-      type: 'finding',
-      rule: 'coverage-forward',
-      message: `${ac} is not reached by any task (no *Advances:* field and no Task-to-criterion coverage-map row names it)`,
-      ids: [ac],
-    }));
+    .map((ac) => {
+      const base = `${ac} is not reached by any task (no *Advances:* field and no Task-to-criterion coverage-map row names it)`;
+      const hint =
+        model.acVerification && model.acVerification.get(ac) === 'reviewer-checked'
+          ? ` — this criterion is reviewer-checked, which still needs a carrying task: name it in some task's *Advances:* (for a reviewer-checked AC the carrying task is the one that produces the artifact the reviewer checks).`
+          : '';
+      return {
+        type: 'finding',
+        rule: 'coverage-forward',
+        message: `${base}${hint}`,
+        ids: [ac],
+      };
+    });
 }
 
 // AC-3 — backward coverage: every defined T-N must either appear as a `task` in the shared

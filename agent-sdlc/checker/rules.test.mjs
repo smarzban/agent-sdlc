@@ -10,6 +10,7 @@ import {
   parseSpec,
   parseLedger,
   parseVerificationReport,
+  extractAcVerification,
   checkTraceIntegrity,
   checkForwardCoverage,
   checkBackwardCoverage,
@@ -290,6 +291,92 @@ test('every AC reached: no forward-coverage findings', () => {
     '- **T-1 — Do it.** Detail. *Advances:* AC-1. *Component:* none. *Deps:* none.',
   ]);
   assert.deepEqual(checkForwardCoverage(m), []);
+});
+
+// --- SMA-465a: per-AC verification type parse + sharpened reviewer-checked coverage hint ---
+
+test('extractAcVerification classifies each AC by the verification-type text in its own block', () => {
+  const m = model([
+    '## Acceptance Criteria',
+    '- **AC-1** — reviewer-checked, axis Spec Conformance.',
+    '- **AC-2** — test-backed, unit.',
+    '- **AC-3** — plain criterion, no verification type stated.',
+  ]);
+  const types = extractAcVerification(m.sections);
+  assert.equal(types.get('AC-1'), 'reviewer-checked');
+  assert.equal(types.get('AC-2'), 'test-backed');
+  assert.equal(types.get('AC-3'), null);
+});
+
+test('extractAcVerification uses the authoritative declaration, not a topic-word mention in prose', () => {
+  const m = model([
+    '## Acceptance Criteria',
+    // test-backed AC whose STATEMENT discusses "reviewer-checked" as a topic word — the loose scan
+    // would misclassify it; the authoritative declaration must win.
+    '- **AC-1** — the parser classifies each AC across reviewer-checked / test-backed fixtures.',
+    '  *(Verification type: **test-backed** — unit. Oracle: returns the expected type per AC.)*',
+    // reviewer-checked AC whose prose mentions "test-backed" as a topic word — again the declaration wins.
+    '- **AC-2** — both grammar sections pin the rule for test-backed and reviewer-checked ACs alike.',
+    '  *(Verification type: **reviewer-checked** — axis: Spec Conformance. Q: do both sections pin it?)*',
+  ]);
+  const types = extractAcVerification(m.sections);
+  assert.equal(types.get('AC-1'), 'test-backed');
+  assert.equal(types.get('AC-2'), 'reviewer-checked');
+});
+
+test('extractAcVerification never throws on a ragged / empty Acceptance Criteria block', () => {
+  const m = model([
+    '## Acceptance Criteria',
+    '- **AC-1** — a bullet with no verification type text at all.',
+    '',
+    '## Plan',
+    '- **T-1 — Do it.** Detail. *Advances:* AC-1. *Component:* none. *Deps:* none.',
+  ]);
+  assert.doesNotThrow(() => extractAcVerification(m.sections));
+  // an empty section body must also return cleanly (typed Map), never throw
+  const empty = model(['## Acceptance Criteria', '', '## Plan', '- **T-1 — x.** *Advances:* AC: untraced.']);
+  let result;
+  assert.doesNotThrow(() => {
+    result = extractAcVerification(empty.sections);
+  });
+  assert.ok(result instanceof Map);
+});
+
+test('a reviewer-checked unreached AC gets the carrying-task hint in its coverage-forward finding', () => {
+  const m = model([
+    '## Acceptance Criteria',
+    '- **AC-1** — reviewer-checked, unreached by any task.',
+    '',
+    '## Plan',
+    '- **T-1 — Do it.** Detail. *Component:* none. *Deps:* none.',
+  ]);
+  const findings = checkForwardCoverage(m);
+  assert.equal(findings.length, 1);
+  // shape unchanged
+  assert.equal(findings[0].type, 'finding');
+  assert.equal(findings[0].rule, 'coverage-forward');
+  assert.deepEqual(findings[0].ids, ['AC-1']);
+  // sharpened: names the reviewer-checked shape and points at the *Advances:* fix
+  assert.ok(findings[0].message.includes('reviewer-checked'));
+  assert.ok(findings[0].message.includes('*Advances:*'));
+});
+
+test('a test-backed unreached AC keeps the base coverage-forward message (no hint)', () => {
+  const m = model([
+    '## Acceptance Criteria',
+    '- **AC-1** — test-backed, unreached by any task.',
+    '',
+    '## Plan',
+    '- **T-1 — Do it.** Detail. *Component:* none. *Deps:* none.',
+  ]);
+  const findings = checkForwardCoverage(m);
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].type, 'finding');
+  assert.equal(findings[0].rule, 'coverage-forward');
+  assert.deepEqual(findings[0].ids, ['AC-1']);
+  // base message only — no reviewer-checked hint
+  assert.ok(!findings[0].message.includes('reviewer-checked'));
+  assert.ok(findings[0].message.startsWith('AC-1 is not reached by any task'));
 });
 
 // --- AC-3: backward coverage ---
