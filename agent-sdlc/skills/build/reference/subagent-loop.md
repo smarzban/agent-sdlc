@@ -114,10 +114,15 @@ test identifier must literally appear in this text (ADR-0001). **Capture the per
 just summary counts.** A test runner that prints one line per test (e.g. `node --test` → `ok N -
 <name>`) must have those `ok - <name>` lines recorded in the block — a summary tail (`# pass N`)
 alone names no test, so ship's AC-14 linkage cannot match any proof row against it and the terminal
-gate blocks. The block's output must contain the identifiers a proof row will later cite. (If per-task
-capture is impractical, at minimum a build-complete comprehensive block carrying the full per-test
-listing satisfies the union AC-14 searches — but the per-test names, never mere counts, are the
-load-bearing content.) The canonical worked example is this very feature's own ledger —
+gate blocks. **Bounded for large suites:** retain in full the `ok N - <name>` lines for **the tests
+this task adds or exercises** — the failing test(s) the plan named for `T-N` (test-first), which the
+conductor knows at capture time; the rest of a large **pre-existing** suite (tests this task did not
+add) may be capped to its summary tail. **A task that adds no tests** (e.g. a prose/doc task) has no
+task-specific per-test names to retain — its suite summary (e.g. `# pass N`) is then the correct
+bounded form (still the conductor's own run, never a transcription); this is the ONLY case where a
+summary alone suffices. (If a full per-task listing is impractical, at minimum a build-complete
+comprehensive block carrying the full per-test listing satisfies the union AC-14 searches — but the
+per-test names, never mere counts, are the load-bearing content.) The canonical worked example is this very feature's own ledger —
 `specs/enforcement-spine/build-report.md`'s `## Green-bar evidence` section.
 
 The message states the task and the `AC-N` (e.g. `feat(T-3): root resolver — advances AC-1`). Then

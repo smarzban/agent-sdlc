@@ -92,10 +92,15 @@ branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
       losing the per-test names AC-14 needs. So the captured block is the **per-test listing** (e.g.
       `node --test`'s `ok N - <name>` lines), not summary counts — those names are what ship's
       AC-14 linkage matches against. **Bounded for large suites:** cap the block to a tail, but
-      retain the per-test names of any test the proof map will cite; if a full per-task listing is
-      impractical, the fallback is a build-complete comprehensive block carrying the full per-test
-      listing — per-task capture stays the norm. (Vacuous-green and staged-isolation handling below
-      are unchanged.)
+      retain in full the per-test `ok N - <name>` lines for **the tests this task adds or exercises**
+      — the failing test(s) the plan named for `T-N` (test-first) — since those are exactly what a
+      later proof map can cite; the rest of a large **pre-existing** suite (tests this task did not
+      add) may be capped to its summary tail. **A task that adds no tests** (e.g. a prose/doc task)
+      has no task-specific per-test names to retain — its suite summary (e.g. `# pass N`) is then the
+      correct bounded form (still the conductor's own run, never a transcription); this is the ONLY
+      case where a summary alone suffices. If a full per-task listing is impractical, the fallback is
+      a build-complete comprehensive block carrying the full per-test listing — per-task capture stays
+      the norm. (Vacuous-green and staged-isolation handling below are unchanged.)
    e. Commit: one atomic commit for the task, reflecting the reviewed code. Verify it compiles **in
       isolation** — run the bar against the staged snapshot (`git stash --keep-index
       --include-untracked` → bar → pop), not just the working tree: an under-staged commit can pass a

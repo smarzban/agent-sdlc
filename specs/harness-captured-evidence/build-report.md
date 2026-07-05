@@ -3,7 +3,11 @@
 Resumable ledger (SMA-463). Conductor-driven, subagent-per-task. Build-skill prose. Per-task green bar =
 checker suite stays green (`node --test agent-sdlc/checker/*.test.mjs`) + `sdlc-check` on this spec exits 0.
 Evidence blocks are **harness-captured** (the conductor ran the commands and pasted the actual output) —
-dogfooding this feature's own rule.
+dogfooding this feature's own rule. **Both tasks are prose-only and add no tests**, so per the re-anchored
+tail/cap rule (retain the per-test `ok - <name>` lines of the tests *this task adds/exercises*; a task
+adding none records the suite summary) the correct retained form here is the checker-suite **summary** —
+there are no task-specific per-test names to capture. The summary below is the conductor's own run output,
+not a transcription of any subagent count.
 
 ## Green bar
 
@@ -28,9 +32,9 @@ dogfooding this feature's own rule.
 
 ### T-1 (@ `ca38d30`)
 
-`agent-sdlc/skills/build/SKILL.md` (+29/−11; prose-only). Green bar = checker suite + spec checker +
-independent conformance reviewer APPROVE (AC-1/AC-2/AC-3; genuine sharpening confirmed; tail/cap preserves
-AC-14 per-test names; no checker rule / no over-claim).
+`agent-sdlc/skills/build/SKILL.md` (+29/−11; prose-only — adds no tests → suite summary is the retained
+form). Green bar = checker suite + spec checker + independent conformance reviewer APPROVE (AC-1/AC-2/AC-3;
+genuine sharpening confirmed; tail/cap preserves AC-14 per-test names; no checker rule / no over-claim).
 
 ```
 $ node --test agent-sdlc/checker/*.test.mjs      → # tests 149 · # pass 149 · # fail 0
@@ -41,9 +45,9 @@ Isolation: staged snapshot = `agent-sdlc/skills/build/SKILL.md` only; 149 pass /
 
 ### T-2 (@ `c02b65b`)
 
-`agent-sdlc/skills/build/reference/subagent-loop.md` (+8/−3; prose-only). Green bar = checker suite +
-spec checker + independent reviewer APPROVE (AC-4; consistent with the sharpened build SKILL; no correct
-existing content removed; no over-claim).
+`agent-sdlc/skills/build/reference/subagent-loop.md` (+8/−3; prose-only — adds no tests → suite summary is
+the retained form). Green bar = checker suite + spec checker + independent reviewer APPROVE (AC-4;
+consistent with the sharpened build SKILL; no correct existing content removed; no over-claim).
 
 ```
 $ node --test agent-sdlc/checker/*.test.mjs      → # tests 149 · # pass 149 · # fail 0
