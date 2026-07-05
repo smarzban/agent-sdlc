@@ -13,7 +13,8 @@ everything and changes nothing, routing each fix to the stage that owns it.
 <HARD-GATE>
 Reads the `## Brief`, `## Acceptance Criteria`, `## Design`, `## Tech Stack`, and `## Plan` sections
 of `specs/<feature>/<feature>.md` (plus `specs/overview.md` at project level), `constitution.md`,
-and `CONTEXT.md`. A section may be materialized from a non-canonical source (a provenance marker on
+`CONTEXT.md`, and any probe-output artifact a `## Tech Stack` load-bearing claim references
+(read-only, for presence + shape only). A section may be materialized from a non-canonical source (a provenance marker on
 its first line) and the chain may be entered mid-way (some upstream links marked `untraced`); the
 gate honours both — see [input-resolution](../getting-started/reference/input-resolution.md).
 Writes only `specs/<feature>/gate-report.md`. Modifies NO other file, fixes
@@ -52,8 +53,10 @@ a verdict: ready to build, or not.
    are expected. The gate never executes declared commands: it stays read-only. **Load-bearing library
    claims** in `## Tech Stack` must each be `verified-by-probe` (a probe ran, output kept + referenced)
    or explicitly `asserted` — an `asserted` (or untagged) load-bearing claim is a **finding routed to
-   techstack**. The gate checks the **tag and the kept probe output's presence and shape ONLY — it
-   never runs the probe and never authenticates its history**: a `verified-by-probe` tag plus a
+   techstack**. The gate checks the **tag and the kept probe output's minimal evidence shape
+   ONLY — that the referenced output is present and well-shaped (a non-empty referenced artifact /
+   log / transcript), and NOTHING more: it never opens-to-execute, never re-runs the probe, never
+   authenticates truth or history**: a `verified-by-probe` tag plus a
    referenced, shaped output present -> the claim is treated as probed; an `asserted` or untagged
    load-bearing claim -> a finding; the gate does not and cannot re-verify the probe's truth
    (consistency-not-truth, ADR-0001). The probe itself runs at techstack/spike time — interactive,

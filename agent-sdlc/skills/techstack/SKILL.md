@@ -19,7 +19,11 @@ source into the named sections (with a provenance marker) before choosing.
 Output is the `## Tech Stack` section of `specs/<feature>/<feature>.md` (the `## Tech Stack` section
 of `specs/overview.md` at project level). Choose concrete products per component; do NOT change the design
 shape (if a product would force a shape change, STOP and loop back to design), and do NOT write a
-plan, break down tasks, or write code. Ground every choice in CURRENT official docs via search,
+plan, break down tasks, or write code. Exempt from that "only output is `## Tech Stack`, no code"
+boundary are throwaway **spike** files (never merged — gitignored or deleted) and the durable
+**kept probe-output artifact** a load-bearing claim references; a probe must NOT mutate the product
+tree (no product code, no dependency added to a product manifest/lockfile) — see
+[reference/probing.md](reference/probing.md) constraint (i). Ground every choice in CURRENT official docs via search,
 record the version and the date checked, and flag anything you could not verify. The terminal
 action is an approved techstack handed to the plan stage.
 </HARD-GATE>
