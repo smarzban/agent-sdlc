@@ -101,9 +101,14 @@ changes, then run the bar against exactly what will be committed — `git stash 
 --include-untracked`, run the bar, `git stash pop` — or, after committing, build a clean checkout of
 HEAD. An under-staged commit is a broken commit even when the working tree is green.
 
-**Capture the evidence block.** One of the green-bar runs above is the task's evidence: a fenced
-block recording the command line(s) exactly as run, plus the output, verbatim — never a checkbox.
-Capture it from the first task onward, never deferred: it is what the checker's evidence-presence
+**Capture the evidence block.** The task's evidence is the **conductor's own** verification run above
+— the full declared bar the conductor (not a subagent) runs after the reviewer passes / before commit
+— captured **verbatim**: a fenced block recording the command line(s) exactly as run plus the run's
+actual output (the per-test `ok N - <name>` listing), never a checkbox and **never a transcription of
+the implementer subagent's reported counts**. The implementer's own red→green TDD test runs during
+the task are the subagent's business, not the recorded evidence — the conductor never trusts a
+subagent's reported test counts (above), so the authoritative recorded run is the conductor's, not the
+subagent's word for it. Capture it from the first task onward, never deferred: it is what the checker's evidence-presence
 check (AC-5) and name-appearance-linkage check (AC-14) read, so a test-backed proof-map row's cited
 test identifier must literally appear in this text (ADR-0001). **Capture the per-test listing, not
 just summary counts.** A test runner that prints one line per test (e.g. `node --test` → `ok N -
