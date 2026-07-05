@@ -92,4 +92,24 @@ Isolation: staged snapshot = the two SKILL.md files only; 143 pass / 0 fail, spe
 
 All four tasks done, checker-corroborated (below). Enforcement is gate-walk (no `sdlc-check.mjs` change —
 NC-1); read-only boundary intact (NC-2). Branch `feat/evidence-gated-techstack` (off `main`, PR-A of the
-0.10.0 stack) ready. Next: `/agent-sdlc:ship`.
+0.10.0 stack) shipped as PR #6. Next: maintainer merge authorization (FF SHA-preserving).
+
+## Review-gate — Round 1 (BLOCK → fixed) → Round 2 (PASS)
+
+Non-ollama panel (per campaign steer). **R1 discovery:** holistic ×2 (`claude-opus-4-8` + `codex gpt-5.5`)
++ `lens-spec` (spec appended) + deterministic `scan`. Coverage 3/3 voted, 0 missing, scan clean. opus
+first non-voted (prosed then appended `[]`) → re-ran array-only → clean vote, 0 findings. gpt-5.5 holistic
+raised **2 mediums** (single-model, contested — opus reviewed the same areas clean); I read both in-code,
+**confirmed real** (boundary-declaration gaps, the 0.6.0 ship-checklist-vs-HARD-GATE class), and **fixed**
+(not dismissed) in `7f87ce4`:
+- **MEDIUM** — techstack HARD-GATE ("do NOT write code") contradicted step 5 (write/run a probe script):
+  HARD-GATE now exempts throwaway spike files + the durable kept probe-output artifact, forbids
+  product-tree/manifest/lockfile mutation (probing.md constraint (i)).
+- **MEDIUM** — gate check-4 read the kept probe output, outside the gate HARD-GATE's declared read set:
+  read set now includes "any probe-output artifact a `## Tech Stack` claim references (read-only, presence
+  + shape only)"; check 4 names the minimal evidence shape and reaffirms the gate never executes.
+
+**R2 verification:** single model (`codex gpt-5.5`) over the fix diff `56df641...HEAD` + scan → **PASS**,
+both findings resolved, 0 regressions, 0 new. Suite 143 green; `sdlc-check … --require verification-report`
+exit 0; `agent-sdlc/checker/` untouched `main..HEAD`. Orchestrator **Approve** (verdict-consistent);
+**not merged** (parked for maintainer authorization).
