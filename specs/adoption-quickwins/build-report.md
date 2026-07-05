@@ -111,4 +111,25 @@ Isolation: manifests valid + identical at 0.10.0; 149 pass / 0 fail, spec-exit 0
 All five tasks done, checker-corroborated (below). SMA-401 (light tier), SMA-402 (spec-lifecycle +
 trigger-scope qualifiers + dangling-ref cleanup + shared-rules dedupe), and the **0.10.0 version bump**
 (both manifests) shipped. Strict-YAML frontmatter guard green across all 13 skills. Branch
-`feat/adoption-quickwins` (off PR-C head `3b70f4e`, PR-D of the 0.10.0 stack) ready. Next: `/agent-sdlc:ship`.
+`feat/adoption-quickwins` (off PR-C head `3b70f4e`, PR-D of the 0.10.0 stack) shipped as PR #9. Next:
+maintainer merge authorization (FF SHA-preserving, after PR-C) — **plus the optional gpt-5.5 re-review
+flagged below**.
+
+## Review-gate — Round 1 (BLOCK, DEGRADED PANEL → fixed) → Round 2 (PASS, opus-only / low-confidence)
+
+**Panel degraded — flagged loudly.** Non-ollama steer + **codex/gpt-5.5 hit its OpenAI usage limit**
+(rate-limited until Jul 7) → both gpt passes (holistic + lens-spec) were **lost votes** (recorded in the
+Coverage line). Compensated with **opus on two lenses (holistic + lens-spec) + scan** — a **single-model
+panel**, lower-confidence than the ≥2-model non-ollama panels PR-A..PR-C got.
+
+**R1:** opus lens-spec clean; scan clean; opus holistic raised **1 MEDIUM** — confirmed real and fixed in
+`9720d74`:
+- **MEDIUM** — the T-3 trigger-scope sweep gave `idea` the spine qualifier "(a spec chain exists)", which
+  contradicts idea's entry-point role (idea *creates* the chain). Reworded to an entry-appropriate scope;
+  the other 7 spine skills run mid-chain and keep the qualifier correctly.
+
+**R2 verification:** single model (`claude-opus-4-8`) over `1864d46...HEAD` + scan → **PASS**, resolved, 0
+regressions/new. Suite 149 green; strict-YAML guard `YAML OK`; manifests valid + identical at 0.10.0;
+`sdlc-check … --require verification-report` exit 0. Orchestrator **Approve (low-confidence, opus-only)**;
+**not merged** (parked). **⚠️ Recommend a gpt-5.5 re-review before merge once its limit resets (Jul 7)** —
+the second independent model this pool's other PRs had.
