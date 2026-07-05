@@ -146,6 +146,12 @@ links parse as zero (the retro that motivated this: a plan written to this skill
 - Reads the `## Acceptance Criteria`, `## Design`, and `## Tech Stack` sections of the same file;
   references `AC-N` IDs and design component names.
 - Task IDs (`T-N`) are stable handles the gate and build reference.
+- `## Plan` may carry a **provenance-marked mid-build amendment** — when reality diverges from the plan,
+  build materializes the delta back into this section (through the plan method, gated inline) with a
+  `<!-- source: mid-build amendment (<why>) · <date> -->` marker (see
+  `../build/reference/plan-amendments.md`). A provenance marker mid-`## Plan` is therefore expected, not
+  a defect; a superseded task is marked (not deleted) and new/split tasks get fresh `T-N` ids so the
+  trace stays walkable.
 - This is feature-scoped; at project level it is the plan for the first feature after the
   project-level idea and architecture.
 - Downstream consumers: the gate (walks criterion -> component -> product -> task),

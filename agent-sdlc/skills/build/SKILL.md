@@ -99,6 +99,14 @@ branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
    g. If Linear sync is enabled in `.agent-sdlc/config.json`, transition `T-N`'s issue via the
       `linear-sync` skill.
 
+   If an implementer reports a **plan/reality mismatch** (a named file/path is wrong, a symbol was
+   renamed, the task must split, an assumed dependency differs), **read
+   [reference/plan-amendments.md](reference/plan-amendments.md) now** and follow the amendment loop —
+   STOP the task, route the delta through the `plan` method, materialize it into `## Plan` with a
+   provenance marker, run `/agent-sdlc:gate` inline on the delta, record it in `build-report.md`. Do
+   **not** silently adapt and do **not** free-author the plan. Mechanical drift is amendable in-loop; a
+   scope or acceptance-criteria change **stops-and-asks** the human (see the escalation boundary).
+
    If a dispatched subagent **dies mid-task** (session/token limit, API error, crash), follow the
    **subagent-death policy** — capture partial work → retry once with a fresh subagent → only then
    conductor-takeover, with the deviation recorded in `build-report.md`
@@ -165,6 +173,7 @@ The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and le
 | "The baseline is red, must be my code." | First check the command itself ran — a malformed green-bar command is a techstack declaration bug, not red code; route it there. |
 | "The implementer agent type isn't available — I'll swap in a stand-in whenever I hit a dispatch." | Per-dispatch rediscovery is improvisation. Resolve the roster once at build start, announce the substitution up front, and record it in the ledger. |
 | "The subagent died mid-task — I'll just finish it myself and move on." | Not without the policy: capture the partial work, retry once fresh, only then conductor-take-over, and record the deviation. A silent takeover erases which agent did the work. |
+| "The plan's path is wrong, I'll just fix it inline." | Silent adaptation drifts the spec from the code and breaks the trace. Route the delta through the plan method + inline gate — that's the amendment loop ([reference/plan-amendments.md](reference/plan-amendments.md)), not a detour. Scope changes stop-and-ask. |
 
 ## Red flags (stop and fix)
 
@@ -188,6 +197,8 @@ The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and le
   declaration was never checked.
 - An agent-type substitution discovered per-dispatch instead of pinned + announced at build start.
 - A dead subagent's work silently conductor-completed with no retry and no ledger record.
+- A plan/reality mismatch silently adapted in code instead of amended through the plan method +
+  inline gate (or a scope change amended in-loop instead of stopped-and-asked).
 
 ## Done when
 
