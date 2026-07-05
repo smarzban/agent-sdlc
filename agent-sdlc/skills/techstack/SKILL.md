@@ -41,7 +41,10 @@ A choice is done only when:
    where it can; a new dependency that duplicates an existing capability is rejected or justified.
 6. **Unverified is flagged.** Anything you could not confirm against current docs is marked, not
    quietly assumed.
-7. **Green bar declared** (project level). The exact runnable commands that constitute a passing
+7. **Load-bearing claims are probed.** Every load-bearing library claim is either
+   **verified-by-probe** (a runnable probe confirmed it, output kept + referenced) or explicitly
+   **asserted** — an asserted load-bearing claim is a gate finding.
+8. **Green bar declared** (project level). The exact runnable commands that constitute a passing
    build — compile/build, test, lint, format-check, typecheck (whichever the stack has) — are
    recorded, so the gate, build, and review share one definition of "green".
 
@@ -59,15 +62,23 @@ A choice is done only when:
 4. **Verify against current docs** search the product's current official documentation, confirm it
    still does what you expect, and record the version and the date checked and a link. Do this for
    each choice; do not rely on memory.
-5. **Check against criteria and constitution** confirm any criterion that leans on the choice is
+5. **Probe every load-bearing claim** for each load-bearing library claim (one a component's
+   correctness leans on — "supports X", "handles our version", "has API Y"), run a **runnable
+   probe**: install -> minimal script -> run against the real API -> keep the output -> reference it
+   from the spec. Research and doc-reading are not a probe. **Read
+   [reference/probing.md](reference/probing.md) now** — it is the load-bearing probe +
+   throwaway-spike contract (the runnable probe, the time-boxed throwaway spike, and the three
+   boundary constraints). Tag each load-bearing claim `verified-by-probe` (output kept + referenced)
+   or `asserted`.
+6. **Check against criteria and constitution** confirm any criterion that leans on the choice is
    satisfiable, and that no MUST constraint is broken.
-6. **Prefer the existing stack** (feature level) reuse what is already there; justify any addition
+7. **Prefer the existing stack** (feature level) reuse what is already there; justify any addition
    and reject duplication.
-7. **Build the component-to-product map** one row per component: kind -> product, version,
+8. **Build the component-to-product map** one row per component: kind -> product, version,
    date checked.
-8. **Flag the unverified** list anything you could not confirm.
-9. **Settle and write** present the choices, get approval, write the artifact.
-10. **Hand off** tell the user it is ready for the plan stage. If Linear sync is enabled in
+9. **Flag the unverified** list anything you could not confirm.
+10. **Settle and write** present the choices, get approval, write the artifact.
+11. **Hand off** tell the user it is ready for the plan stage. If Linear sync is enabled in
     `.agent-sdlc/config.json`, also perform this stage's action via the `linear-sync` skill.
 
 ## Principles
@@ -81,6 +92,9 @@ A choice is done only when:
   criterion needs it.
 - **Fit the existing stack first** (feature level). The cheapest dependency is the one already
   there.
+- **Probe load-bearing claims, don't just read about them.** The doc-read says a library *should*
+  work; the runnable probe shows it *does*. Any claim a component's correctness leans on earns its
+  `verified-by-probe` tag by a probe that ran, not by research.
 
 ## Rationalizations (excuses to skip the bar, and the rebuttal)
 
@@ -91,6 +105,8 @@ A choice is done only when:
 | "Add a small library for this one thing." | YAGNI. Reuse an existing capability or justify the new dependency against the criteria. |
 | "The shape can flex to fit this product." | Backwards. The design is the contract. Loop to design if a product does not fit it. |
 | "I'll record the version later." | Later is never. The version and date are the grounding; without them the choice is a guess. |
+| "I researched it thoroughly and a human confirmed it — that's grounding enough." | For a load-bearing claim, no. "pi-ai has no forced tool choice" passed independent research AND human review, then the running API disproved it (a per-call `toolChoice` exists). The run wins; probe it. |
+| "I'll tag it verified-by-probe, I'm confident it works." | `verified-by-probe` means a probe was RUN and its output kept + referenced. Confidence with no kept output is `asserted`, not verified. |
 
 ## Red flags (stop and fix)
 
@@ -101,6 +117,8 @@ A choice is done only when:
 - "Latest" or an unpinned version standing in for a real choice.
 - A build or test framework chosen but no runnable green-bar commands recorded — build then inherits
   no shared definition of "green".
+- A load-bearing library claim tagged neither `verified-by-probe` nor `asserted`; or tagged
+  `verified-by-probe` with no kept output referenced.
 
 ## Done when
 
@@ -109,6 +127,7 @@ A choice is done only when:
 - Every criterion that depends on a choice is satisfiable by it.
 - Nothing violates `constitution.md`.
 - The component-to-product map is complete; unverified items are flagged.
+- Every load-bearing library claim is tagged `verified-by-probe` (output kept + referenced) or `asserted`.
 - The green bar — the runnable compile/test/lint/format-check commands — is recorded at project level.
 - The user has approved the techstack.
 
@@ -117,7 +136,10 @@ A choice is done only when:
 The `## Tech Stack` section of `specs/<feature>/<feature>.md` (or of `specs/overview.md` at project
 level), containing only:
 - **Choices** per component: the design kind -> chosen product, version, the date checked and a
-  doc link, and why over the alternatives.
+  doc link, and why over the alternatives. Each load-bearing claim on a choice is tagged
+  `verified-by-probe` -> `<path/log/transcript>` (the kept probe output the reader can open) or
+  `asserted` — the tag rides inline on the claim so a reader sees, per claim, whether a runnable
+  probe backs it and where the output lives.
 - **Cross-cutting choices** (project level): language, build tooling, test framework, named as
   products with versions.
 - **Green bar** (project level): the exact commands that define a passing build — compile/build,
