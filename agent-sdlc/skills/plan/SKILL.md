@@ -1,6 +1,6 @@
 ---
 name: plan
-description: "Turn settled criteria, design, and techstack into an implementation plan an agent can execute autonomously: dependency-ordered atomic tasks, each naming exact files, the failing test to write first, and the criterion and component it advances. Use AFTER techstack and BEFORE build. Triggers: 'plan', 'break this down', 'task breakdown', 'write the implementation plan', or any time the design and techstack are settled and you need executable tasks. This is the agent-owned stage; the plan must be followable with no extra context."
+description: "Turn settled criteria, design, and techstack into an implementation plan an agent can execute autonomously: dependency-ordered atomic tasks, each naming exact files, the failing test to write first, and the criterion and component it advances. Use AFTER techstack and BEFORE build. Triggers: 'plan', 'break this down', 'task breakdown', 'write the implementation plan', or any time the design and techstack are settled and you need executable tasks. Scope: only within an Agent SDLC run (a spec chain exists), not on the bare word alone. This is the agent-owned stage; the plan must be followable with no extra context."
 ---
 
 # Plan: break the shape into tasks an agent can execute alone

@@ -1,6 +1,6 @@
 ---
 name: getting-started
-description: "Entry point and operating rules for Agent SDLC, the pipeline that takes an idea to a reviewed PR. Use at the start of any project or feature to pick the right stage, understand the hand-offs, and follow the shared rules every stage obeys. Triggers: 'where do I start', 'what stage am I in', starting a new project or feature, 'use agent-sdlc', or deciding which Agent SDLC skill applies. Read this first; it routes to the others."
+description: "Entry point and operating rules for Agent SDLC, the pipeline that takes an idea to a reviewed PR. Use at the start of any project or feature to pick the right stage, understand the hand-offs, and follow the shared rules every stage obeys. Triggers: 'where do I start', 'what stage am I in', starting a new project or feature, 'use agent-sdlc', or deciding which Agent SDLC skill applies. Scope: when starting or navigating an Agent SDLC run. Read this first; it routes to the others."
 ---
 
 # Using Agent SDLC: idea to a reviewed PR

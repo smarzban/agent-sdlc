@@ -1,6 +1,6 @@
 ---
 name: architecture-design
-description: "Turn settled acceptance criteria into a logical architecture shape an agent can build against: components and responsibilities, the contracts between them, data flow and key state, trust and failure boundaries, and ADRs for hard-to-reverse decisions, with every criterion traced to the component responsible for it. Use AFTER acceptance-criteria and BEFORE techstack. Triggers: 'design', 'architecture', 'how should this be structured', 'shape the system', or any time you have settled acceptance criteria and need the intended shape. Names the KIND of thing, never the concrete product (no Postgres, no React) - that is the techstack stage."
+description: "Turn settled acceptance criteria into a logical architecture shape an agent can build against: components and responsibilities, the contracts between them, data flow and key state, trust and failure boundaries, and ADRs for hard-to-reverse decisions, with every criterion traced to the component responsible for it. Use AFTER acceptance-criteria and BEFORE techstack. Triggers: 'design', 'architecture', 'how should this be structured', 'shape the system', or any time you have settled acceptance criteria and need the intended shape. Scope: only within an Agent SDLC run (a spec chain exists), not on the bare word alone. Names the KIND of thing, never the concrete product (no Postgres, no React) - that is the techstack stage."
 ---
 
 # Design: shape the system, not the stack

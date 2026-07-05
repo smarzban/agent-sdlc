@@ -1,6 +1,6 @@
 ---
 name: acceptance-criteria
-description: "Turn a settled idea (problem + scope) into a checkable contract: a set of acceptance criteria that are each testable by a test AND checkable by a reviewer, plus a verification map. Use AFTER idea and BEFORE design. Triggers: 'acceptance criteria', 'define done', 'what does done mean', 'write the criteria', or any time you have a settled brief and need the contract the build will be held to. Stays tech-agnostic: WHAT and WHY, never HOW."
+description: "Turn a settled idea (problem + scope) into a checkable contract: a set of acceptance criteria that are each testable by a test AND checkable by a reviewer, plus a verification map. Use AFTER idea and BEFORE design. Triggers: 'acceptance criteria', 'define done', 'what does done mean', 'write the criteria', or any time you have a settled brief and need the contract the build will be held to. Scope: only within an Agent SDLC run (a spec chain exists), not on the bare word alone. Stays tech-agnostic: WHAT and WHY, never HOW."
 ---
 
 # Acceptance criteria: turn settled intent into a checkable contract

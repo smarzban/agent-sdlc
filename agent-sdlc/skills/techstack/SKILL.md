@@ -1,6 +1,6 @@
 ---
 name: techstack
-description: "Turn the design's logical shape into concrete product and library choices, one per component kind, each grounded in CURRENT official docs and pinned to a version. Use AFTER design and BEFORE plan. Triggers: 'techstack', 'what should we build this with', 'pick the stack', 'which library/framework/database', or any time you have a settled design and need the products that realize it. Names the PRODUCT for each kind the design named; never silently changes the shape."
+description: "Turn the design's logical shape into concrete product and library choices, one per component kind, each grounded in CURRENT official docs and pinned to a version. Use AFTER design and BEFORE plan. Triggers: 'techstack', 'what should we build this with', 'pick the stack', 'which library/framework/database', or any time you have a settled design and need the products that realize it. Scope: only within an Agent SDLC run (a spec chain exists), not on the bare word alone. Names the PRODUCT for each kind the design named; never silently changes the shape."
 ---
 
 # Techstack: choose the products that realize the shape

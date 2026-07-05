@@ -1,6 +1,6 @@
 ---
 name: gate
-description: "Read-only consistency and coverage gate before build. Walks the full chain criterion -> component -> product -> task across the whole spec, flags orphans, gaps, constitution violations, and unresolved placeholders, severity-rates every finding, and routes each fix to the stage that owns it. Use AFTER plan and BEFORE build. Triggers: 'verify', 'analyze', 'is this ready to build', 'check coverage', 'spec consistency'. Modifies nothing; it reports."
+description: "Read-only consistency and coverage gate before build. Walks the full chain criterion -> component -> product -> task across the whole spec, flags orphans, gaps, constitution violations, and unresolved placeholders, severity-rates every finding, and routes each fix to the stage that owns it. Use AFTER plan and BEFORE build. Triggers: 'verify', 'analyze', 'is this ready to build', 'check coverage', 'spec consistency'. Scope: only within an Agent SDLC run (a spec chain exists), not on the bare word alone. Modifies nothing; it reports."
 ---
 
 # Gate: walk the chain before anyone writes code

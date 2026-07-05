@@ -1,6 +1,6 @@
 ---
 name: build
-description: "Execute a gate-passed plan autonomously: one fresh subagent per task, test-first, committing green between tasks, until the branch is ready to ship. Use AFTER the gate verdict is 'ready to build' and BEFORE ship. Triggers: 'build', 'implement the plan', 'execute the tasks', 'start building', or a clean gate-report.md with a settled `## Plan`. This is the conductor: it dispatches and gates, it does not write code itself."
+description: "Execute a gate-passed plan autonomously: one fresh subagent per task, test-first, committing green between tasks, until the branch is ready to ship. Use AFTER the gate verdict is 'ready to build' and BEFORE ship. Triggers: 'build', 'implement the plan', 'execute the tasks', 'start building', or a clean gate-report.md with a settled `## Plan`. Scope: only within an Agent SDLC run (a spec chain exists), not on the bare word alone. This is the conductor: it dispatches and gates, it does not write code itself."
 ---
 
 # Build: conduct the plan into a green branch

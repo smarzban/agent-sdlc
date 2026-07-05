@@ -1,6 +1,6 @@
 ---
 name: ship
-description: "Turn a green, build-finished branch into a reviewed pull request: verify, push, open a PR built from the spec, and hand the PR to review-gate. Use AFTER build reports the branch ready. Triggers: 'ship', 'open the PR', 'raise the pull request', 'send for review', or a build-report.md with every task done. Terminal stage of the build half; it does not merge."
+description: "Turn a green, build-finished branch into a reviewed pull request: verify, push, open a PR built from the spec, and hand the PR to review-gate. Use AFTER build reports the branch ready. Triggers: 'ship', 'open the PR', 'raise the pull request', 'send for review', or a build-report.md with every task done. Scope: only within an Agent SDLC run (a spec chain exists), not on the bare word alone. Terminal stage of the build half; it does not merge."
 ---
 
 # Ship: branch to reviewed PR
