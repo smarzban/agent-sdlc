@@ -44,7 +44,9 @@ Tag each criterion as one of two, defaulting to test-backed:
 
 - **test-backed** name the *kind* of oracle only at this stage: unit / integration / property /
   e2e / manual. Do NOT name concrete tests; test identity is the plan stage's job once a design
-  exists. These feed the downstream spec-to-test coverage check.
+  exists. These feed the ship-stage terminal AC verification (the `verification-report.md` proof
+  map, validated by `sdlc-check --require verification-report`): a test-backed criterion's proof is
+  a named test that must appear in the captured green-bar evidence.
 - **reviewer-checked** name the review axis (e.g. Security, Spec Conformance, Architecture) and
   write out the explicit pass/fail question the reviewer answers. Allowed only with a one-line
   justification of why it cannot be cheaply automated. These feed the downstream Spec Conformance
@@ -192,5 +194,6 @@ Downstream, the gate/ship checker parses this section literally:
 - Reads the `## Brief` section of the same file; resolves terms against root `CONTEXT.md` (or the
   right context if a `CONTEXT-MAP.md` exists).
 - Downstream consumers: the design stage (built against these criteria), the verify gate (checks
-  every criterion maps to a task), and the review panel (test-backed -> spec-to-test coverage;
-  reviewer-checked -> Spec Conformance).
+  every criterion maps to a task), the ship-stage terminal AC verification (test-backed -> a named
+  test in the captured green-bar evidence, via the `verification-report.md` proof map + `sdlc-check
+  --require verification-report`), and review-gate (reviewer-checked -> Spec Conformance).

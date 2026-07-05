@@ -158,4 +158,4 @@ links parse as zero (the retro that motivated this: a plan written to this skill
 - This is feature-scoped; at project level it is the plan for the first feature after the
   project-level idea and architecture.
 - Downstream consumers: the gate (walks criterion -> component -> product -> task),
-  the build stage (executes each task test-first), and the review panel.
+  the build stage (executes each task test-first), and review-gate.
