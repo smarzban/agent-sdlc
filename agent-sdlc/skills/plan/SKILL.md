@@ -148,10 +148,13 @@ links parse as zero (the retro that motivated this: a plan written to this skill
 - Task IDs (`T-N`) are stable handles the gate and build reference.
 - `## Plan` may carry a **provenance-marked mid-build amendment** — when reality diverges from the plan,
   build materializes the delta back into this section (through the plan method, gated inline) with a
-  `<!-- source: mid-build amendment (<why>) · <date> -->` marker (see
-  `../build/reference/plan-amendments.md`). A provenance marker mid-`## Plan` is therefore expected, not
-  a defect; a superseded task is marked (not deleted) and new/split tasks get fresh `T-N` ids so the
-  trace stays walkable.
+  `<!-- source: mid-build amendment (<why>) · ingested YYYY-MM-DD -->` marker (canonical provenance
+  grammar; see `../build/reference/plan-amendments.md`). A provenance marker mid-`## Plan` is therefore
+  expected, not a defect. This mid-section stamp is **documentary / human-facing provenance only** — the
+  checker's provenance-marker rule validates a section's first body line, not a mid-section marker, so it
+  is not machine-validated; trace integrity is enforced by the trace + coverage rules and the inline
+  gate, never by the stamp. A superseded task is marked (not deleted) and new/split tasks get fresh
+  `T-N` ids so the trace stays walkable.
 - This is feature-scoped; at project level it is the plan for the first feature after the
   project-level idea and architecture.
 - Downstream consumers: the gate (walks criterion -> component -> product -> task),

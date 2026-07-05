@@ -35,11 +35,17 @@ the code. It is **not** a scope or acceptance-criteria change: that escalates (s
    delta is a plan edit, so it obeys the plan skill.
 3. **Materialize into `## Plan` with a provenance marker.** Write the amended task(s) into the
    `## Plan` section, stamped like a start-anywhere ingest:
-   `<!-- source: mid-build amendment (<why>) · <date> -->`. Handle ids so the trace stays walkable — a
-   **superseded task is marked, not deleted** (its id stays, annotated superseded); **new or split
-   tasks get fresh `T-N` ids** (never reuse a spent id); the coverage map is updated so every `AC-N`
-   still traces to a carrying task. Faithful, not creative — transcribe the real delta, never invent
-   tasks or criteria.
+   `<!-- source: mid-build amendment (<why>) · ingested YYYY-MM-DD -->` (canonical provenance grammar
+   — `source: … · ingested <date>`, the same shape every ingest marker uses). This mid-`## Plan` stamp
+   is **documentary / human-facing provenance**, not a machine-validated gate: the checker's
+   provenance-marker rule validates only a section's **first** body line (`extractProvenanceMarkers` in
+   `agent-sdlc/checker/sdlc-check.mjs`), so a marker sitting mid-section is not checked at all. Trace
+   integrity is enforced by the trace + coverage rules plus the inline gate (step 4), never by this
+   stamp — write it for the human reader, don't lean on it as an enforcement point. Handle ids so the
+   trace stays walkable — a **superseded task is marked, not deleted** (its id stays, annotated
+   superseded); **new or split tasks get fresh `T-N` ids** (never reuse a spent id); the coverage map is
+   updated so every `AC-N` still traces to a carrying task. Faithful, not creative — transcribe the real
+   delta, never invent tasks or criteria.
 4. **Run the inline gate on the delta.** Invoke `/agent-sdlc:gate` inline — the exact mechanism
    [ingesting-plans.md](ingesting-plans.md) already uses. It re-walks the amended chain and issues a
    verdict; proceed **only** on a clean (ready-to-build) verdict for the amended chain. A Critical/High

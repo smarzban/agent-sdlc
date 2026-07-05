@@ -359,6 +359,10 @@ test('a reviewer-checked unreached AC gets the carrying-task hint in its coverag
   // sharpened: names the reviewer-checked shape and points at the *Advances:* fix
   assert.ok(findings[0].message.includes('reviewer-checked'));
   assert.ok(findings[0].message.includes('*Advances:*'));
+  // and carries the substantive guidance, not just the topic word: the carrying-task instruction
+  // plus the reviewer-checked-specific "which task carries it" phrasing.
+  assert.ok(findings[0].message.includes('carrying task'));
+  assert.ok(findings[0].message.includes('produces the artifact the reviewer checks'));
 });
 
 test('a test-backed unreached AC keeps the base coverage-forward message (no hint)', () => {
@@ -375,6 +379,27 @@ test('a test-backed unreached AC keeps the base coverage-forward message (no hin
   assert.equal(findings[0].rule, 'coverage-forward');
   assert.deepEqual(findings[0].ids, ['AC-1']);
   // base message only — no reviewer-checked hint
+  assert.ok(!findings[0].message.includes('reviewer-checked'));
+  assert.ok(findings[0].message.startsWith('AC-1 is not reached by any task'));
+});
+
+test('a type-unknown unreached AC (no verification type stated) keeps the base coverage-forward message (no hint)', () => {
+  // closes the null branch: neither `reviewer-checked` nor `test-backed`, no `Verification type:`
+  // declaration — extractAcVerification classifies it null, so the reviewer-checked hint must NOT append.
+  const m = model([
+    '## Acceptance Criteria',
+    '- **AC-1** — a plain criterion, no verification type stated, unreached by any task.',
+    '',
+    '## Plan',
+    '- **T-1 — Do it.** Detail. *Component:* none. *Deps:* none.',
+  ]);
+  assert.equal(m.acVerification.get('AC-1'), null, 'sanity check: type is unknown (null) for this AC');
+  const findings = checkForwardCoverage(m);
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].type, 'finding');
+  assert.equal(findings[0].rule, 'coverage-forward');
+  assert.deepEqual(findings[0].ids, ['AC-1']);
+  // base message only — the reviewer-checked hint must not appear for a type-unknown AC
   assert.ok(!findings[0].message.includes('reviewer-checked'));
   assert.ok(findings[0].message.startsWith('AC-1 is not reached by any task'));
 });
