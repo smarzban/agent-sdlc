@@ -1,6 +1,6 @@
 ---
 name: writing-technical-docs
-description: Use when asked to write full technical/internal documentation for a codebase — the architecture with its design rationale, data models/schemas, per-subsystem internals, invariants and the security model, and a complete module/API reference where every exported symbol is documented. Coverage is contractual — inventory the surface first, then close the ledger; no silent sampling. Complements writing-repo-docs (user/operator/contributor essentials); run it after the essentials exist, or standalone when only maintainer docs are needed. Triggers: "technical documentation", "architecture docs", "document the internals", "API reference", "document every module/function", "data model docs".
+description: "Use when asked to write full technical/internal documentation for a codebase — the architecture with its design rationale, data models/schemas, per-subsystem internals, invariants and the security model, and a complete module/API reference where every exported symbol is documented. Coverage is contractual — inventory the surface first, then close the ledger; no silent sampling. Complements writing-repo-docs (user/operator/contributor essentials — including a library's public-API reference); run it after the essentials exist, or standalone when only maintainer docs are needed. Triggers: \"technical documentation\", \"architecture docs\", \"document the internals\", \"complete API/module reference\", \"document every module/function\", \"data model docs\"."
 ---
 
 # Writing Technical Docs
@@ -39,7 +39,7 @@ Read the code first; write the ledger before any doc page. Capture (format in `r
 
 ## Phase 2 — Decide the reference strategy
 
-Pick per principle 4 and record the choice in the landing page (so the next maintainer knows why). If a generator is used: wire it up (or document how to run it), and scope the hand-written pages to concepts, invariants, and per-subsystem narratives — the parts no generator produces.
+Pick per principle 4 and record the choice in the landing page (so the next maintainer knows why). If a generator is used: document how to run it, and scope the hand-written pages to concepts, invariants, and per-subsystem narratives — the parts no generator produces. Adding the generator to the build/manifests is an owner-approved change, not a docs-task default.
 
 ## Phase 3 — Write the spine
 
@@ -99,4 +99,5 @@ Read `reference/fact-check-and-verify.md`. In full:
 
 - Lives beside the essentials tree — default `docs/technical/` (adopt the repo's existing layout if it has one).
 - The essentials' light `architecture.md` (from `writing-repo-docs`) links here; don't duplicate its overview — deepen it.
+- Same rule for a library/framework's **public-API `reference/`** from the essentials: it satisfies the ledger's public-symbol rows — point rows at it (deepening in place where internals detail is warranted) and let the coverage check grep both trees. The technical reference adds internal modules, load-bearing internals, and anything the essentials reference omitted; never a drift-prone twin of it.
 - Small files, one concern each; relative cross-links; the repo's own terminology throughout.

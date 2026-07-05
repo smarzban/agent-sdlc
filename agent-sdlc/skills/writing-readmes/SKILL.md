@@ -1,6 +1,6 @@
 ---
 name: writing-readmes
-description: Use when writing, overhauling, or reviewing a project's README (the front-door README.md of a repo). Produces a clear, scannable, source-grounded README that leads with what/why, adapts its section set to the repo type, keeps a lean quickstart distinct from full install, and links out to deeper docs instead of inlining them. Use also when a README "isn't clear what the project is" or has grown into a docs dump. For the docs tree itself use writing-repo-docs (essentials) or writing-technical-docs (internals). Triggers: "write/fix the README", "README review", "the readme isn't clear".
+description: "Use when writing, overhauling, or reviewing a project's README (the front-door README.md of a repo). Produces a clear, scannable, source-grounded README that leads with what/why, adapts its section set to the repo type, keeps a lean quickstart distinct from full install, and links out to deeper docs instead of inlining them. Use also when a README \"isn't clear what the project is\" or has grown into a docs dump. For the docs tree itself use writing-repo-docs (essentials) or writing-technical-docs (internals). Triggers: \"write/fix the README\", \"README review\", \"the readme isn't clear\"."
 ---
 
 # Writing READMEs

@@ -1,7 +1,7 @@
 # Depth & coverage — the ledger and the page templates
 
 Coverage is the contract that separates "full technical documentation" from a tour.
-The ledger is built in Phase 1, updated as pages land, and closed in Phase 5.
+The ledger is built in Phase 1, updated and closed as pages land in Phase 4, and verified closed in Phase 5.
 
 ## The coverage ledger
 
@@ -30,6 +30,13 @@ Rules:
 - **Private internals** enter the ledger when they carry an invariant a maintainer must
   know (a lock ordering, a cache coherence rule, a sentinel value). Mark them `internal —
   load-bearing`.
+- **A generated reference closes rows too.** When the Phase-2 strategy is a generator,
+  mark the covered rows `generated (<tool>)` — closure then means verifying the
+  generator's *input scope* covers the inventoried symbols (its config includes every
+  module; spot-check the output), not grepping hand-written pages.
+- **An essentials public-API `reference/` closes rows too.** For a library/framework
+  documented with `writing-repo-docs`, public-symbol rows may satisfy against that
+  existing tree — point the row at it rather than duplicating the entry.
 - **Exclusions are declared, never implied.** Legitimate reasons: vendored, generated,
   deprecated-and-marked, an explicitly agreed scope cut from the user. Each carries the
   reason in the row. An item missing from both the docs *and* the exclusion list means
@@ -41,9 +48,13 @@ Diff the actual surface against the reference pages mechanically where possible 
 e.g. extract the export list and grep the reference tree for each name:
 
 ```bash
-# sketch (adapt per language): every exported name must appear in the reference tree
+# sketch (adapt per language): every exported name must appear in a reference tree.
+# Anchor the match (backticks or -w) — a bare grep for a common name like `run` or
+# `Config` matches incidental prose and fails open. Grep BOTH trees when an
+# essentials public-API reference exists.
 for sym in $(extract-exports src/); do
-  grep -rq "$sym" docs/technical/reference/ || echo "UNDOCUMENTED: $sym"
+  grep -rqw "$sym" docs/technical/reference/ docs/reference/ 2>/dev/null \
+    || echo "UNDOCUMENTED: $sym"
 done
 ```
 

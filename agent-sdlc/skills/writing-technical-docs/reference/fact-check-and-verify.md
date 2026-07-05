@@ -62,7 +62,7 @@ configured, a default the code doesn't use) that otherwise ship as authoritative
 
 ## 3b. Coverage check (Phase 5)
 
-Here the verification pass has a fourth leg: **close the coverage ledger.**
+Here the verification pass has an additional leg: **verify the coverage ledger closed.**
 Diff the inventoried surface (exports, data models, entry points) against the reference
 tree — see `depth-and-coverage.md` for the ledger rules and a check-script sketch. Every
 flagged item is documented, excluded-with-reason, or the work is not done.

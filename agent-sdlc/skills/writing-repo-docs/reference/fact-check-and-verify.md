@@ -60,6 +60,14 @@ This is the highest-leverage step: in practice a fresh fact-check pass finds rea
 errors (a tuple documented as a set, a session lifetime that was never actually
 configured, a default the code doesn't use) that otherwise ship as authoritative.
 
+## 3b. Command check (Phase 5)
+
+The quickstart, install, and `development.md` command sequences are traced against
+the CI workflow and the package scripts (those are the ground truth, not an old
+README). Where the environment allows, execute the sandbox-safe dev/test commands
+to confirm they work; deploy/ops sequences (Docker/k8s, reverse proxy, anything
+system-modifying) are trace-only — never executed during a docs task.
+
 ## 4. Placeholder scan (Phase 5)
 
 Grep the output for red flags and eliminate them: `TBD`, `TODO`, `FIXME`,
@@ -80,6 +88,7 @@ that was removed). When that happens:
 ## Done criteria
 
 - Every concrete claim traced to source.
+- Command sequences traced against CI/scripts (and sandbox-safe dev/test ones run where possible).
 - 0 broken internal links.
 - Fact-check pass run (ideally a second-agent adversarial pass); all confirmed
   errors fixed.

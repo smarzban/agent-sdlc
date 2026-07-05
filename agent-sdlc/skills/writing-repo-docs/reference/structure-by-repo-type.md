@@ -8,8 +8,10 @@ these are the shapes, not literal required filenames. Always include a top-level
 
 Scope reminder: this skill produces the **essentials** — use, install/operate,
 contribute. Deep internals (design rationale, data models, per-subsystem pages,
-the full API/module reference) are `writing-technical-docs`; the essentials tree
-carries at most a light `architecture.md` overview that links there.
+the internal module reference) are `writing-technical-docs`; the essentials tree
+carries at most a light `architecture.md` overview that links there. One nuance:
+a library/framework's **public-API `reference/` stays here** (see Library) —
+consumers are programmers, so the public API is usage.
 
 ## Default skeleton
 
@@ -118,7 +120,7 @@ architecture.md    (optional, light) system map -> technical docs
 ```
 README.md          what it is + philosophy
 quickstart.md      scaffold + first app
-guides/            task-oriented (routing, data, auth, testing, deploy…)
+guides/            task-oriented (routing, data, auth, testing, extending/plugins, deploy…)
 concepts/          the core abstractions and lifecycle
 reference/         the public API surface
 development.md     contribute to the framework itself

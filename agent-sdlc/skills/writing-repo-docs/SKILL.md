@@ -1,6 +1,6 @@
 ---
 name: writing-repo-docs
-description: Use when asked to write or overhaul the documentation a repository needs to be usable and contributable — a landing index, quickstart, installation, running-it-locally dev setup, contributing + community-health files (CONTRIBUTING, SECURITY, changelog, templates), and a comprehensive per-feature usage guide, plus at most a light architecture overview. Source-grounded, audience-separated, shaped to the repo type; doubles as an in-app help corpus. For deep internals — architecture rationale, data models, a complete module/API reference — use writing-technical-docs instead (or afterwards). Triggers: "write the docs", "document this repo", "installation docs", "contributing guide", "how to run it locally", "usage guide".
+description: "Use when asked to write or overhaul the documentation a repository needs to be usable and contributable — a landing index, quickstart, installation, running-it-locally dev setup, contributing + community-health files (CONTRIBUTING, SECURITY, changelog, templates), and a comprehensive per-feature usage guide, plus at most a light architecture overview. Source-grounded, audience-separated, shaped to the repo type; doubles as an in-app help corpus. For deep internals — architecture rationale, data models, a complete module/API reference — use writing-technical-docs instead (or afterwards). Triggers: \"write the docs\", \"document this repo\", \"installation docs\", \"contributing guide\", \"how to run it locally\", \"usage guide\"."
 ---
 
 # Writing Repo Docs (the essentials)
@@ -33,7 +33,7 @@ Read enough to answer: *what is this, who uses it, and how does work actually ge
 - **Project type** — library/SDK, CLI tool, web service/API, full application, framework, or monorepo. This drives everything (see `reference/structure-by-repo-type.md`).
 - **Entry points & public surface** — the README, the package manifest, the CLI command definitions, the exported API, the HTTP routes, the config/settings.
 - **Existing docs** — README, `docs/`, `CLAUDE.md`/`AGENTS.md`, specs, ADRs. Reuse canonical content, but **treat existing docs as suspect**: they drift. Note contradictions and stale claims rather than copying them forward.
-- **The contributor path as it actually is** — how the repo is really built and tested (the CI workflow is the ground truth), the commit convention in `git log`, the branch/PR flow, existing CONTRIBUTING/SECURITY/CHANGELOG/templates, whether there is a release process at all.
+- **The contributor path as it actually is** — how the repo is really built and tested (the CI workflow is the ground truth), the commit convention in `git log`, the branch/PR flow, existing CONTRIBUTING/SECURITY/CHANGELOG/templates, whether there is a release process at all. No tests or CI? Document what actually exists and flag the gap — never invent test instructions.
 - **Audiences** — end users? operators/deployers? API consumers? contributors? Decide which audience docs are warranted; don't write an "operator" section for a pure library.
 
 Capture a short internal map (project type, audiences, module list, canonical sources, contributor conventions) before structuring.
@@ -83,7 +83,7 @@ For each file:
 These are conventions with sharp edges — some must never be invented:
 
 - **CONTRIBUTING.md** — dev-setup pointer (→ `docs/development.md`), how to run the tests, the commit convention **as observed in `git log`**, the branch/PR flow, what reviews expect. Mirror the repo's *actual* conventions; don't import a generic template.
-- **SECURITY.md** — the vulnerability-reporting channel. **Confirm the channel with the owner** (email? GitHub private reporting?) — never invent a policy or an SLA.
+- **SECURITY.md** — the vulnerability-reporting channel. **Confirm the channel with the owner** (email? GitHub private reporting?) — never invent a policy or an SLA. Can't confirm it? Don't create the file — flag it as an owner decision (deriving a channel from git-log metadata counts as inventing).
 - **CHANGELOG.md** — only when a release process exists. Backfill only from tags/releases you can verify; never reconstruct history from guesswork.
 - **Issue/PR templates** — offer them shaped to the repo's real triage needs; owner decision.
 - **CODE_OF_CONDUCT** — owner decision, always. Flag its absence for a public repo; never pick one unilaterally.
@@ -95,7 +95,7 @@ Read `reference/fact-check-and-verify.md` for the full checklist. At minimum:
 
 - **Link check** — every internal relative link resolves to a real file.
 - **Fact-check pass** — re-read the docs against the source with fresh eyes; if a subagent is available, dispatch an adversarial fact-check ("find any statement contradicted by the code"). Fix every confirmed error.
-- **Command check** — the quickstart, install, and `development.md` command sequences are traced against CI/scripts (and run, where possible).
+- **Command check** — the quickstart, install, and `development.md` command sequences are traced against CI/scripts. Execute only sandbox-safe dev/test commands to confirm them; deploy/ops sequences are trace-only.
 - **Placeholder scan** — no TBD/TODO/empty sections.
 
 ## Phase 6 — Index + report
@@ -103,6 +103,7 @@ Read `reference/fact-check-and-verify.md` for the full checklist. At minimum:
 - Ensure the landing `README.md` indexes everything and tells each audience where to start.
 - **Make the docs agent-discoverable (GEO).** Use the real category/stack terms in the landing description; when the docs are/will be published, add an [`llms.txt`](https://llmstxt.org/) at the root — a curated Markdown map linking the key pages.
 - Tell the user: where the docs live, the file tree, which community files were created vs **flagged as owner decisions** (security channel, code of conduct, license, templates), and any caveats — especially contradictions between existing docs and the code (surface them; offer to fix the code separately).
+- **State whether technical docs exist.** When the repo warrants internals documentation, recommend `writing-technical-docs` as the follow-on — the essentials tree deliberately stops short of it.
 
 ## Principles
 
@@ -128,6 +129,6 @@ Read `reference/fact-check-and-verify.md` for the full checklist. At minimum:
 ## Done when
 
 - The docs tree exists per the chosen structure, every file source-verified, 0 broken links, 0 placeholders.
-- `usage/` covers every user-facing feature; `development.md` gets a newcomer from clone to green tests.
+- `usage/` covers every user-facing feature; `development.md` gets a newcomer from clone to green tests (or, where no suite exists, to a running instance — with the gap flagged).
 - CONTRIBUTING.md reflects the repo's real conventions; the other community files are created or explicitly flagged as owner decisions.
 - The landing index routes every audience, and the report lists what was built, what was flagged, and any code/doc drift found.
