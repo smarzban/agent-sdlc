@@ -133,6 +133,12 @@ links parse as zero (the retro that motivated this: a plan written to this skill
   nothing).
 - **IDs are defined at a bold-lead** — `**AC-N**`, `**T-N**` — distinct from a plain-text citation. A
   slash-run citation (`AC-1/2/3`) expands to each id.
+- **Every AC needs a carrying task — reviewer-checked included.** Forward coverage holds **every**
+  defined `AC-N` to being advanced by ≥1 task (a task's `*Advances:*` field ∪ a Task-to-criterion
+  coverage-map row); an AC's verification type does not exempt it. A **reviewer-checked** AC is not
+  auto-traced — its **carrying task is the one that produces the artifact the reviewer checks**, so
+  name that AC in that task's `*Advances:*` (or a coverage-map row). Do not leave a reviewer-checked
+  AC uncarried expecting the reviewer to stand in for a task.
 
 ## Conventions
 

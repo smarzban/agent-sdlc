@@ -53,6 +53,13 @@ Tag each criterion as one of two, defaulting to test-backed:
 Reviewer-checked is a labeled exception, not an escape hatch. If you are reaching for it to dodge
 a hard test, that is a red flag (see below).
 
+**A reviewer-checked AC still needs a carrying task.** Verification type governs HOW an AC is proved,
+never WHETHER it must be advanced by a task. Every AC — reviewer-checked ones included — must appear in
+≥1 task's `*Advances:*` (or a Task-to-criterion coverage-map row) or forward coverage fails.
+**For a reviewer-checked AC the carrying task is the one that produces the artifact the reviewer
+checks** — the criterion is still "carried" by the task that builds the thing being inspected. There
+is no auto-tracing: pick that task and name the AC in its `*Advances:*`.
+
 ## Checklist (do in order)
 
 1. **Load the inputs** read the `## Brief` section of `specs/<feature>/<feature>.md`, the root
@@ -126,6 +133,8 @@ a hard test, that is a red flag (see below).
   history…) with the term left to interpretation — two readers or implementations can diverge. The
   enforcement spine shipped three such defects from one root: "carries", "referencing", and "which
   history" were each under-specified, and each let a checker and its author disagree. Pin the term.
+- A reviewer-checked AC left with no carrying task — verification type is not an exemption from
+  forward coverage; every AC needs a task that advances it (the one producing the artifact reviewed).
 - The verification map has a criterion with no oracle and no axis, or a criterion listed twice.
 
 ## Done when
@@ -158,6 +167,21 @@ Downstream, the gate/ship checker parses this section literally:
   `NC-N` negative criterion is **prose** from its view, so it is never required to carry a proof-map
   row (nor traced). Keep negative criteria as `NC-N` precisely so they stay out of the mechanical
   coverage set; use `AC-N` for anything the checker must hold the build to.
+- **Carrying-task rule (pinned) — verification type never exempts an AC from forward coverage.** The
+  `coverage-forward` check holds **every defined `AC-N`, reviewer-checked and test-backed alike**, to
+  being reached by ≥1 task (a task's `*Advances:*` field ∪ a Task-to-criterion coverage-map row). A
+  **reviewer-checked** AC is not auto-traced by being reviewer-checked; its **carrying task is the one
+  that produces the artifact the reviewer checks** — name that AC in that task's `*Advances:*`. Pin
+  this because it is counter-intuitive (a reviewer-checked criterion still needs a build task).
+- **Verification-type parsing + the reviewer-checked hint (checker behavior, kept in lockstep).** The
+  checker reads each AC's verification type from its own `*(Verification type: **X** …)*` declaration
+  in this section (declaration-first; it falls back to a loose `reviewer-checked` / `test-backed`
+  keyword scan of the AC's block **only** when no such declaration is present). When forward coverage
+  fails for a **reviewer-checked** AC, the `coverage-forward` finding **appends a carrying-task hint**
+  ("— this criterion is reviewer-checked, which still needs a carrying task: name it in some task's
+  `*Advances:*` …"); a test-backed / type-unknown unreached AC keeps the base message unchanged. The
+  checker only **sharpens the message** — it does NOT auto-create the link (NC-1): forward coverage
+  still requires a real `*Advances:*` / coverage-map link.
 
 ## Conventions
 
