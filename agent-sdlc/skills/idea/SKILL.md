@@ -1,6 +1,6 @@
 ---
 name: idea
-description: "Turn a fuzzy idea or a specific feature request into a settled problem statement, scope, and resolved key decisions, through divergent exploration then relentless one-at-a-time grilling, capturing canonical terminology as you go. Use at the very start of any feature or project, BEFORE acceptance criteria or any design. Triggers: 'shape this idea', 'scope this out', 'frame the problem', 'I want to build', 'I want to add a feature', 'let's think through'. Scope: only within an Agent SDLC run (a spec chain exists), not on the bare word alone. Deliberately distinct from generic brainstorming: it stops at settled intent and scope."
+description: "Turn a fuzzy idea or a specific feature request into a settled problem statement, scope, and resolved key decisions, through divergent exploration then relentless one-at-a-time grilling, capturing canonical terminology as you go. Use at the very start of any feature or project, BEFORE acceptance criteria or any design. Triggers: 'shape this idea', 'scope this out', 'frame the problem', 'I want to build', 'I want to add a feature', 'let's think through'. Scope: when starting or shaping a feature or project in an Agent SDLC run (the entry stage — it creates the spec chain), not on the bare word alone. Deliberately distinct from generic brainstorming: it stops at settled intent and scope."
 ---
 
 # Idea: shape intent before criteria
