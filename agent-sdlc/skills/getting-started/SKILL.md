@@ -91,6 +91,28 @@ Decide the level the way `idea` does, and carry it through.
   fitting the existing `overview.md` architecture and stack, justifying any deviation with an ADR
   in `specs/adr/`.
 
+## Routing: light tier vs full chain (by size)
+
+After the level, decide the **tier** by size. The full chain is right for a feature and heavy for a
+30-line fix — routing only by entry point lets small work bypass the discipline, so route by size too.
+
+- **Small and self-contained** (a bug fix, a small addition, a ~tens-of-lines change) with **no new
+  dependency, no new component, and no cross-cutting change** -> the **light tier**: brief + AC + plan
+  folded into one short authoring pass in the same sectioned spec file; `## Design`/`## Tech Stack`
+  only when a trigger fires. **If light tier: read [reference/light-tier.md](reference/light-tier.md)
+  now** — it is the load-bearing compressed-pass contract (what to author, the triggers, the
+  same-verification invariant).
+- **A feature**, or any change where an **escalation trigger** fires — a **new dependency**, a **new
+  component**, or a **cross-cutting change** — -> the **full chain**. Those three triggers force the
+  full tier; when unsure, choose the full chain.
+
+The light tier compresses **authoring only, never verification**: same gate, same test-first build
+with one atomic green commit per task, same `sdlc-check` checker (same sectioned file + grammar). A
+**mid-flight tier upgrade** (a trigger fires or the change turns out bigger than judged) authors the
+missing `## Design`/`## Tech Stack` **through the normal materialize path** — the same one
+[reference/input-resolution.md](reference/input-resolution.md) describes, landing in the one spec
+file, **no ephemeral mode**. The upgrade is always available; when unsure, upgrade.
+
 ## File layout
 
 ```
@@ -111,6 +133,9 @@ Decide the level the way `idea` does, and carry it through.
 
 - A new app, vague idea: start at **`idea`**, project level.
 - A new feature on an existing app: start at **`idea`**, feature level (often a light pass).
+- A small, self-contained change (bug fix / small addition, no new dependency/component/cross-cutting
+  impact): take the **light tier** — read [reference/light-tier.md](reference/light-tier.md) and fold
+  brief + AC + plan into one short pass, then run **`gate`** -> **`build`** as usual.
 - You already have a settled problem and scope: start at **`acceptance-criteria`**.
 - You have approved criteria: **`architecture-design`**, then **`techstack`**, then **`plan`**.
 - A `## Plan` section exists in `<feature>.md`: run **`gate`**, then **`build`**.
