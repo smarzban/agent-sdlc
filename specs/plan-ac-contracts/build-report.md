@@ -90,7 +90,23 @@ follow-up, or to be folded if review-gate raises it.
 
 ## Hand-off
 
-All three tasks done, checker-corroborated (below). SMA-465 checker change is real TDD (+5 tests, 148
-total), read-only + never-throw held; doc pinned in lockstep. SMA-400 amendment protocol reuses the
-inline gate (no new grammar). Branch `feat/plan-ac-contracts` (off PR-A head `0a0d49f`, PR-B of the 0.10.0
-stack) ready. Next: `/agent-sdlc:ship`.
+All three tasks done, checker-corroborated (below). SMA-465 checker change is real TDD (read-only +
+never-throw held); doc pinned in lockstep. SMA-400 amendment protocol reuses the inline gate (no new
+grammar). Branch `feat/plan-ac-contracts` (off PR-A head `0a0d49f`, PR-B of the 0.10.0 stack) shipped as
+PR #7. Next: maintainer merge authorization (FF SHA-preserving, after PR-A).
+
+## Review-gate — Round 1 (PASS w/ 3 advisory LOWs → fixed) → Round 2 (PASS)
+
+Non-ollama panel. **R1:** holistic ×2 (`claude-opus-4-8` + `codex gpt-5.5`) + `lens-spec` (spec appended)
++ `scan`. Coverage 3/3 voted, 0 missing, scan clean. Lens decision written out (fired lens-spec; skipped
+the rest by trigger). opus clean; verdict **PASS** — only 3 LOW/advisory (no critical/high/medium). I
+elected to fix all three (cheap, real; #1 corroborated the T-3 reviewer's Minor), committed `122f801`:
+- **LOW** — `plan-amendments.md` amendment-marker example → canonical `· ingested YYYY-MM-DD` grammar +
+  a documentary clause (mid-`## Plan` stamp is human-facing, not machine-validated; integrity via
+  trace/coverage rules + inline gate).
+- **LOW** — added a type-unknown (null verification type) coverage-forward fixture (base message, no hint).
+- **LOW** — strengthened the reviewer-checked-hint test to assert the full hint wording.
+
+**R2 verification:** single model (`codex gpt-5.5`) over `15ba6a3...HEAD` + scan → **PASS**, all three
+resolved, 0 regressions/new. Suite 149 green; `sdlc-check … --require verification-report` exit 0 (the 5
+cited test names unchanged). Orchestrator **Approve** (verdict-consistent); **not merged** (parked).
