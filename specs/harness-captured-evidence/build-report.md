@@ -66,4 +66,24 @@ spec-exit 0.
 
 Both tasks done, checker-corroborated (below). SMA-463 is a build-discipline sharpening (no checker change
 — NC-1; the checker can't distinguish captured from transcribed text). Branch `feat/harness-captured-evidence`
-(off PR-B head `7b8a35a`, PR-C of the 0.10.0 stack) ready. Next: `/agent-sdlc:ship`.
+(off PR-B head `7b8a35a`, PR-C of the 0.10.0 stack) shipped as PR #8. Next: maintainer merge authorization
+(FF SHA-preserving, after PR-B).
+
+## Review-gate — Round 1 (BLOCK → fixed) → Round 2 (PASS)
+
+Non-ollama panel. **R1:** holistic ×2 (`claude-opus-4-8` + `codex gpt-5.5`) + `lens-spec` + `scan`; 3/3
+voted, 0 missing, scan clean. gpt-5.5 holistic clean. Two findings, both **caught on this PR's own
+artifacts** (fitting dogfood), confirmed real and fixed in `5508e65`:
+- **MEDIUM** (lens-spec) — this feature's ledger recorded summary counts on the PR that bans summary-only
+  evidence. Resolved by re-anchoring the rule (retention keyed to the tests a task adds/exercises; a
+  prose-only task adds none → suite summary is the correct bounded form) + stating it explicitly in each
+  evidence block.
+- **LOW** (opus) — the tail/cap clause forward-referenced "any test the proof map will cite" — not
+  evaluable at per-task capture time (the proof map is a ship artifact). Re-anchored to the task's own
+  plan-named tests (builder-evaluable); mirrored in `subagent-loop.md`; forward-reference removed.
+
+Coherence check: PR-B's test-adding T-1 captured its `ok 108–112` lines; PR-A/PR-C add no tests and
+correctly summarize — the re-anchored rule justifies both. **R2 verification:** single model
+(`codex gpt-5.5`) over `532d137...HEAD` + scan → **PASS**, both resolved, 0 regressions/new. Suite 149
+green; `sdlc-check … --require verification-report` exit 0. Orchestrator **Approve**; **not merged**
+(parked).
