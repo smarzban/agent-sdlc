@@ -20,7 +20,7 @@ Linear, a doc, or the request itself, or a `## Plan` exists but has no gate verd
    `docs/specs/<feature>/<feature>.md` (root `specs/` in a repo that already uses it — the back-compat
    rule in getting-started; never split a repo across both locations), reverse of `linear-sync`'s
    mapping for the Linear case, stamped
-   with a provenance marker (`<!-- source: linear SMA-… · ingested <date> -->`). Carry each task's
+   with a provenance marker (`<!-- source: linear ENG-… · ingested <date> -->`). Carry each task's
    real `AC-N` if the source has one; otherwise mark it `AC: untraced` — never fabricate a criterion.
    Transcribe only what the source contains; do not invent tasks.
 3. **Resolve the green bar.** build cannot run without a concrete green bar (compile, test, lint,

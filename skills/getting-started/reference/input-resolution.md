@@ -13,7 +13,7 @@ never fabricate it.
 
 ## The resolution order (do in order, stop at the first that yields)
 
-1. **Explicit source** — a source the request named: a Linear ref (`SMA-328..348`, a project/
+1. **Explicit source** — a source the request named: a Linear ref (`ENG-328..348`, a project/
    milestone), a doc (path or paste), "from this prompt", or an existing repo artifact. Read it.
 2. **Canonical spec** — the stage's `##` section in `docs/specs/<feature>/<feature>.md` (or
    `docs/specs/overview.md` at project level; root `specs/` in a repo that already uses it — the
@@ -58,7 +58,7 @@ date, so a reader (and the gate, and the PR) can see it was ingested rather than
 
 ```
 ## Plan
-<!-- source: linear SMA-328..348 · ingested 2026-06-29 -->
+<!-- source: linear ENG-328..348 · ingested 2026-06-29 -->
 ```
 
 Use the real source identifier (`linear <ids>`, `doc <path>`, `prompt`) and an absolute date. A
@@ -105,11 +105,11 @@ the reviewer knows what was not vetted upstream.
 
 ## Worked example — `build` from a Linear plan
 
-The request: "build SMA-328..348 on this branch." No spec tree exists yet.
+The request: "build ENG-328..348 on this branch." No spec tree exists yet.
 
 1. **Resolve** — explicit source = the Linear issue set. Read the issues.
 2. **Materialize** — write `docs/specs/optimisations/optimisations.md` `## Plan` from the issues (reverse
-   `linear-sync` mapping), stamped `<!-- source: linear SMA-328..348 · ingested <date> -->`. Trace
+   `linear-sync` mapping), stamped `<!-- source: linear ENG-328..348 · ingested <date> -->`. Trace
    each task to a real `AC-N` if the source carries one; otherwise `AC: untraced`.
 3. **Gate inline** — run `gate` on the materialized plan; it writes `gate-report.md` with a
    mid-chain-entry coverage note for the untraced links. Proceed only on a clean verdict.

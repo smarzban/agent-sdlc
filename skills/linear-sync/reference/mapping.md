@@ -39,8 +39,8 @@ Each stage runs its action AFTER writing its `##` section; the document content 
 | `ship` | attach the PR: `save_issue` BY id with `links:[{url:"<pr-url>",title:"PR"}]` on the feature's issues; `save_status_update` (project, body "PR open: <pr-url>"); set the feature project state to "In Review". No merge transition — merge is out of scope for ship. |
 
 build and ship only **transition** entities the `plan` stage already created (milestones + `T-N`
-issues, recorded in `linear-ids.json`); they never create. The build-stage transitions previously
-deferred here now live in the `build` and `ship` skills.
+issues, recorded in `linear-ids.json`); they never create — their transition steps live in the
+`build` and `ship` skills.
 
 ## `linear-ids.json` shape
 
@@ -74,7 +74,7 @@ Ongoing or unplanned work mirrors Linear's native model rather than being forced
   milestone / state — never its title or description** (see the sync warning below).
 - A point release becomes a **release-milestone in the relevant feature project**, not a new project.
 
-Wiring GitHub↔Linear (so issues/PRs flow into Triage and PR magic-words like "Fixes SMA-123"
+Wiring GitHub↔Linear (so issues/PRs flow into Triage and PR magic-words like "Fixes ENG-123"
 auto-transition the linked issue) is a one-time Linear/GitHub workspace setup — outside these skills.
 **Beware the content sync it creates:** for a repo↔team Issues Sync, editing a synced issue's title
 or description in Linear **propagates back to the public GitHub issue** (independent of the
