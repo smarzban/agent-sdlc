@@ -82,8 +82,11 @@ marketplace (`.cursor-plugin/marketplace.json`), each listing this one plugin at
 
 ```text
 /plugin marketplace add smarzban/agent-sdlc
-/plugin install agent-sdlc@agent-sdlc
+/plugin install agent-sdlc
 ```
+
+(The explicit form `agent-sdlc@agent-sdlc` — `plugin@marketplace` — is only needed if another
+installed marketplace also offers a plugin named `agent-sdlc`.)
 
 Skills then trigger on their `description`, or invoke explicitly with the plugin namespace, e.g.
 `/agent-sdlc:idea` or `/agent-sdlc:writing-readmes`.
