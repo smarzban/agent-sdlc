@@ -1,7 +1,7 @@
 {
   "name": "review-gate",
-  "version": "1.7.0",
-  "description": "Multi-model code-review gate + whole-repo audit. An agent orchestrates holistic reviews across four models; a deterministic spine owns the block/pass verdict and the trust boundary — tool-detected facts (committed secrets, conflict markers) can't be silently dismissed.",
+  "version": "1.7.1",
+  "description": "MOVED — review-gate is now Empanel and ships from its own repo. Install the replacement with `/plugin marketplace add smarzban/empanel` then `/plugin install empanel@empanel` (skills: gate, repo-audit; they drive the `@empanel/cli` npm package — `npm i -g @empanel/cli@0`). This 1.7.1 release is a pointer only and the final review-gate release from this marketplace; installed 1.7.x copies keep working but receive no further updates here.",
   "author": { "name": "Saeed Marzban" },
-  "keywords": ["code-review", "pull-request", "merge-gate", "review-gate", "multi-model", "sign-off", "audit"]
+  "keywords": ["code-review", "pull-request", "merge-gate", "review-gate", "empanel", "multi-model", "sign-off", "audit"]
 }
