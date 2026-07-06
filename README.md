@@ -14,13 +14,10 @@ The bundle also ships three standalone documentation skills — `writing-readmes
 `writing-repo-docs`, and `writing-technical-docs` — for the downstream job of documenting what you
 build. They sit outside the pipeline spine and can be used on their own, on any repo.
 
-> **Looking for `review-gate`?** It's now **[Empanel](https://github.com/smarzban/empanel)** and
-> ships from its own repo: `/plugin marketplace add smarzban/empanel` then
-> `/plugin install empanel@empanel` (the skills drive the `@empanel/cli` npm package, which is
-> [live on npm](https://www.npmjs.com/package/@empanel/cli)). The empanel repo is private until its
-> 1.0.0 public flip, so the plugin install currently needs repo access — the CLI itself installs
-> for anyone. This marketplace no longer hosts the plugin; installed 1.7.x copies keep working but
-> receive no further updates here.
+> **Pairs with [Empanel](https://github.com/smarzban/empanel)** — a multi-model code-review gate
+> + whole-repo audit. `ship` hands the open PR to its gate skill (`/empanel:gate`) when installed,
+> and degrades to a portable reviewer subagent when it isn't. Empanel ships as its own plugin
+> marketplace plus the [`@empanel/cli`](https://www.npmjs.com/package/@empanel/cli) npm package.
 
 ## The idea
 
@@ -84,22 +81,18 @@ marketplace (`.cursor-plugin/marketplace.json`), each listing this one plugin at
 ### Claude Code
 
 ```text
-/plugin marketplace add smarzban/skills
+/plugin marketplace add smarzban/agent-sdlc
 /plugin install agent-sdlc@agent-sdlc
 ```
 
 Skills then trigger on their `description`, or invoke explicitly with the plugin namespace, e.g.
 `/agent-sdlc:idea` or `/agent-sdlc:writing-readmes`.
 
-Previously installed as `agent-sdlc@smarzban-skills` (the old two-plugin marketplace name)? Remove
-the old marketplace (`/plugin marketplace remove smarzban-skills`) and re-add as above — the name
-changed with the single-plugin restructure and there is no automatic migration.
-
 ### Cursor
 
 Settings → Plugins → **Import** under Team Marketplaces, paste the repo URL
-(`https://github.com/smarzban/skills`), review the parsed plugin, and enable it. Cursor tracks the
-default branch automatically. Skills auto-activate by context, or invoke them by name via `@` /
+(`https://github.com/smarzban/agent-sdlc`), review the parsed plugin, and enable it. Cursor tracks
+the default branch automatically. Skills auto-activate by context, or invoke them by name via `@` /
 slash.
 
 ### Any other agent
