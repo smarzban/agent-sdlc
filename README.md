@@ -45,7 +45,7 @@ reads instruction files.
 
 Then, in the repo you want to build in, state what you want — *"I want to add a feature: …"* —
 and the pipeline picks it up at `idea`, or ask `/agent-sdlc:getting-started` to route you.
-A run leaves a committed spec chain in `specs/<feature>/` and ends in a reviewed PR.
+A run leaves a committed spec chain in `docs/specs/<feature>/` and ends in a reviewed PR.
 Full walkthrough: [docs/quickstart.md](docs/quickstart.md).
 
 ## The idea
@@ -162,21 +162,23 @@ agent-sdlc/                          ← repo root = the plugin AND its marketpl
 │   ├── writing-repo-docs/           ← documentation skill (repo essentials) + reference/
 │   └── writing-technical-docs/      ← documentation skill (full internals) + reference/
 ├── docs/                            ← user + contributor documentation (see below)
-└── specs/                           ← this repo's own dogfood spec tree
+└── docs/specs/                      ← this repo's own dogfood spec tree (under docs/)
 ```
 
 A run produces, per feature:
 
 ```
-specs/<feature>/
+docs/specs/<feature>/
 ├── <feature>.md            ← ## Brief · ## Acceptance Criteria · ## Design · ## Tech Stack · ## Plan
 ├── gate-report.md          ← gate output (read-only)
 ├── build-report.md         ← build output (the resumable task ledger)
 └── verification-report.md  ← ship's AC → proof map (checker-verified pre-PR)
 ```
 
-plus, at project level, `specs/overview.md` (`## Overview` · `## Architecture` · `## Tech Stack`)
-and `specs/adr/` for decision records, and root-level `constitution.md` + `CONTEXT.md` (glossary).
+plus, at project level, `docs/specs/overview.md` (`## Overview` · `## Architecture` · `## Tech Stack`)
+and `docs/specs/adr/` for decision records, and root-level `constitution.md` + `CONTEXT.md` (glossary).
+(A repo that already has a spec tree at root `specs/` keeps using it — the back-compat rule in the
+getting-started skill; new spec trees are created at `docs/specs/`.)
 `build` then lands the code on a feature branch and `ship` opens the reviewed PR — neither edits the
 spec.
 
@@ -196,7 +198,7 @@ the Linear MCP isn't connected. Setup + mapping: [docs/usage/linear-sync.md](doc
   agent.
 - **Contribute to it** → [docs/development.md](docs/development.md) +
   [CONTRIBUTING.md](CONTRIBUTING.md).
-- **Understand the repo** → [docs/architecture.md](docs/architecture.md); `specs/` is the repo
+- **Understand the repo** → [docs/architecture.md](docs/architecture.md); `docs/specs/` is the repo
   building itself through its own pipeline.
 
 ## Contributing

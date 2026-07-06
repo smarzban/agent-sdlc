@@ -3,7 +3,7 @@
 > A full-SDLC pipeline for AI coding agents — idea to a reviewed pull request — packaged as a Claude Code + Cursor plugin, with a zero-dependency enforcement checker (sdlc-check) and three standalone documentation skills.
 
 The skills in `skills/<name>/SKILL.md` are the authoritative method; `docs/` is the user- and
-contributor-facing guide; `specs/` is the repo's own pipeline output (it builds itself through the
+contributor-facing guide; `docs/specs/` is the repo's own pipeline output (it builds itself through the
 pipeline it implements).
 
 ## Docs
@@ -23,5 +23,5 @@ pipeline it implements).
 
 ## Optional
 
-- [Project overview (living spec)](specs/overview.md): the pipeline applied to this repo itself.
+- [Project overview (living spec)](docs/specs/overview.md): the pipeline applied to this repo itself.
 - [Skill: getting-started](skills/getting-started/SKILL.md): the router + shared operating rules.

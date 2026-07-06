@@ -31,6 +31,6 @@ authoritative method.
 - [README](../README.md) — the front door.
 - [Development](development.md) — clone → run the checker tests → author a skill → release.
 - [Architecture](architecture.md) — the repo's shape in one page.
-- [`specs/`](../specs/) — this repo's own pipeline output: agent-sdlc builds itself through the
+- [`docs/specs/`](specs/) — this repo's own pipeline output: agent-sdlc builds itself through the
   pipeline it implements, and the spec chains are committed as evidence.
 - License: [Apache-2.0](../LICENSE).

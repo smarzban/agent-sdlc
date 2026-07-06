@@ -9,10 +9,10 @@ sectioned spec and it verifies the chain. Single zero-dependency ESM file
 
 ```bash
 # installed as a plugin — bin/ is on the Bash PATH, works from any directory
-sdlc-check specs/<feature>/<feature>.md
+sdlc-check docs/specs/<feature>/<feature>.md
 
 # from a checkout of this repo
-node checker/sdlc-check.mjs specs/<feature>/<feature>.md
+node checker/sdlc-check.mjs docs/specs/<feature>/<feature>.md
 ```
 
 The spec path is the one required argument. The ledger (`build-report.md`) and verification report
@@ -20,8 +20,8 @@ The spec path is the one required argument. The ledger (`build-report.md`) and v
 rules auto-scope to the artifacts that exist. To make absence itself a failure:
 
 ```bash
-sdlc-check specs/<feature>/<feature>.md --require ledger
-sdlc-check specs/<feature>/<feature>.md --require verification-report
+sdlc-check docs/specs/<feature>/<feature>.md --require ledger
+sdlc-check docs/specs/<feature>/<feature>.md --require verification-report
 ```
 
 (`ship`'s standard pre-PR invocation requires both — `--require ledger --require
@@ -61,7 +61,7 @@ Plus two shell-level findings: `artifact-parse` (an artifact that exists but can
 
 It verifies **consistency, not truth**: the spec, ledger, report, and git history agree with each
 other. Evidence is plain text checked by name-appearance
-([ADR-0001](../../specs/adr/ADR-0001-plain-text-evidence-contracts.md)); fabricated-but-consistent
+([ADR-0001](../specs/adr/ADR-0001-plain-text-evidence-contracts.md)); fabricated-but-consistent
 artifacts are out of scope — that's what the review gate and a human are for.
 
 One practical consequence of `ledger-vs-git`: merge a shipped feature **fast-forward,

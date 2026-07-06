@@ -35,7 +35,7 @@ or a mid-chain start when you already have criteria or a plan (see
 A run leaves a committed spec chain in your repo and ends in a reviewed PR:
 
 ```
-specs/<feature>/
+docs/specs/<feature>/
 ├── <feature>.md            ← the sectioned spec (Brief · AC · Design · Tech Stack · Plan)
 ├── gate-report.md          ← the pre-build readiness verdict
 ├── build-report.md         ← build's resumable task ledger

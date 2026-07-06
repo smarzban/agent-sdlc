@@ -14,7 +14,7 @@ node --test checker/*.test.mjs   # Node >= 22; expect 153 passing
 ```
 
 Before opening a PR, the suite must be green, and every shipped spec must still self-verify
-(`node checker/sdlc-check.mjs specs/<feature>/<feature>.md` → exit 0 — the loop command is in
+(`node checker/sdlc-check.mjs docs/specs/<feature>/<feature>.md` → exit 0 — the loop command is in
 [docs/development.md](docs/development.md)).
 
 ## Branch and merge flow
@@ -52,9 +52,9 @@ Conventional Commits with an area scope, as in the existing `git log`:
 ## Changes to the pipeline go through the pipeline
 
 This repo dogfoods itself: a non-trivial change to the pipeline is expected to ship as a spec
-chain in `specs/<feature>/` — gate-passed plan, test-first build with one green commit per task,
+chain in `docs/specs/<feature>/` — gate-passed plan, test-first build with one green commit per task,
 a reviewed PR. Small self-contained fixes can take the
-[light tier](docs/usage/light-tier.md). The committed chains in [`specs/`](specs/) show exactly
+[light tier](docs/usage/light-tier.md). The committed chains in [`docs/specs/`](docs/specs/) show exactly
 what that looks like.
 
 ## What review expects

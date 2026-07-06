@@ -58,19 +58,24 @@ each own and edit exactly one `##` section; `build` and `ship` never edit the sp
 /
 ├── constitution.md          ← standing principles, seeded by idea (project-wide)
 ├── CONTEXT.md               ← glossary (project-wide)
-└── specs/
-    ├── overview.md          ← project tier: ## Overview · ## Architecture · ## Tech Stack
-    ├── adr/                 ← decision records (ADR-NNNN-<slug>.md)
-    └── <feature>/
-        ├── <feature>.md     ← ## Brief · ## Acceptance Criteria · ## Design · ## Tech Stack · ## Plan
-        ├── gate-report.md   ← gate output (read-only)
-        ├── build-report.md  ← build's resumable task ledger + per-task green-bar evidence
-        └── verification-report.md ← ship's AC -> proof map (checker-verified pre-PR)
+└── docs/
+    └── specs/
+        ├── overview.md      ← project tier: ## Overview · ## Architecture · ## Tech Stack
+        ├── adr/             ← decision records (ADR-NNNN-<slug>.md)
+        └── <feature>/
+            ├── <feature>.md           ← ## Brief · ## Acceptance Criteria · ## Design · ## Tech Stack · ## Plan
+            ├── gate-report.md         ← gate output (read-only)
+            ├── build-report.md        ← build's resumable task ledger + per-task green-bar evidence
+            └── verification-report.md ← ship's AC -> proof map (checker-verified pre-PR)
 ```
 
+A repo that already has a spec tree at root `specs/` keeps using it — the back-compat rule in the
+getting-started skill: never split a repo across both locations, never auto-migrate; new spec
+trees are created at `docs/specs/`.
+
 **Spec lifecycle:** a shipped feature spec is an immutable snapshot (`ship` stamps a status header);
-`specs/overview.md` is the living project-tier document, updated as the project evolves. This
-repo's own [`specs/`](../../specs/) tree is a real example — every feature of the pipeline shipped
+`docs/specs/overview.md` is the living project-tier document, updated as the project evolves. This
+repo's own [`docs/specs/`](../specs/) tree is a real example — every feature of the pipeline shipped
 through the pipeline.
 
 ## Shared rules worth knowing

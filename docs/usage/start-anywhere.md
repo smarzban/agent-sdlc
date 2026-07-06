@@ -11,7 +11,7 @@ A stage resolves its input, in order, from:
 
 1. **An explicit source** you name — a prompt ("from this prompt"), a pasted or linked doc, a
    Linear issue set or project, an existing repo artifact.
-2. **The canonical spec** — the stage's `##` section in `specs/<feature>/<feature>.md` (the
+2. **The canonical spec** — the stage's `##` section in `docs/specs/<feature>/<feature>.md` (the
    default).
 3. **Ask / loop back** — if neither yields the input, the stage asks for it or routes to the stage
    that produces it. It never invents an input to clear its own gate.

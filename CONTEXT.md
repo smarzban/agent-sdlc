@@ -13,5 +13,5 @@ Canonical vocabulary for this repo's spec chain. Glossary only — no implementa
   passed, as opposed to a ledger assertion that it did; captured as a fenced command + output
   block in the build ledger.
 - **verification report** — the ship-written report file beside the spec
-  (`specs/<feature>/verification-report.md`) holding the AC → proof map; validated by
+  (`docs/specs/<feature>/verification-report.md`) holding the AC → proof map; validated by
   `sdlc-check`, copied into the PR body.

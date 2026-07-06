@@ -30,14 +30,14 @@ node --check checker/sdlc-check.mjs
 ## Run the checker
 
 ```bash
-node checker/sdlc-check.mjs specs/<feature>/<feature>.md
+node checker/sdlc-check.mjs docs/specs/<feature>/<feature>.md
 ```
 
 See [usage/sdlc-check.md](usage/sdlc-check.md) for flags and rules. The repo is self-verifying:
-every shipped feature spec in `specs/` passes its own check —
+every shipped feature spec in `docs/specs/` passes its own check —
 
 ```bash
-for d in specs/*/; do
+for d in docs/specs/*/; do
   f="$d$(basename "$d").md"
   [ -f "$f" ] && node checker/sdlc-check.mjs "$f"
 done
@@ -90,11 +90,11 @@ and add tests with the change.
 ## How this repo builds itself
 
 Changes to the pipeline go **through** the pipeline: a feature gets a spec chain in
-`specs/<feature>/` (spec → `gate-report.md` → `build-report.md` → `verification-report.md`),
+`docs/specs/<feature>/` (spec → `gate-report.md` → `build-report.md` → `verification-report.md`),
 is built one task per commit (`feat(T-N): …`), and ships as a reviewed PR. The committed chains
 double as worked examples — start with
-[`specs/enforcement-spine/`](../specs/enforcement-spine/) and the living
-[`specs/overview.md`](../specs/overview.md).
+[`docs/specs/enforcement-spine/`](specs/enforcement-spine/) and the living
+[`docs/specs/overview.md`](specs/overview.md).
 
 ## Releases
 

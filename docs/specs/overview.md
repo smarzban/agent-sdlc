@@ -4,7 +4,7 @@
 
 This repo is **agent-sdlc's own repo**: a full-SDLC pipeline for AI coding agents, packaged as a
 single plugin and served from the repo root as its own dual-tool marketplace (`agent-sdlc`, Claude
-Code + Cursor). This `specs/` tree applies agent-sdlc to itself: features of the pipeline are
+Code + Cursor). This `docs/specs/` tree applies agent-sdlc to itself: features of the pipeline are
 shaped, gated, and built through the pipeline they implement. Feature specs are immutable
 snapshots; this overview is the living project-tier document.
 
@@ -15,12 +15,13 @@ single-plugin restructure.
 
 ### Features
 
-Each `specs/<feature>/` chain below shipped through the pipeline itself (spec → gate → build →
+Each `docs/specs/<feature>/` chain below shipped through the pipeline itself (spec → gate → build →
 ship → reviewed PR); see the per-feature spec and reports for scope and evidence. Shipped:
 `enforcement-spine` (0.7.0, the `sdlc-check` checker + terminal AC verification) and its
 hardening/adoption successors (`checker-correctness`, `checker-semantics`, `build-gate-robustness`,
 `contract-visibility`, 0.8.0), `evidence-gated-techstack`, `plan-ac-contracts`,
-`harness-captured-evidence`, `adoption-quickwins` (0.10.0), and `diagnosability-pool` (0.10.1).
+`harness-captured-evidence`, `adoption-quickwins` (0.10.0), `diagnosability-pool` (0.10.1), and
+`spec-location-under-docs` (0.12.0, the canonical spec tree moves under `docs/`).
 
 ## Architecture
 
@@ -39,8 +40,9 @@ The repo's shape, as it exists:
 - **Cross-plugin contracts are invoke-if-present.** ship invokes the external Empanel gate
   (`/empanel:gate`; legacy name `/review-gate:review-gate` accepted) when present and announces a
   loud degraded fallback (a dispatched reviewer subagent) when absent — never a silent skip.
-- **Spec chains live in `specs/`** per the consolidated artifact model (one sectioned spec per
-  feature; process reports beside the spec, never inside it).
+- **Spec chains live in `docs/specs/`** per the consolidated artifact model (one sectioned spec per
+  feature; process reports beside the spec, never inside it); a repo that already has a root
+  `specs/` tree keeps it (the back-compat rule in getting-started).
 
 ## Tech Stack
 

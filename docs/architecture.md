@@ -1,7 +1,7 @@
 # Architecture
 
 The repo's shape in one page. The living project-tier record — kept current by the pipeline
-itself — is [`specs/overview.md`](../specs/overview.md); this page maps the territory.
+itself — is [`docs/specs/overview.md`](specs/overview.md); this page maps the territory.
 
 ## The map
 
@@ -12,7 +12,7 @@ agent-sdlc/                          ← repo root = the plugin AND its marketpl
 ├── skills/<name>/SKILL.md           ← the pipeline + doc skills (13), some with reference/ depth
 ├── checker/sdlc-check.mjs           ← the enforcement spine (zero-dep Node ESM) + its test suites
 ├── bin/sdlc-check                   ← on-PATH launcher resolving the checker from anywhere
-└── specs/                           ← the repo's own dogfood spec chains + living overview.md
+└── docs/specs/                      ← the repo's own dogfood spec chains + living overview.md
 ```
 
 ## The load-bearing ideas
@@ -30,8 +30,8 @@ agent-sdlc/                          ← repo root = the plugin AND its marketpl
   when present and announces a loud degraded fallback (a dispatched reviewer subagent) when not —
   never a silent skip. The checker follows the same rule when Node is absent.
 - **The spec tree is the memory.** Every feature of the pipeline shipped through the pipeline;
-  `specs/` holds the immutable per-feature chains and the living overview. The artifact model is
+  `docs/specs/` holds the immutable per-feature chains and the living overview. The artifact model is
   described in [usage/pipeline.md](usage/pipeline.md).
 
 Deeper internals (the checker's rule semantics, parser model, ADRs) live in the source and in
-[`specs/`](../specs/) — dedicated technical docs don't exist yet.
+[`docs/specs/`](specs/) — dedicated technical docs don't exist yet.
