@@ -10,3 +10,9 @@
 
 # Local agent context (private; not committed)
 CLAUDE.md
+
+# Gate-round scratch guard: new .review-gate/ / .empanel/ round artifacts are opt-in only
+# (`git add -f`) so a careless `git add -A` can't publish local review rounds. Already-committed
+# round records stay tracked — gitignore does not affect tracked files.
+.review-gate/
+.empanel/

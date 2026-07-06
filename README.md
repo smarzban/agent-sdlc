@@ -16,9 +16,11 @@ build. They sit outside the pipeline spine and can be used on their own, on any 
 
 > **Looking for `review-gate`?** It's now **[Empanel](https://github.com/smarzban/empanel)** and
 > ships from its own repo: `/plugin marketplace add smarzban/empanel` then
-> `/plugin install empanel@empanel` (the skills drive the `@empanel/cli` npm package). This
-> marketplace no longer hosts it; installed 1.7.x copies keep working but receive no further
-> updates here.
+> `/plugin install empanel@empanel` (the skills drive the `@empanel/cli` npm package, which is
+> [live on npm](https://www.npmjs.com/package/@empanel/cli)). The empanel repo is private until its
+> 1.0.0 public flip, so the plugin install currently needs repo access — the CLI itself installs
+> for anyone. This marketplace no longer hosts the plugin; installed 1.7.x copies keep working but
+> receive no further updates here.
 
 ## The idea
 
@@ -88,6 +90,10 @@ marketplace (`.cursor-plugin/marketplace.json`), each listing this one plugin at
 
 Skills then trigger on their `description`, or invoke explicitly with the plugin namespace, e.g.
 `/agent-sdlc:idea` or `/agent-sdlc:writing-readmes`.
+
+Previously installed as `agent-sdlc@smarzban-skills` (the old two-plugin marketplace name)? Remove
+the old marketplace (`/plugin marketplace remove smarzban-skills`) and re-add as above — the name
+changed with the single-plugin restructure and there is no automatic migration.
 
 ### Cursor
 
