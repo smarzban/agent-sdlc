@@ -1,7 +1,0 @@
-{
-  "verdict": "pass",
-  "blocking": [],
-  "dismissed": [],
-  "report": "# Review (0 clusters)",
-  "prComment": "## Review Gate — Round 2\n✅ **PASS** — no blocking findings.\n\nFindings: 0 total — 0 critical · 0 high · 0 medium · 0 low · 0 info.\n_Reviewed by:_ verify · models: codex:gpt-5.5\n\n### Progress since Round 1\n✅ Resolved (1): \\[correctness\\] Ledger evidence still records only summary counts — not present in this round's findings\n⏳ Still blocking (0)\n🆕 New / regressed (0)"
-}
