@@ -23,8 +23,8 @@ PR. (Test and deploy are later additions to the same chain.)
 | 6 | `build` | `/agent-sdlc:build` | agent | `## Plan`, `gate-report.md` | product code (a green branch) + `build-report.md` |
 | 7 | `ship` | `/agent-sdlc:ship` | agent | `build-report.md`, the spec | a reviewed PR (invokes the Empanel gate) |
 
-Feature-tier sections live in `specs/<feature>/<feature>.md`; project-tier sections (`## Overview`,
-`## Architecture`, `## Tech Stack`) live in `specs/overview.md`. Stages 1–5 each own and edit only
+Feature-tier sections live in `docs/specs/<feature>/<feature>.md`; project-tier sections (`## Overview`,
+`## Architecture`, `## Tech Stack`) live in `docs/specs/overview.md`. Stages 1–5 each own and edit only
 their own section; `build` writes product code + `build-report.md`, and `ship` opens the PR — neither
 edits the spec.
 
@@ -83,13 +83,13 @@ Stated once here; the stage skills reference them by name rather than restating.
 
 Decide the level the way `idea` does, and carry it through.
 
-- **Project** (clean repo, building a whole app): `idea` writes `specs/overview.md` `## Overview`
+- **Project** (clean repo, building a whole app): `idea` writes `docs/specs/overview.md` `## Overview`
   (incl. the feature list) and seeds `constitution.md` and `CONTEXT.md`. `architecture-design`
   writes the north-star `## Architecture`, and `techstack` the cross-cutting `## Tech Stack`, both
-  in `overview.md`. Each feature then runs the full chain in its own `specs/<feature>/<feature>.md`.
-- **Feature** (existing project, adding a piece): run the chain in `specs/<feature>/<feature>.md`,
+  in `overview.md`. Each feature then runs the full chain in its own `docs/specs/<feature>/<feature>.md`.
+- **Feature** (existing project, adding a piece): run the chain in `docs/specs/<feature>/<feature>.md`,
   fitting the existing `overview.md` architecture and stack, justifying any deviation with an ADR
-  in `specs/adr/`.
+  in `docs/specs/adr/`.
 
 ## Routing: light tier vs full chain (by size)
 
@@ -119,21 +119,28 @@ file, **no ephemeral mode**. The upgrade is always available; when unsure, upgra
 /
 ├── constitution.md          ← standing principles (project-wide)
 ├── CONTEXT.md               ← glossary (project-wide)
-└── specs/
-    ├── overview.md          ← project tier: ## Overview · ## Architecture · ## Tech Stack
-    ├── adr/                 ← decision records
-    │   └── ADR-NNNN-<slug>.md
-    └── <feature>/
-        ├── <feature>.md     ← feature tier: ## Brief · ## Acceptance Criteria · ## Design · ## Tech Stack · ## Plan
-        ├── gate-report.md   ← gate output (read-only)
-        └── build-report.md  ← build output (the resumable ledger)
+└── docs/
+    └── specs/
+        ├── overview.md      ← project tier: ## Overview · ## Architecture · ## Tech Stack
+        ├── adr/             ← decision records
+        │   └── ADR-NNNN-<slug>.md
+        └── <feature>/
+            ├── <feature>.md           ← feature tier: ## Brief · ## Acceptance Criteria · ## Design · ## Tech Stack · ## Plan
+            ├── gate-report.md         ← gate output (read-only)
+            ├── build-report.md        ← build output (the resumable ledger)
+            └── verification-report.md ← ship output (the AC → proof map)
 ```
+
+**Back-compat rule (the authoritative statement — the other skills reference it rather than
+restating it):** if the repo already has a spec tree at root `specs/`, KEEP using it — never split
+a repo across both locations, and never auto-migrate a user's repo. New spec trees are created at
+`docs/specs/`. Root-level `constitution.md` and `CONTEXT.md` stay at the repo root either way.
 
 ### Spec lifecycle
 
-A **feature spec** (`specs/<feature>/<feature>.md`) is an **immutable snapshot** — once shipped it is
+A **feature spec** (`docs/specs/<feature>/<feature>.md`) is an **immutable snapshot** — once shipped it is
 not edited; `ship` stamps a one-line **status header** at the top (status · version · date) recording
-what was built. `specs/overview.md` is **living** — its project-tier `## Overview` · `## Architecture`
+what was built. `docs/specs/overview.md` is **living** — its project-tier `## Overview` · `## Architecture`
 · `## Tech Stack` are updated as the project evolves. Each feature's **design stage owns updating
 `## Architecture`** (in `overview.md`) on a material change: a new feature that reshapes the north-star
 updates the living architecture there, never by rewriting a shipped feature spec. This matters more

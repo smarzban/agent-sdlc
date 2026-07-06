@@ -24,7 +24,7 @@ below); the full chain is never wrong, only sometimes heavier than needed.
 ## The compressed pass
 
 One short authoring pass writes three sections into the SAME sectioned spec file
-(`specs/<feature>/<feature>.md`) — just fewer and shorter sections:
+(`docs/specs/<feature>/<feature>.md`) — just fewer and shorter sections:
 
 - **`## Brief`** — one paragraph: the problem and the scope of the small change.
 - **`## Acceptance Criteria`** — a handful of `AC-N`, SAME grammar and SAME verification types

@@ -15,8 +15,9 @@ never fabricate it.
 
 1. **Explicit source** — a source the request named: a Linear ref (`SMA-328..348`, a project/
    milestone), a doc (path or paste), "from this prompt", or an existing repo artifact. Read it.
-2. **Canonical spec** — the stage's `##` section in `specs/<feature>/<feature>.md` (or
-   `specs/overview.md` at project level). This is the default when no explicit source is given.
+2. **Canonical spec** — the stage's `##` section in `docs/specs/<feature>/<feature>.md` (or
+   `docs/specs/overview.md` at project level; root `specs/` in a repo that already uses it — the
+   back-compat rule in the getting-started SKILL). This is the default when no explicit source is given.
 3. **Ask / loop back** — if neither yields the input, ask for it or route to the stage that produces
    it. **Never invent the input to clear your own gate.**
 
@@ -34,8 +35,8 @@ section first, then run.** The stage proceeds exactly as if a human had authored
   `build-report.md` + `git log` over memory). An input held only in context satisfies neither — it
   vanishes on compaction and leaves the gate nothing to walk. Materializing is therefore **forced,
   not optional**: there is no ephemeral mode that keeps the guarantees.
-- **Where.** Into the committed spec tree — `specs/<feature>/<feature>.md` (feature) or
-  `specs/overview.md` (project). The spec files that appear are a feature, not litter: a durable,
+- **Where.** Into the committed spec tree — `docs/specs/<feature>/<feature>.md` (feature) or
+  `docs/specs/overview.md` (project). The spec files that appear are a feature, not litter: a durable,
   reviewable record of what was built and where it came from, and the thing `ship` links from the PR.
 - **Idempotent.** Re-running reads the now-materialized section; it does not re-ingest the source or
   duplicate the section. Materialization writes once and is safe to repeat.
@@ -102,10 +103,10 @@ the reviewer knows what was not vetted upstream.
 
 ## Worked example — `build` from a Linear plan
 
-The request: "build SMA-328..348 on this branch." No `specs/` tree exists.
+The request: "build SMA-328..348 on this branch." No spec tree exists yet.
 
 1. **Resolve** — explicit source = the Linear issue set. Read the issues.
-2. **Materialize** — write `specs/optimisations/optimisations.md` `## Plan` from the issues (reverse
+2. **Materialize** — write `docs/specs/optimisations/optimisations.md` `## Plan` from the issues (reverse
    `linear-sync` mapping), stamped `<!-- source: linear SMA-328..348 · ingested <date> -->`. Trace
    each task to a real `AC-N` if the source carries one; otherwise `AC: untraced`.
 3. **Gate inline** — run `gate` on the materialized plan; it writes `gate-report.md` with a
