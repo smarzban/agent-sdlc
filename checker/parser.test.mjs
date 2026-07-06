@@ -8,39 +8,39 @@ import { parseSpec, parseLedger, parseVerificationReport } from './sdlc-check.mj
 // --- Typed parse failure: never a throw, never an empty-model pass ---
 
 test('missing spec content (undefined) fails cleanly, naming the file and the problem', () => {
-  const result = parseSpec(undefined, 'specs/x/x.md');
+  const result = parseSpec(undefined, 'docs/specs/x/x.md');
   assert.equal(result.ok, false);
-  assert.equal(result.error.file, 'specs/x/x.md');
+  assert.equal(result.error.file, 'docs/specs/x/x.md');
   assert.match(result.error.problem, /missing|empty/i);
 });
 
 test('null spec content fails cleanly', () => {
-  const result = parseSpec(null, 'specs/x/x.md');
+  const result = parseSpec(null, 'docs/specs/x/x.md');
   assert.equal(result.ok, false);
-  assert.equal(result.error.file, 'specs/x/x.md');
+  assert.equal(result.error.file, 'docs/specs/x/x.md');
 });
 
 test('non-string spec content fails cleanly (never throws)', () => {
-  const result = parseSpec(42, 'specs/x/x.md');
+  const result = parseSpec(42, 'docs/specs/x/x.md');
   assert.equal(result.ok, false);
-  assert.equal(result.error.file, 'specs/x/x.md');
+  assert.equal(result.error.file, 'docs/specs/x/x.md');
 });
 
 test('empty string spec content fails cleanly', () => {
-  const result = parseSpec('', 'specs/x/x.md');
+  const result = parseSpec('', 'docs/specs/x/x.md');
   assert.equal(result.ok, false);
   assert.match(result.error.problem, /missing|empty/i);
 });
 
 test('whitespace-only spec content fails cleanly', () => {
-  const result = parseSpec('   \n  \n', 'specs/x/x.md');
+  const result = parseSpec('   \n  \n', 'docs/specs/x/x.md');
   assert.equal(result.ok, false);
 });
 
 test('unparseable content (no "##" sections at all) fails cleanly, never an empty-model pass', () => {
-  const result = parseSpec('just some prose with no headings at all', 'specs/x/x.md');
+  const result = parseSpec('just some prose with no headings at all', 'docs/specs/x/x.md');
   assert.equal(result.ok, false);
-  assert.equal(result.error.file, 'specs/x/x.md');
+  assert.equal(result.error.file, 'docs/specs/x/x.md');
   assert.match(result.error.problem, /section/i);
 });
 
@@ -440,9 +440,9 @@ test('a task with a real AC reference carries no untraced marker', () => {
 // --- Ledger parsing: task table + green-bar evidence blocks (T-3) ---
 
 test('missing ledger content fails cleanly, naming the file and the problem', () => {
-  const result = parseLedger(undefined, 'specs/x/build-report.md');
+  const result = parseLedger(undefined, 'docs/specs/x/build-report.md');
   assert.equal(result.ok, false);
-  assert.equal(result.error.file, 'specs/x/build-report.md');
+  assert.equal(result.error.file, 'docs/specs/x/build-report.md');
   assert.match(result.error.problem, /missing|empty/i);
 });
 

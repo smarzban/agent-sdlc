@@ -40,10 +40,10 @@ function treeHash(dir) {
   return execFileSync('git', ['write-tree'], { cwd: dir }).toString().trim();
 }
 
-// Writes the spec (+ optional ledger/report) under <dir>/specs/enforcement-spine/ — the real
+// Writes the spec (+ optional ledger/report) under <dir>/docs/specs/enforcement-spine/ — the real
 // artifact layout (siblings of the spec file) — and returns the spec's absolute path.
 function writeSpecTree(dir, { spec, ledger, report }) {
-  const specDir = path.join(dir, 'specs', 'enforcement-spine');
+  const specDir = path.join(dir, 'docs', 'specs', 'enforcement-spine');
   mkdirSync(specDir, { recursive: true });
   const specPath = path.join(specDir, 'enforcement-spine.md');
   writeFileSync(specPath, spec);
