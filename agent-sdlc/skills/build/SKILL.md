@@ -111,7 +111,10 @@ branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
       deferred. This is the write side the checker's evidence-presence (AC-5) and
       name-appearance-linkage (AC-14) checks read: a test-backed proof-map row's cited test
       identifier must literally appear in this text (ADR-0001) — so the block must record the
-      per-test names, not a summary count that names no test.
+      per-test names, not a summary count that names no test. **Note the verification form** beside
+      the evidence — the exact command, its directly-read exit code, and the machine-reporter counts
+      (per *Reading the green bar* above) — so the record shows the bar was read correctly, not merely
+      that something was run.
    g. If Linear sync is enabled in `.agent-sdlc/config.json`, transition `T-N`'s issue via the
       `linear-sync` skill.
 
@@ -139,6 +142,33 @@ The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and le
 [reference/subagent-loop.md](reference/subagent-loop.md). The disciplines the subagents follow are in
 [reference/tdd.md](reference/tdd.md), [reference/source-driven.md](reference/source-driven.md),
 [reference/simplicity.md](reference/simplicity.md), and [reference/debugging.md](reference/debugging.md).
+
+## Reading the green bar (how you run it, not just when)
+
+The bar only means something if you read it correctly — a green bar *misread* is worse than a red
+one, because it ships. Every green-bar run in this loop — the baseline (step 2), each per-task
+verification (step 4d), the in-isolation check (step 4e), and ship's re-verify — obeys three rules:
+
+- **Read the exit code directly, never through a pipe.** `cmd | filter; echo $?` reports the *last*
+  pipeline stage's exit (the pager's, the `grep`'s, the `head`'s), not `cmd`'s — so a command that
+  failed reads as `0` and a red bar passes as green. Read the unpiped command's own status: capture
+  first and read after (`cmd > out.txt 2>&1; rc=$?`, then filter `out.txt`), or set
+  `set -o pipefail` / inspect `${PIPESTATUS[0]}` explicitly. This applies to the checker too —
+  `sdlc-check … | head` and then `$?` is the classic false green.
+- **Take the suite verdict from a machine-readable reporter, not a human summary.** Read the runner's
+  structured signal — its **exit code**, `node --test`'s `# fail N` line, vitest's
+  `--reporter=json` → `numFailedTests` — never a scraped human-formatted "N failed" line. When the
+  human reporter and the machine reporter **disagree** (a worker/spawn-contention flake shows failures
+  the machine reporter counts as zero), you **investigate via the machine reporter** — you never
+  explain the discrepancy away as "probably a flake," and you never normalize "some failures are
+  flake" into shipping a real red.
+- **Record the verification form in the ledger.** The captured evidence notes *how* the bar was read
+  — the exact command, its directly-read exit code, and the machine-reporter counts — so a later
+  reader (and the checker) can tell a real green from a misread one, not just that something was run.
+
+These are not extra steps; they are how the runs the loop already prescribes must be read. A bar read
+through a pipe, or trusted from a human summary over the machine one, is the exact false green this
+discipline exists to stop.
 
 ## Principles
 
@@ -168,6 +198,11 @@ The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and le
   post-review run, never a transcription of the subagent's reported count: a subagent's self-report
   is not evidence (trust-the-subagent), and a transcribed summary loses the per-test names AC-14
   needs (summary-only degradation). A task marked done with no evidence block is not done.
+- **Read the bar, don't glance at it.** A misread green bar is worse than a red one — it ships. Read
+  exit codes straight from the command (never through a pipe that hands you the pager's `$?`), take
+  suite verdicts from a machine-readable reporter (not a scraped human summary), and investigate any
+  human/machine reporter discrepancy via the machine one — never wave it off as "probably a flake."
+  See *Reading the green bar* above.
 - **Corroborate at resume and at hand-off.** The checker is a second, mechanical witness to the
   ledger/trace/commits so far — run it before continuing after a break and again before ship. A
   nonzero exit or a crash is a failed check, not noise.
@@ -189,6 +224,8 @@ The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and le
 | "`sdlc-check` failed but the task looks fine, proceed anyway." | A failed checker run is a failed check — stop-and-ask. Proceeding needs an explicit, recorded human override. |
 | "I'll add the evidence block later, once more tasks land." | Evidence is captured from the first task, never deferred — a gap left for later is a hole the checker (AC-5/AC-14) will find. |
 | "The subagent already ran the tests and reported them green — I'll record its count." | A subagent's self-report is not evidence. The conductor runs the declared command itself and records that run's actual per-test output — a false or summarized count is exactly the hole this closes. |
+| "`sdlc-check … \| head` printed nothing scary and `$?` was 0 — green." | `$?` after a pipe is the pager's exit, not the checker's. Read the command's own exit code — capture to a file first, or use `pipefail`/`${PIPESTATUS[0]}`. A pipe is how a red bar passes as green. |
+| "The human reporter shows a couple of failures — probably a flake, ship it." | Investigate via the machine reporter (exit code, `# fail N`, `--reporter=json` `numFailedTests`), never explain a discrepancy away. Normalizing "some failures are flake" is how a real red ships. |
 | "The baseline is red because the target files don't exist yet — stop." | Absence of the declared paths is vacuous green, not red — greenfield has nothing to fail. Proceed; the bar binds once the paths exist. |
 | "The baseline is red, must be my code." | First check the command itself ran — a malformed green-bar command is a techstack declaration bug, not red code; route it there. |
 | "The implementer agent type isn't available — I'll swap in a stand-in whenever I hit a dispatch." | Per-dispatch rediscovery is improvisation. Resolve the roster once at build start, announce the substitution up front, and record it in the ledger. |
@@ -211,6 +248,11 @@ The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and le
 - A task marked done with no captured green-bar evidence block.
 - A green-bar evidence block that is a transcribed subagent summary or a bare `# pass N` count
   rather than the conductor's own captured per-test run.
+- A green bar whose exit code was read through a pipe (`cmd | filter; $?`) — the status was the
+  pipe's last stage, not the command's — or a suite verdict scraped from a human summary instead of a
+  machine-readable reporter, or a reporter discrepancy explained away as flake rather than
+  investigated via the machine one, or a captured evidence block that doesn't note the verification
+  form (the command, its directly-read exit code, the reporter counts).
 - Proceeded to the next task at resume, or to ship at build-complete, while `sdlc-check` failed with
   no recorded override.
 - The checker silently skipped when `node` was absent, instead of an announced degraded fallback.

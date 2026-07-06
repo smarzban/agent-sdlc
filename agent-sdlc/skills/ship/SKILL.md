@@ -29,8 +29,11 @@ it stops and asks before changing anything — a PR is an outward artifact.
 1. **Precondition** a green build-finished branch with a clean working tree — `build-report.md`
    all-done, or (no ledger, a branch built outside the pipeline) verify the branch directly. A task
    in-progress or blocked → stop → build.
-2. **Verify** run the full suite fresh and read the output (verification-before-completion). Red →
-   stop; do not push a red branch.
+2. **Verify** run the full suite fresh and read the output (verification-before-completion) — reading
+   the bar the way `build` prescribes (build's *Reading the green bar* discipline): the exit code
+   straight from the command, never through a pipe that hands you the pager's `$?`, and the suite
+   verdict from a machine-readable reporter, not a scraped human summary. Red → stop; do not push a
+   red branch.
 3. **Verify criteria** build the AC → proof map, write `specs/<feature>/verification-report.md`, then
    **invoke the checker** (pre-PR invocation point, AC-15) with the report required:
    `sdlc-check specs/<feature>/<feature>.md --require ledger --require verification-report`. Runtime
