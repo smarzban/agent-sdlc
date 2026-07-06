@@ -1,0 +1,82 @@
+{
+  "verdict": "block",
+  "blocking": [
+    {
+      "key": "agent-sdlc/skills/gate/SKILL.md::55::gate-checks-probe-evidence-outside-its-declared-read-set",
+      "representative": {
+        "title": "[correctness] Gate checks probe evidence outside its declared read set",
+        "severity": "medium",
+        "file": "agent-sdlc/skills/gate/SKILL.md",
+        "line": 55,
+        "area": "correctness",
+        "rationale": "The gate now checks a `verified-by-probe` tag plus the kept output's presence and shape, but its hard gate/checklist only declares reading spec sections, overview, constitution, and CONTEXT. Without adding referenced probe-output artifacts to the read boundary and defining their minimum shape, the new check is underspecified and can be skipped or applied inconsistently.",
+        "suggestion": "Add referenced probe-output artifacts to the gate's read-only inputs and define the minimal acceptable evidence shape the gate must verify.",
+        "confidence": "high",
+        "source": "model"
+      },
+      "members": [
+        {
+          "reviewer": "holistic",
+          "model": "codex:gpt-5.5",
+          "finding": {
+            "title": "[correctness] Gate checks probe evidence outside its declared read set",
+            "severity": "medium",
+            "file": "agent-sdlc/skills/gate/SKILL.md",
+            "line": 55,
+            "area": "correctness",
+            "rationale": "The gate now checks a `verified-by-probe` tag plus the kept output's presence and shape, but its hard gate/checklist only declares reading spec sections, overview, constitution, and CONTEXT. Without adding referenced probe-output artifacts to the read boundary and defining their minimum shape, the new check is underspecified and can be skipped or applied inconsistently.",
+            "suggestion": "Add referenced probe-output artifacts to the gate's read-only inputs and define the minimal acceptable evidence shape the gate must verify.",
+            "confidence": "high",
+            "source": "model"
+          }
+        }
+      ],
+      "agreement": {
+        "count": 1,
+        "total": 2
+      },
+      "severity": "medium",
+      "contested": true
+    },
+    {
+      "key": "agent-sdlc/skills/techstack/SKILL.md::65::probe-requirement-conflicts-with-techstack-write-boundary",
+      "representative": {
+        "title": "[correctness] Probe requirement conflicts with techstack write boundary",
+        "severity": "medium",
+        "file": "agent-sdlc/skills/techstack/SKILL.md",
+        "line": 65,
+        "area": "correctness",
+        "rationale": "The new mandatory probe step requires writing a minimal script and keeping probe output, but the techstack hard gate still says its only output is the Tech Stack section and that it must not write code. An agent following the hard gate must either skip `verified-by-probe` or violate the stage boundary.",
+        "suggestion": "Amend the hard gate/output contract to explicitly allow only throwaway spike files plus durable kept probe-output artifacts, forbid product code/manifest mutation, and define where those retained outputs live.",
+        "confidence": "high",
+        "source": "model"
+      },
+      "members": [
+        {
+          "reviewer": "holistic",
+          "model": "codex:gpt-5.5",
+          "finding": {
+            "title": "[correctness] Probe requirement conflicts with techstack write boundary",
+            "severity": "medium",
+            "file": "agent-sdlc/skills/techstack/SKILL.md",
+            "line": 65,
+            "area": "correctness",
+            "rationale": "The new mandatory probe step requires writing a minimal script and keeping probe output, but the techstack hard gate still says its only output is the Tech Stack section and that it must not write code. An agent following the hard gate must either skip `verified-by-probe` or violate the stage boundary.",
+            "suggestion": "Amend the hard gate/output contract to explicitly allow only throwaway spike files plus durable kept probe-output artifacts, forbid product code/manifest mutation, and define where those retained outputs live.",
+            "confidence": "high",
+            "source": "model"
+          }
+        }
+      ],
+      "agreement": {
+        "count": 1,
+        "total": 2
+      },
+      "severity": "medium",
+      "contested": true
+    }
+  ],
+  "dismissed": [],
+  "report": "# Review (2 clusters)\n- 🟠 **[MEDIUM]** \\[correctness\\] Gate checks probe evidence outside its declared read set — `agent-sdlc/skills/gate/SKILL.md:55` · 1/2 models · _by:_ holistic _(correctness)_\n  The gate now checks a \\`verified-by-probe\\` tag plus the kept output's presence and shape, but its hard gate/checklist only declares reading spec sections, overview, constitution, and CONTEXT. Without adding referenced probe-output artifacts to the read boundary and defining their minimum shape, the new check is underspecified and can be skipped or applied inconsistently.\n  _Fix:_ Add referenced probe-output artifacts to the gate's read-only inputs and define the minimal acceptable evidence shape the gate must verify.\n- 🟠 **[MEDIUM]** \\[correctness\\] Probe requirement conflicts with techstack write boundary — `agent-sdlc/skills/techstack/SKILL.md:65` · 1/2 models · _by:_ holistic _(correctness)_\n  The new mandatory probe step requires writing a minimal script and keeping probe output, but the techstack hard gate still says its only output is the Tech Stack section and that it must not write code. An agent following the hard gate must either skip \\`verified-by-probe\\` or violate the stage boundary.\n  _Fix:_ Amend the hard gate/output contract to explicitly allow only throwaway spike files plus durable kept probe-output artifacts, forbid product code/manifest mutation, and define where those retained outputs live.",
+  "prComment": "## Review Gate — Round 1\n🚫 **BLOCK** — 2 blocking finding(s) must be resolved or justified.\n\nFindings: 2 total — 0 critical · 0 high · 2 medium · 0 low · 0 info.\n_Reviewed by:_ holistic + lens-spec · models: codex:gpt-5.5, claude:claude-opus-4-8\n\n### Must fix\n- 🟠 **[MEDIUM]** \\[correctness\\] Gate checks probe evidence outside its declared read set — `agent-sdlc/skills/gate/SKILL.md:55` · 1/2 models · _by:_ holistic _(correctness)_\n  The gate now checks a \\`verified-by-probe\\` tag plus the kept output's presence and shape, but its hard gate/checklist only declares reading spec sections, overview, constitution, and CONTEXT. Without adding referenced probe-output artifacts to the read boundary and defining their minimum shape, the new check is underspecified and can be skipped or applied inconsistently.\n  _Fix:_ Add referenced probe-output artifacts to the gate's read-only inputs and define the minimal acceptable evidence shape the gate must verify.\n- 🟠 **[MEDIUM]** \\[correctness\\] Probe requirement conflicts with techstack write boundary — `agent-sdlc/skills/techstack/SKILL.md:65` · 1/2 models · _by:_ holistic _(correctness)_\n  The new mandatory probe step requires writing a minimal script and keeping probe output, but the techstack hard gate still says its only output is the Tech Stack section and that it must not write code. An agent following the hard gate must either skip \\`verified-by-probe\\` or violate the stage boundary.\n  _Fix:_ Amend the hard gate/output contract to explicitly allow only throwaway spike files plus durable kept probe-output artifacts, forbid product code/manifest mutation, and define where those retained outputs live."
+}

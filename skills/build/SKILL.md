@@ -46,7 +46,7 @@ branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
    - **nonzero exit** → **STOP** (as today) — but read the command's output and label *which* kind,
      because the label routes the fix:
      - **unrunnable command** — the declared command is malformed / bad-form (e.g. the enforcement-spine
-       `node --test agent-sdlc/checker/` bare-directory invocation): the failure is about the command's
+       `node --test checker/` bare-directory invocation): the failure is about the command's
        *form*, not the code. This is a **green-bar DECLARATION defect** — STOP, show the command's
        **actual output**, and route the fix back to **`techstack`** (the green-bar owner), not a
        misleading "the repo is red" halt. Record it in `build-report.md`.

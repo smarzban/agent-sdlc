@@ -39,7 +39,7 @@ the code. It is **not** a scope or acceptance-criteria change: that escalates (s
    — `source: … · ingested <date>`, the same shape every ingest marker uses). This mid-`## Plan` stamp
    is **documentary / human-facing provenance**, not a machine-validated gate: the checker's
    provenance-marker rule validates only a section's **first** body line (`extractProvenanceMarkers` in
-   `agent-sdlc/checker/sdlc-check.mjs`), so a marker sitting mid-section is not checked at all. Trace
+   `checker/sdlc-check.mjs`), so a marker sitting mid-section is not checked at all. Trace
    integrity is enforced by the trace + coverage rules plus the inline gate (step 4), never by this
    stamp — write it for the human reader, don't lean on it as an enforcement point. Handle ids so the
    trace stays walkable — a **superseded task is marked, not deleted** (its id stays, annotated

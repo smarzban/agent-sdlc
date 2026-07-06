@@ -49,7 +49,7 @@ the PR body** (AC-16), not merely stated — see the PR body section below. Runt
 **announced degraded fallback** line — never a silent skip.
 
 `sdlc-check` is the plugin's bundled launcher (agent-sdlc adds its `bin/` to PATH on install, same as
-review-gate) — call it by name, never a cwd-relative `node agent-sdlc/checker/…` path, which does not
+review-gate) — call it by name, never a cwd-relative `node checker/sdlc-check.mjs …` path, which does not
 exist in a user's own repo and would fail-closed the whole pipeline.
 
 **No-ledger path** (a branch built outside the pipeline — the HARD-GATE's alternate precondition):

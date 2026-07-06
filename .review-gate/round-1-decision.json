@@ -1,0 +1,553 @@
+{
+  "verdict": "block",
+  "blocking": [
+    {
+      "key": "agent-sdlc/checker/sdlc-check.mjs::433::missing-component-names-are-not-reported-as-dangling-trace-references",
+      "representative": {
+        "title": "[correctness] Missing component names are not reported as dangling trace references",
+        "severity": "high",
+        "file": "agent-sdlc/checker/sdlc-check.mjs",
+        "line": 433,
+        "area": "correctness",
+        "rationale": "AC-1 requires a task citing a nonexistent component to fail, but component-name references are only added when they resolve to an existing component. A task with `*Component:* MissingWidget.` produces no ref at all, so trace integrity has nothing to report.",
+        "suggestion": "Preserve unresolved non-empty component-field values as dangling component references, or add a dedicated component-reference validation rule that fails and names the unresolved component.",
+        "confidence": "high",
+        "source": "model"
+      },
+      "members": [
+        {
+          "reviewer": "lens-spec",
+          "model": "codex:gpt-5.5",
+          "finding": {
+            "title": "[correctness] Missing component names are not reported as dangling trace references",
+            "severity": "high",
+            "file": "agent-sdlc/checker/sdlc-check.mjs",
+            "line": 433,
+            "area": "correctness",
+            "rationale": "AC-1 requires a task citing a nonexistent component to fail, but component-name references are only added when they resolve to an existing component. A task with `*Component:* MissingWidget.` produces no ref at all, so trace integrity has nothing to report.",
+            "suggestion": "Preserve unresolved non-empty component-field values as dangling component references, or add a dedicated component-reference validation rule that fails and names the unresolved component.",
+            "confidence": "high",
+            "source": "model"
+          }
+        }
+      ],
+      "agreement": {
+        "count": 1,
+        "total": 4
+      },
+      "severity": "high",
+      "contested": true
+    },
+    {
+      "key": "agent-sdlc/skills/build/SKILL.md::44::mandated-checker-path-is-repo-relative-and-won-t-resolve-for-installed-plugin-users-hard-blocking-gate-build-ship",
+      "representative": {
+        "title": "[correctness] Mandated checker path is repo-relative and won't resolve for installed-plugin users, hard-blocking gate/build/ship",
+        "severity": "high",
+        "file": "agent-sdlc/skills/build/SKILL.md",
+        "line": 44,
+        "area": "correctness",
+        "rationale": "gate/build/ship now MANDATE `node agent-sdlc/checker/sdlc-check.mjs specs/<feature>/<feature>.md ...` with a path relative to cwd, but agent-sdlc is a marketplace plugin whose files live under the plugin install dir, not the user's project. When a user runs `/agent-sdlc:build` in their own repo, `agent-sdlc/checker/sdlc-check.mjs` does not exist relative to cwd, `node` exits nonzero (module not found), and the skills' own fail-closed contract treats a nonzero/crashing checker as a failed check → stop-and-ask (build/ship) / blocked verdict (gate). The degraded-fallback path only covers `node` being ABSENT, so it does not rescue this. Net effect: the whole pipeline is blocked for every non-dogfooding user once these skills ship. (The spec path in the same command is correctly user-cwd-relative — the two paths assume different roots.)",
+        "suggestion": "Resolve the checker via the plugin root, not cwd — e.g. `node \"${CLAUDE_PLUGIN_ROOT}/checker/sdlc-check.mjs\" specs/<feature>/<feature>.md ...`, or ship the checker as a PATH `bin` the way review-gate does (package.json `bin`). Update all invocation sites (build/SKILL.md, build/reference/subagent-loop.md, gate/SKILL.md, ship/SKILL.md, ship/reference/finishing.md) consistently.",
+        "confidence": "high",
+        "source": "model"
+      },
+      "members": [
+        {
+          "reviewer": "holistic",
+          "model": "claude:claude-opus-4-8",
+          "finding": {
+            "title": "[correctness] Mandated checker path is repo-relative and won't resolve for installed-plugin users, hard-blocking gate/build/ship",
+            "severity": "high",
+            "file": "agent-sdlc/skills/build/SKILL.md",
+            "line": 44,
+            "area": "correctness",
+            "rationale": "gate/build/ship now MANDATE `node agent-sdlc/checker/sdlc-check.mjs specs/<feature>/<feature>.md ...` with a path relative to cwd, but agent-sdlc is a marketplace plugin whose files live under the plugin install dir, not the user's project. When a user runs `/agent-sdlc:build` in their own repo, `agent-sdlc/checker/sdlc-check.mjs` does not exist relative to cwd, `node` exits nonzero (module not found), and the skills' own fail-closed contract treats a nonzero/crashing checker as a failed check → stop-and-ask (build/ship) / blocked verdict (gate). The degraded-fallback path only covers `node` being ABSENT, so it does not rescue this. Net effect: the whole pipeline is blocked for every non-dogfooding user once these skills ship. (The spec path in the same command is correctly user-cwd-relative — the two paths assume different roots.)",
+            "suggestion": "Resolve the checker via the plugin root, not cwd — e.g. `node \"${CLAUDE_PLUGIN_ROOT}/checker/sdlc-check.mjs\" specs/<feature>/<feature>.md ...`, or ship the checker as a PATH `bin` the way review-gate does (package.json `bin`). Update all invocation sites (build/SKILL.md, build/reference/subagent-loop.md, gate/SKILL.md, ship/SKILL.md, ship/reference/finishing.md) consistently.",
+            "confidence": "high",
+            "source": "model"
+          }
+        },
+        {
+          "reviewer": "lens-spec",
+          "model": "codex:gpt-5.5",
+          "finding": {
+            "title": "[correctness] Gate and build overrides are not required in the PR body",
+            "severity": "medium",
+            "file": "agent-sdlc/skills/build/SKILL.md",
+            "line": 48,
+            "area": "correctness",
+            "rationale": "AC-16 requires any proceed-past-failure override to be recorded in the PR body, but build records checker overrides only in `build-report.md` and gate similarly records them only in `gate-report.md`. Those stages can proceed after an override without mandating that ship publishes the override in the PR body.",
+            "suggestion": "Require ship to copy any gate/build checker-failure overrides into the PR body's verification section, or require gate/build override records to explicitly be PR-body-bound at ship.",
+            "confidence": "med",
+            "source": "model"
+          }
+        }
+      ],
+      "agreement": {
+        "count": 2,
+        "total": 4
+      },
+      "severity": "high",
+      "contested": true
+    },
+    {
+      "key": "agent-sdlc/checker/rules.test.mjs::42::ac-1-lacks-a-nonexistent-component-name-test",
+      "representative": {
+        "title": "[test-coverage] AC-1 lacks a nonexistent component-name test",
+        "severity": "medium",
+        "file": "agent-sdlc/checker/rules.test.mjs",
+        "line": 42,
+        "area": "test-coverage",
+        "rationale": "The AC-1 tests cover dangling AC/T IDs, but none would fail if a task cited a nonexistent component by name and the checker silently dropped it. This leaves the component half of AC-1 unexercised.",
+        "suggestion": "Add a unit test with a `*Component:* MissingWidget.` task reference and assert the check fails naming that unresolved component.",
+        "confidence": "high",
+        "source": "model"
+      },
+      "members": [
+        {
+          "reviewer": "lens-spec",
+          "model": "codex:gpt-5.5",
+          "finding": {
+            "title": "[test-coverage] AC-1 lacks a nonexistent component-name test",
+            "severity": "medium",
+            "file": "agent-sdlc/checker/rules.test.mjs",
+            "line": 42,
+            "area": "test-coverage",
+            "rationale": "The AC-1 tests cover dangling AC/T IDs, but none would fail if a task cited a nonexistent component by name and the checker silently dropped it. This leaves the component half of AC-1 unexercised.",
+            "suggestion": "Add a unit test with a `*Component:* MissingWidget.` task reference and assert the check fails naming that unresolved component.",
+            "confidence": "high",
+            "source": "model"
+          }
+        }
+      ],
+      "agreement": {
+        "count": 1,
+        "total": 4
+      },
+      "severity": "medium",
+      "contested": true
+    },
+    {
+      "key": "agent-sdlc/checker/sdlc-check.mjs::968::ledger-vs-git-scans-unscoped-full-git-history-per-feature-t-n-reuse-collides-once-a-second-feature-merges",
+      "representative": {
+        "title": "[correctness] ledger-vs-git scans unscoped full git history; per-feature T-N reuse collides once a second feature merges",
+        "severity": "medium",
+        "file": "agent-sdlc/checker/sdlc-check.mjs",
+        "line": 968,
+        "area": "correctness",
+        "rationale": "readRepoFacts runs `git -C repoPath log -z --format=...` with no rev-range, so it walks HEAD's entire ancestor history (main + the feature branch). Task IDs T-1..T-N restart per feature, and the build SKILL.md mandates `feat(T-N):` as the commit scope for every task in every feature. Once a second feature using that convention has landed on main, a done task T-N in the current ledger matches BOTH the current feature's `feat(T-N):` and the prior feature's `feat(T-N):` -> `matches.length > 1` -> a false-positive \"N commits reference it (expected exactly one)\" finding. I confirmed this against a throwaway repo with two `feat(T-1):` commits: readRepoFacts returns 2 commits for task T-1. Today's dogfood passes only because enforcement-spine is the first feature to use the `feat(T-N):` scope (all prior features used area scopes); the very next pipeline-built feature breaks AC-4.",
+        "suggestion": "Scope the git walk to the feature branch's own commits, or — cleaner — verify the per-task commit SHA the ledger already records (`t.commit`) instead of re-deriving matches from full history: for each done task, confirm its recorded SHA's subject references exactly that task. A rev-range form like `git log <merge-base(HEAD,default)>..HEAD` also bounds the search to this feature's commits.",
+        "confidence": "high",
+        "source": "model"
+      },
+      "members": [
+        {
+          "reviewer": "holistic",
+          "model": "ollama:glm-5.2:cloud",
+          "finding": {
+            "title": "[correctness] ledger-vs-git scans unscoped full git history; per-feature T-N reuse collides once a second feature merges",
+            "severity": "medium",
+            "file": "agent-sdlc/checker/sdlc-check.mjs",
+            "line": 968,
+            "area": "correctness",
+            "rationale": "readRepoFacts runs `git -C repoPath log -z --format=...` with no rev-range, so it walks HEAD's entire ancestor history (main + the feature branch). Task IDs T-1..T-N restart per feature, and the build SKILL.md mandates `feat(T-N):` as the commit scope for every task in every feature. Once a second feature using that convention has landed on main, a done task T-N in the current ledger matches BOTH the current feature's `feat(T-N):` and the prior feature's `feat(T-N):` -> `matches.length > 1` -> a false-positive \"N commits reference it (expected exactly one)\" finding. I confirmed this against a throwaway repo with two `feat(T-1):` commits: readRepoFacts returns 2 commits for task T-1. Today's dogfood passes only because enforcement-spine is the first feature to use the `feat(T-N):` scope (all prior features used area scopes); the very next pipeline-built feature breaks AC-4.",
+            "suggestion": "Scope the git walk to the feature branch's own commits, or — cleaner — verify the per-task commit SHA the ledger already records (`t.commit`) instead of re-deriving matches from full history: for each done task, confirm its recorded SHA's subject references exactly that task. A rev-range form like `git log <merge-base(HEAD,default)>..HEAD` also bounds the search to this feature's commits.",
+            "confidence": "high",
+            "source": "model"
+          }
+        },
+        {
+          "reviewer": "holistic",
+          "model": "claude:claude-opus-4-8",
+          "finding": {
+            "title": "[correctness] git-log field pairing misaligns when a commit has an empty subject",
+            "severity": "low",
+            "file": "agent-sdlc/checker/sdlc-check.mjs",
+            "line": 978,
+            "area": "correctness",
+            "rationale": "readRepoFacts splits the `-z` `%H%x00%s` stream on NUL and then `.filter((f) => f !== '')`. A commit with an empty subject (`git commit --allow-empty-message`) contributes an empty `%s` field; filtering it out shifts every subsequent hash/subject pair by one, so commit ids get paired with the wrong messages. That can mis-count references in AC-4 (checkLedgerVsGit), producing a spurious finding or, less likely, a false pass. Rare in practice but a real correctness edge.",
+            "suggestion": "Don't drop empty fields before pairing — split on NUL and iterate in strict (id, subject) pairs (only trim a single trailing empty element produced by the final record separator), or use a record-oriented parse that preserves empty subjects.",
+            "confidence": "low",
+            "source": "model"
+          }
+        }
+      ],
+      "agreement": {
+        "count": 2,
+        "total": 4
+      },
+      "severity": "medium",
+      "contested": true
+    },
+    {
+      "key": "agent-sdlc/skills/build/SKILL.md::43::fresh-builds-can-block-before-a-ledger-exists",
+      "representative": {
+        "title": "[correctness] fresh builds can block before a ledger exists",
+        "severity": "medium",
+        "file": "agent-sdlc/skills/build/SKILL.md",
+        "line": 43,
+        "area": "correctness",
+        "rationale": "The build loop tells the agent to run `sdlc-check ... --require ledger` before continuing from the ledger step, but on a fresh build `build-report.md` may not exist yet. That makes the new checker invocation fail before the first task even starts.",
+        "suggestion": "Make the resume checker conditional on an existing initialized ledger, or create a valid initial `build-report.md` before invoking `--require ledger`; keep the unconditional ledger-required check for build-complete.",
+        "confidence": "med",
+        "source": "model"
+      },
+      "members": [
+        {
+          "reviewer": "holistic",
+          "model": "codex:gpt-5.5",
+          "finding": {
+            "title": "[correctness] fresh builds can block before a ledger exists",
+            "severity": "medium",
+            "file": "agent-sdlc/skills/build/SKILL.md",
+            "line": 43,
+            "area": "correctness",
+            "rationale": "The build loop tells the agent to run `sdlc-check ... --require ledger` before continuing from the ledger step, but on a fresh build `build-report.md` may not exist yet. That makes the new checker invocation fail before the first task even starts.",
+            "suggestion": "Make the resume checker conditional on an existing initialized ledger, or create a valid initial `build-report.md` before invoking `--require ledger`; keep the unconditional ledger-required check for build-complete.",
+            "confidence": "med",
+            "source": "model"
+          }
+        }
+      ],
+      "agreement": {
+        "count": 1,
+        "total": 4
+      },
+      "severity": "medium",
+      "contested": true
+    },
+    {
+      "key": "agent-sdlc/skills/ship/SKILL.md::34::verification-report-is-written-but-never-committed",
+      "representative": {
+        "title": "[correctness] verification report is written but never committed",
+        "severity": "medium",
+        "file": "agent-sdlc/skills/ship/SKILL.md",
+        "line": 34,
+        "area": "correctness",
+        "rationale": "Ship now writes `specs/<feature>/verification-report.md` before pushing, but the sequence goes straight from writing/checking it to `git push` and PR creation with no add/commit step. The checker can pass against a local uncommitted report that is absent from the pushed branch and leaves the worktree dirty.",
+        "suggestion": "Add an explicit step after the checker passes to commit `verification-report.md` before pushing, or stop making it a repository artifact and keep the proof map only in the PR body.",
+        "confidence": "high",
+        "source": "model"
+      },
+      "members": [
+        {
+          "reviewer": "holistic",
+          "model": "codex:gpt-5.5",
+          "finding": {
+            "title": "[correctness] verification report is written but never committed",
+            "severity": "medium",
+            "file": "agent-sdlc/skills/ship/SKILL.md",
+            "line": 34,
+            "area": "correctness",
+            "rationale": "Ship now writes `specs/<feature>/verification-report.md` before pushing, but the sequence goes straight from writing/checking it to `git push` and PR creation with no add/commit step. The checker can pass against a local uncommitted report that is absent from the pushed branch and leaves the worktree dirty.",
+            "suggestion": "Add an explicit step after the checker passes to commit `verification-report.md` before pushing, or stop making it a repository artifact and keep the proof map only in the PR body.",
+            "confidence": "high",
+            "source": "model"
+          }
+        }
+      ],
+      "agreement": {
+        "count": 1,
+        "total": 4
+      },
+      "severity": "medium",
+      "contested": true
+    },
+    {
+      "key": "agent-sdlc/skills/ship/SKILL.md::36::no-ledger-ship-path-is-now-impossible",
+      "representative": {
+        "title": "[correctness] no-ledger ship path is now impossible",
+        "severity": "medium",
+        "file": "agent-sdlc/skills/ship/SKILL.md",
+        "line": 36,
+        "area": "correctness",
+        "rationale": "The hard gate still allows branches built outside the pipeline with no `build-report.md`, but step 3 unconditionally runs `sdlc-check` with `--require ledger`. That required artifact check will fail every documented no-ledger ship path unless the operator records an override.",
+        "suggestion": "Branch the ship flow: on the no-ledger path, do not pass `--require ledger`; instead record that ledger-backed AC-14 corroboration is unavailable and rely on the direct suite verification plus review-gate as the hard gate describes.",
+        "confidence": "high",
+        "source": "model"
+      },
+      "members": [
+        {
+          "reviewer": "holistic",
+          "model": "codex:gpt-5.5",
+          "finding": {
+            "title": "[correctness] no-ledger ship path is now impossible",
+            "severity": "medium",
+            "file": "agent-sdlc/skills/ship/SKILL.md",
+            "line": 36,
+            "area": "correctness",
+            "rationale": "The hard gate still allows branches built outside the pipeline with no `build-report.md`, but step 3 unconditionally runs `sdlc-check` with `--require ledger`. That required artifact check will fail every documented no-ledger ship path unless the operator records an override.",
+            "suggestion": "Branch the ship flow: on the no-ledger path, do not pass `--require ledger`; instead record that ledger-backed AC-14 corroboration is unavailable and rely on the direct suite verification plus review-gate as the hard gate describes.",
+            "confidence": "high",
+            "source": "model"
+          }
+        }
+      ],
+      "agreement": {
+        "count": 1,
+        "total": 4
+      },
+      "severity": "medium",
+      "contested": true
+    }
+  ],
+  "dismissed": [
+    {
+      "cluster": {
+        "key": "agent-sdlc/checker/sdlc-check.mjs::952::commit-matching-ignores-task-references-outside-conventional-scopes",
+        "representative": {
+          "title": "[correctness] Commit matching ignores task references outside conventional scopes",
+          "severity": "high",
+          "file": "agent-sdlc/checker/sdlc-check.mjs",
+          "line": 952,
+          "area": "correctness",
+          "rationale": "AC-4 says git history must contain exactly one commit referencing exactly the task ID, but `distinctTaskTokens` only scans the `type(scope):` scope. A commit such as `feat: implement T-1`, or an extra `fix: follow-up T-1`, is treated as not referencing the task, causing false failures and false passes of the exactly-one rule.",
+          "suggestion": "Count `T-N` references in the commit message/subject according to the spec, or update the spec to explicitly require task IDs only in conventional-commit scopes.",
+          "confidence": "high",
+          "source": "model"
+        },
+        "members": [
+          {
+            "reviewer": "lens-spec",
+            "model": "codex:gpt-5.5",
+            "finding": {
+              "title": "[correctness] Commit matching ignores task references outside conventional scopes",
+              "severity": "high",
+              "file": "agent-sdlc/checker/sdlc-check.mjs",
+              "line": 952,
+              "area": "correctness",
+              "rationale": "AC-4 says git history must contain exactly one commit referencing exactly the task ID, but `distinctTaskTokens` only scans the `type(scope):` scope. A commit such as `feat: implement T-1`, or an extra `fix: follow-up T-1`, is treated as not referencing the task, causing false failures and false passes of the exactly-one rule.",
+              "suggestion": "Count `T-N` references in the commit message/subject according to the spec, or update the spec to explicitly require task IDs only in conventional-commit scopes.",
+              "confidence": "high",
+              "source": "model"
+            }
+          }
+        ],
+        "agreement": {
+          "count": 1,
+          "total": 4
+        },
+        "severity": "high",
+        "contested": true
+      },
+      "justification": "By-design and overseer-confirmed (T-6 corrective): AC-4 task-reference = the conventional-commit SCOPE position (feat(T-N):), which build MANDATES for every task. Verified in code (distinctTaskTokens, sdlc-check.mjs:936-958): scope-only matching is deliberate — whole-subject matching false-positived on docs-commit prose (the documented dogfood). The failure direction is SAFE: an unscoped implementing commit (feat: T-1) yields no match -> the task reads as no-commit -> BLOCK, never a silent pass; a second fix(T-N): commit is a non-atomic-history violation the exactly-one rule is meant to catch. Not a false pass."
+    },
+    {
+      "cluster": {
+        "key": "agent-sdlc/checker/git.test.mjs::224::ac-4-tests-do-not-exercise-general-task-id-references",
+        "representative": {
+          "title": "[test-coverage] AC-4 tests do not exercise general task-ID references",
+          "severity": "medium",
+          "file": "agent-sdlc/checker/git.test.mjs",
+          "line": 224,
+          "area": "test-coverage",
+          "rationale": "The AC-4 tests assert that unscoped or prose task mentions do not count, so no test would fail if the checker ignored valid task-ID references outside conventional scopes. That misses the stated exactly-one commit-reference contract.",
+          "suggestion": "Add fixture repos where `feat: implement T-1` counts as the one matching commit, and where a second `fix: follow-up T-1` causes the done task to fail for multiple references.",
+          "confidence": "high",
+          "source": "model"
+        },
+        "members": [
+          {
+            "reviewer": "lens-spec",
+            "model": "codex:gpt-5.5",
+            "finding": {
+              "title": "[test-coverage] AC-4 tests do not exercise general task-ID references",
+              "severity": "medium",
+              "file": "agent-sdlc/checker/git.test.mjs",
+              "line": 224,
+              "area": "test-coverage",
+              "rationale": "The AC-4 tests assert that unscoped or prose task mentions do not count, so no test would fail if the checker ignored valid task-ID references outside conventional scopes. That misses the stated exactly-one commit-reference contract.",
+              "suggestion": "Add fixture repos where `feat: implement T-1` counts as the one matching commit, and where a second `fix: follow-up T-1` causes the done task to fail for multiple references.",
+              "confidence": "high",
+              "source": "model"
+            }
+          }
+        ],
+        "agreement": {
+          "count": 1,
+          "total": 4
+        },
+        "severity": "medium",
+        "contested": true
+      },
+      "justification": "Tied to the ::952:: by-design decision: the AC-4 tests correctly assert that unscoped/prose task mentions do NOT count, because scope-position matching is the intended AC-4 semantics (overseer-confirmed). A test asserting feat: T-1 (no scope) counts would contradict the design. Not a coverage gap. Advisory."
+    },
+    {
+      "cluster": {
+        "key": "agent-sdlc/checker/rules.test.mjs::548::ac-13-tests-lock-in-missing-nc-proof-rows",
+        "representative": {
+          "title": "[test-coverage] AC-13 tests lock in missing NC proof rows",
+          "severity": "medium",
+          "file": "agent-sdlc/checker/rules.test.mjs",
+          "line": 548,
+          "area": "test-coverage",
+          "rationale": "The AC-13 tests include a case asserting NC criteria are out of scope, so no test would fail when NC-1 through NC-4 are omitted from the proof map. This does not exercise the verification-map criteria for the negative criteria.",
+          "suggestion": "Replace or supplement that test with one that defines an NC criterion, omits its proof-map row, and expects a proof-map-completeness finding naming the NC criterion.",
+          "confidence": "med",
+          "source": "model"
+        },
+        "members": [
+          {
+            "reviewer": "lens-spec",
+            "model": "codex:gpt-5.5",
+            "finding": {
+              "title": "[test-coverage] AC-13 tests lock in missing NC proof rows",
+              "severity": "medium",
+              "file": "agent-sdlc/checker/rules.test.mjs",
+              "line": 548,
+              "area": "test-coverage",
+              "rationale": "The AC-13 tests include a case asserting NC criteria are out of scope, so no test would fail when NC-1 through NC-4 are omitted from the proof map. This does not exercise the verification-map criteria for the negative criteria.",
+              "suggestion": "Replace or supplement that test with one that defines an NC criterion, omits its proof-map row, and expects a proof-map-completeness finding naming the NC criterion.",
+              "confidence": "med",
+              "source": "model"
+            }
+          }
+        ],
+        "agreement": {
+          "count": 1,
+          "total": 4
+        },
+        "severity": "medium",
+        "contested": true
+      },
+      "justification": "Tied to the ::1073:: by-design decision: NC out-of-scope for proof-map completeness is intentional (NCs verified via AC-11/12 folding + ship review per the spec verification map). The test correctly pins that scope. Advisory."
+    },
+    {
+      "cluster": {
+        "key": "agent-sdlc/checker/sdlc-check.mjs::1073::negative-criteria-are-excluded-from-proof-map-completeness",
+        "representative": {
+          "title": "[correctness] Negative criteria are excluded from proof-map completeness",
+          "severity": "medium",
+          "file": "agent-sdlc/checker/sdlc-check.mjs",
+          "line": 1073,
+          "area": "correctness",
+          "rationale": "AC-13 and the verification map require proof entries for every criterion, including NC-1 through NC-4, but completeness only iterates parsed IDs with `kind === 'AC'`. A verification report can omit all NC proof rows and still pass.",
+          "suggestion": "Parse NC definitions as criteria and require proof-map rows with non-empty proof for both AC and NC criteria, matching the verification map.",
+          "confidence": "med",
+          "source": "model"
+        },
+        "members": [
+          {
+            "reviewer": "lens-spec",
+            "model": "codex:gpt-5.5",
+            "finding": {
+              "title": "[correctness] Negative criteria are excluded from proof-map completeness",
+              "severity": "medium",
+              "file": "agent-sdlc/checker/sdlc-check.mjs",
+              "line": 1073,
+              "area": "correctness",
+              "rationale": "AC-13 and the verification map require proof entries for every criterion, including NC-1 through NC-4, but completeness only iterates parsed IDs with `kind === 'AC'`. A verification report can omit all NC proof rows and still pass.",
+              "suggestion": "Parse NC definitions as criteria and require proof-map rows with non-empty proof for both AC and NC criteria, matching the verification map.",
+              "confidence": "med",
+              "source": "model"
+            }
+          }
+        ],
+        "agreement": {
+          "count": 1,
+          "total": 4
+        },
+        "severity": "medium",
+        "contested": true
+      },
+      "justification": "By-design (T-7, reviewed): the artifact is the AC->proof map; parseSpec deliberately does not define NC ids (ID_DEFINITION_RE = AC|C|T). Per the spec verification map, NC-1/NC-2 are test-backed folded into the AC-11/AC-12 runs and NC-3/NC-4 are reviewer-checked at ship — so NCs ARE verified, just not via their own proof rows. Scoping AC-13 completeness to defined ACs is correct against the spec. Advisory (single model); logged as a possible follow-up if own-row NC proofs are ever wanted."
+    },
+    {
+      "cluster": {
+        "key": "agent-sdlc/checker/sdlc-check.mjs::70::directory-passed-as-spec-path-falls-through-to-generic-internal-error-message",
+        "representative": {
+          "title": "[security] Arbitrary file read via unvalidated spec path",
+          "severity": "medium",
+          "file": "agent-sdlc/checker/sdlc-check.mjs",
+          "line": 70,
+          "area": "security",
+          "rationale": "The CLI accepts a user-supplied positional specPath, checks only existence, then reads it and derives sibling ledger/report paths from its directory without validating that the path stays inside the intended project root. An attacker who controls the argument can read any file the process can access, including co-located build-report.md/verification-report.md.",
+          "suggestion": "Resolve specPath to a canonical absolute path and reject paths outside a configured allowed root or containing parent-directory traversal before reading the file or its sibling artifacts.",
+          "confidence": "high",
+          "source": "model"
+        },
+        "members": [
+          {
+            "reviewer": "holistic",
+            "model": "ollama:kimi-k2.7-code:cloud",
+            "finding": {
+              "title": "[error-handling] Directory passed as spec path falls through to generic internal-error message",
+              "severity": "info",
+              "file": "agent-sdlc/checker/sdlc-check.mjs",
+              "line": 70,
+              "area": "error-handling",
+              "rationale": "`existsSync` returns true for directories, so `readFileSync` throws `EISDIR`, which the main guard prints as an 'unexpected internal error' rather than a clean 'spec path is a directory' failure.",
+              "suggestion": "Stat the path with `lstatSync` before reading and emit a clear, typed failure when the spec path is not a regular file.",
+              "confidence": "med",
+              "source": "model"
+            }
+          },
+          {
+            "reviewer": "lens-security",
+            "model": "ollama:kimi-k2.7-code:cloud",
+            "finding": {
+              "title": "[security] Arbitrary file read via unvalidated spec path",
+              "severity": "medium",
+              "file": "agent-sdlc/checker/sdlc-check.mjs",
+              "line": 70,
+              "area": "security",
+              "rationale": "The CLI accepts a user-supplied positional specPath, checks only existence, then reads it and derives sibling ledger/report paths from its directory without validating that the path stays inside the intended project root. An attacker who controls the argument can read any file the process can access, including co-located build-report.md/verification-report.md.",
+              "suggestion": "Resolve specPath to a canonical absolute path and reject paths outside a configured allowed root or containing parent-directory traversal before reading the file or its sibling artifacts.",
+              "confidence": "high",
+              "source": "model"
+            }
+          }
+        ],
+        "agreement": {
+          "count": 1,
+          "total": 4
+        },
+        "severity": "medium",
+        "contested": true
+      },
+      "justification": "Not in the threat model. Verified in code (run(), sdlc-check.mjs:63-80): the checker is a local, read-only dev/CI tool invoked by the pipeline stage with a spec path IT controls; there is no privilege boundary crossed — the caller already has the process file access. No untrusted/remote input reaches specPath. Path-traversal by someone who already controls the argv and runs the process locally is not an escalation. Advisory (single model)."
+    },
+    {
+      "cluster": {
+        "key": "agent-sdlc/skills/gate/SKILL.md::46::unescaped-feature-path-in-checker-command-templates",
+        "representative": {
+          "title": "[security] Unescaped feature path in checker command templates",
+          "severity": "medium",
+          "file": "agent-sdlc/skills/gate/SKILL.md",
+          "line": 46,
+          "area": "security",
+          "rationale": "The new checker invocation templates interpolate `specs/<feature>/<feature>.md` directly into a shell command, and the same pattern is repeated in build/ship. If a feature name or materialized spec path is attacker-controlled and contains shell metacharacters, an agent following the template can execute arbitrary commands while trying to run the checker.",
+          "suggestion": "Require a validated feature slug such as `[A-Za-z0-9._-]+`, or instruct the agent/tooling to resolve the spec path and pass it as a separate argv element without shell interpolation; update all new `sdlc-check` examples accordingly.",
+          "confidence": "med",
+          "source": "model"
+        },
+        "members": [
+          {
+            "reviewer": "lens-security",
+            "model": "codex:gpt-5.5",
+            "finding": {
+              "title": "[security] Unescaped feature path in checker command templates",
+              "severity": "medium",
+              "file": "agent-sdlc/skills/gate/SKILL.md",
+              "line": 46,
+              "area": "security",
+              "rationale": "The new checker invocation templates interpolate `specs/<feature>/<feature>.md` directly into a shell command, and the same pattern is repeated in build/ship. If a feature name or materialized spec path is attacker-controlled and contains shell metacharacters, an agent following the template can execute arbitrary commands while trying to run the checker.",
+              "suggestion": "Require a validated feature slug such as `[A-Za-z0-9._-]+`, or instruct the agent/tooling to resolve the spec path and pass it as a separate argv element without shell interpolation; update all new `sdlc-check` examples accordingly.",
+              "confidence": "med",
+              "source": "model"
+            }
+          }
+        ],
+        "agreement": {
+          "count": 1,
+          "total": 4
+        },
+        "severity": "medium",
+        "contested": true
+      },
+      "justification": "Advisory: the checker-invocation lines are illustrative skill PROSE templates with a <feature> placeholder, not executed code; the feature slug is an author-controlled spec-directory name, not external/attacker input. Recommend a follow-up to state a slug constraint ([A-Za-z0-9._-]+) and pass the path as a separate argv element, but no injection path exists in the shipped artifacts. Single model."
+    }
+  ],
+  "report": "# Review (19 clusters)\n- 🔴 **[HIGH]** \\[correctness\\] Missing component names are not reported as dangling trace references — `agent-sdlc/checker/sdlc-check.mjs:433` · 1/4 models · _by:_ lens-spec _(correctness)_\n  AC-1 requires a task citing a nonexistent component to fail, but component-name references are only added when they resolve to an existing component. A task with \\`\\*Component:\\* MissingWidget.\\` produces no ref at all, so trace integrity has nothing to report.\n  _Fix:_ Preserve unresolved non-empty component-field values as dangling component references, or add a dedicated component-reference validation rule that fails and names the unresolved component.\n- 🔴 **[HIGH]** \\[correctness\\] Commit matching ignores task references outside conventional scopes — `agent-sdlc/checker/sdlc-check.mjs:952` · 1/4 models · _by:_ lens-spec _(correctness)_\n  AC-4 says git history must contain exactly one commit referencing exactly the task ID, but \\`distinctTaskTokens\\` only scans the \\`type(scope):\\` scope. A commit such as \\`feat: implement T-1\\`, or an extra \\`fix: follow-up T-1\\`, is treated as not referencing the task, causing false failures and false passes of the exactly-one rule.\n  _Fix:_ Count \\`T-N\\` references in the commit message/subject according to the spec, or update the spec to explicitly require task IDs only in conventional-commit scopes.\n- 🔴 **[HIGH]** \\[correctness\\] Mandated checker path is repo-relative and won't resolve for installed-plugin users, hard-blocking gate/build/ship — `agent-sdlc/skills/build/SKILL.md:44` · 2/4 models · _by:_ holistic, lens-spec _(correctness)_\n  gate/build/ship now MANDATE \\`node agent-sdlc/checker/sdlc-check.mjs specs/\\<feature\\>/\\<feature\\>.md ...\\` with a path relative to cwd, but agent-sdlc is a marketplace plugin whose files live under the plugin install dir, not the user's project. When a user runs \\`/agent-sdlc:build\\` in their own repo, \\`agent-sdlc/checker/sdlc-check.mjs\\` does not exist relative to cwd, \\`node\\` exits nonzero (module not found), and the skills' own fail-closed contract treats a nonzero/crashing checker as a failed check → stop-and-ask (build/ship) / blocked verdict (gate). The degraded-fallback path only covers \\`node\\` being ABSENT, so it does not rescue this. Net effect: the whole pipeline is blocked for every non-dogfooding user once these skills ship. (The spec path in the same command is correctly user-cwd-relative — the two paths assume different roots.)\n  _Fix:_ Resolve the checker via the plugin root, not cwd — e.g. \\`node \"${CLAUDE\\_PLUGIN\\_ROOT}/checker/sdlc-check.mjs\" specs/\\<feature\\>/\\<feature\\>.md ...\\`, or ship the checker as a PATH \\`bin\\` the way review-gate does (package.json \\`bin\\`). Update all invocation sites (build/SKILL.md, build/reference/subagent-loop.md, gate/SKILL.md, ship/SKILL.md, ship/reference/finishing.md) consistently.\n- 🟠 **[MEDIUM]** \\[test-coverage\\] AC-4 tests do not exercise general task-ID references — `agent-sdlc/checker/git.test.mjs:224` · 1/4 models · _by:_ lens-spec _(test-coverage)_\n  The AC-4 tests assert that unscoped or prose task mentions do not count, so no test would fail if the checker ignored valid task-ID references outside conventional scopes. That misses the stated exactly-one commit-reference contract.\n  _Fix:_ Add fixture repos where \\`feat: implement T-1\\` counts as the one matching commit, and where a second \\`fix: follow-up T-1\\` causes the done task to fail for multiple references.\n- 🟠 **[MEDIUM]** \\[test-coverage\\] AC-1 lacks a nonexistent component-name test — `agent-sdlc/checker/rules.test.mjs:42` · 1/4 models · _by:_ lens-spec _(test-coverage)_\n  The AC-1 tests cover dangling AC/T IDs, but none would fail if a task cited a nonexistent component by name and the checker silently dropped it. This leaves the component half of AC-1 unexercised.\n  _Fix:_ Add a unit test with a \\`\\*Component:\\* MissingWidget.\\` task reference and assert the check fails naming that unresolved component.\n- 🟠 **[MEDIUM]** \\[test-coverage\\] AC-13 tests lock in missing NC proof rows — `agent-sdlc/checker/rules.test.mjs:548` · 1/4 models · _by:_ lens-spec _(test-coverage)_\n  The AC-13 tests include a case asserting NC criteria are out of scope, so no test would fail when NC-1 through NC-4 are omitted from the proof map. This does not exercise the verification-map criteria for the negative criteria.\n  _Fix:_ Replace or supplement that test with one that defines an NC criterion, omits its proof-map row, and expects a proof-map-completeness finding naming the NC criterion.\n- 🟠 **[MEDIUM]** \\[correctness\\] Negative criteria are excluded from proof-map completeness — `agent-sdlc/checker/sdlc-check.mjs:1073` · 1/4 models · _by:_ lens-spec _(correctness)_\n  AC-13 and the verification map require proof entries for every criterion, including NC-1 through NC-4, but completeness only iterates parsed IDs with \\`kind === 'AC'\\`. A verification report can omit all NC proof rows and still pass.\n  _Fix:_ Parse NC definitions as criteria and require proof-map rows with non-empty proof for both AC and NC criteria, matching the verification map.\n- 🟠 **[MEDIUM]** \\[security\\] Arbitrary file read via unvalidated spec path — `agent-sdlc/checker/sdlc-check.mjs:70` · 1/4 models · _by:_ holistic, lens-security _(security)_\n  The CLI accepts a user-supplied positional specPath, checks only existence, then reads it and derives sibling ledger/report paths from its directory without validating that the path stays inside the intended project root. An attacker who controls the argument can read any file the process can access, including co-located build-report.md/verification-report.md.\n  _Fix:_ Resolve specPath to a canonical absolute path and reject paths outside a configured allowed root or containing parent-directory traversal before reading the file or its sibling artifacts.\n- 🟠 **[MEDIUM]** \\[correctness\\] ledger-vs-git scans unscoped full git history; per-feature T-N reuse collides once a second feature merges — `agent-sdlc/checker/sdlc-check.mjs:968` · 2/4 models · _by:_ holistic _(correctness)_\n  readRepoFacts runs \\`git -C repoPath log -z --format=...\\` with no rev-range, so it walks HEAD's entire ancestor history (main + the feature branch). Task IDs T-1..T-N restart per feature, and the build SKILL.md mandates \\`feat(T-N):\\` as the commit scope for every task in every feature. Once a second feature using that convention has landed on main, a done task T-N in the current ledger matches BOTH the current feature's \\`feat(T-N):\\` and the prior feature's \\`feat(T-N):\\` -\\> \\`matches.length \\> 1\\` -\\> a false-positive \"N commits reference it (expected exactly one)\" finding. I confirmed this against a throwaway repo with two \\`feat(T-1):\\` commits: readRepoFacts returns 2 commits for task T-1. Today's dogfood passes only because enforcement-spine is the first feature to use the \\`feat(T-N):\\` scope (all prior features used area scopes); the very next pipeline-built feature breaks AC-4.\n  _Fix:_ Scope the git walk to the feature branch's own commits, or — cleaner — verify the per-task commit SHA the ledger already records (\\`t.commit\\`) instead of re-deriving matches from full history: for each done task, confirm its recorded SHA's subject references exactly that task. A rev-range form like \\`git log \\<merge-base(HEAD,default)\\>..HEAD\\` also bounds the search to this feature's commits.\n- 🟠 **[MEDIUM]** \\[correctness\\] fresh builds can block before a ledger exists — `agent-sdlc/skills/build/SKILL.md:43` · 1/4 models · _by:_ holistic _(correctness)_\n  The build loop tells the agent to run \\`sdlc-check ... --require ledger\\` before continuing from the ledger step, but on a fresh build \\`build-report.md\\` may not exist yet. That makes the new checker invocation fail before the first task even starts.\n  _Fix:_ Make the resume checker conditional on an existing initialized ledger, or create a valid initial \\`build-report.md\\` before invoking \\`--require ledger\\`; keep the unconditional ledger-required check for build-complete.\n- 🟠 **[MEDIUM]** \\[security\\] Unescaped feature path in checker command templates — `agent-sdlc/skills/gate/SKILL.md:46` · 1/4 models · _by:_ lens-security _(security)_\n  The new checker invocation templates interpolate \\`specs/\\<feature\\>/\\<feature\\>.md\\` directly into a shell command, and the same pattern is repeated in build/ship. If a feature name or materialized spec path is attacker-controlled and contains shell metacharacters, an agent following the template can execute arbitrary commands while trying to run the checker.\n  _Fix:_ Require a validated feature slug such as \\`\\[A-Za-z0-9.\\_-\\]+\\`, or instruct the agent/tooling to resolve the spec path and pass it as a separate argv element without shell interpolation; update all new \\`sdlc-check\\` examples accordingly.\n- 🟠 **[MEDIUM]** \\[correctness\\] verification report is written but never committed — `agent-sdlc/skills/ship/SKILL.md:34` · 1/4 models · _by:_ holistic _(correctness)_\n  Ship now writes \\`specs/\\<feature\\>/verification-report.md\\` before pushing, but the sequence goes straight from writing/checking it to \\`git push\\` and PR creation with no add/commit step. The checker can pass against a local uncommitted report that is absent from the pushed branch and leaves the worktree dirty.\n  _Fix:_ Add an explicit step after the checker passes to commit \\`verification-report.md\\` before pushing, or stop making it a repository artifact and keep the proof map only in the PR body.\n- 🟠 **[MEDIUM]** \\[correctness\\] no-ledger ship path is now impossible — `agent-sdlc/skills/ship/SKILL.md:36` · 1/4 models · _by:_ holistic _(correctness)_\n  The hard gate still allows branches built outside the pipeline with no \\`build-report.md\\`, but step 3 unconditionally runs \\`sdlc-check\\` with \\`--require ledger\\`. That required artifact check will fail every documented no-ledger ship path unless the operator records an override.\n  _Fix:_ Branch the ship flow: on the no-ledger path, do not pass \\`--require ledger\\`; instead record that ledger-backed AC-14 corroboration is unavailable and rely on the direct suite verification plus review-gate as the hard gate describes.\n- ⚪ **[LOW]** \\[correctness\\] CLI main guard silently no-ops when invoked through a symlink — `agent-sdlc/checker/sdlc-check.mjs:1212` · 1/4 models · _by:_ holistic _(correctness)_\n  The main guard compares \\`import.meta.url\\` (real path) with \\`pathToFileURL(process.argv\\[1\\])\\` (symlink path), so a symlinked invocation loads the module but never runs \\`run()\\`, exiting 0 with no output and no check performed.\n  _Fix:_ Resolve \\`process.argv\\[1\\]\\` with \\`realpathSync\\` before comparing to \\`import.meta.url\\`, or document symlink invocation as unsupported rather than silent.\n- ⚪ **[LOW]** \\[correctness\\] Trace-field regex truncates at the first literal period — `agent-sdlc/checker/sdlc-check.mjs:244` · 1/4 models · _by:_ holistic _(correctness)_\n  \\`TRACE\\_FIELD\\_RE\\` captures until the first \\`.\\`, so an \\`\\*Advances:\\*\\` value such as \\`AC-1. Also see T-2.\\` would capture only \\`AC-1\\` and silently drop \\`T-2\\`, breaking coverage/trace rules for future specs.\n  _Fix:_ Terminate the field at the next \\`\\*Field:\\*\\` marker or the end of the owning bullet block instead of the first period.\n- ⚪ **[LOW]** \\[correctness\\] Component-by-name resolution uses substring matching — `agent-sdlc/checker/sdlc-check.mjs:394` · 1/4 models · _by:_ holistic _(correctness)_\n  \\`resolveComponentRefs\\` adds any component whose name is a substring of the citation text, so a component 'Widget' would be falsely resolved from a citation of 'WidgetManager', attributing the trace to the wrong C-N.\n  _Fix:_ Match component names as whole tokens (word boundaries) or prefer the longest matching component name, and fail/flag ambiguous citations.\n- ⚪ **[LOW]** \\[error-handling\\] Ragged markdown rows throw a TypeError instead of a typed failure, violating the parsers' never-throw contract — `agent-sdlc/checker/sdlc-check.mjs:605` · 1/4 models · _by:_ holistic _(error-handling)_\n  extractLedgerTasks reads \\`cells\\[col.commit\\].replace(...)\\`, \\`cells\\[col.ac\\].trim()\\`, \\`cells\\[col.notes\\].trim()\\` (and parseVerificationReport \\`cells\\[col.proof\\].trim()\\` at line 708) after only validating the task/criterion cell. A GFM-legal row that drops trailing cells (e.g. \\`\\| T-1 \\| done \\|\\` under a 5-column header) leaves those indexes undefined, so \\`.replace\\`/\\`.trim\\` throw a TypeError. parseLedger/parseVerificationReport are documented as pure and never-throwing (returning \\`{ok:false,error}\\`); instead this surfaces as an 'unexpected internal error' stack from the main guard. It is fail-closed (exits nonzero), so not a false pass, but it degrades a recoverable parse into a crash.\n  _Fix:_ Guard the later cells the same way the code already guards status/task, e.g. \\`(cells\\[col.commit\\] \\|\\| '').replace(...)\\` and \\`(cells\\[col.ac\\] \\|\\| '').trim()\\`, so a short row yields a typed model/failure rather than throwing.\n- ⚪ **[LOW]** \\[correctness\\] readRepoFacts drops empty NUL fields before pairing, so an empty commit subject mis-pairs every later record — `agent-sdlc/checker/sdlc-check.mjs:978` · 1/4 models · _by:_ holistic\n  stdout.split('\\\\0').filter((f) =\\> f !== '') removes ALL empty fields, including a mid-stream one from an empty commit subject (\\`%s\\` is empty when a commit is made with --allow-empty-message). The hash/subject pairing then shifts: \\`hash\\\\0\\\\0hash2\\\\0subj2\\` becomes \\['hash','hash2','subj2'\\] and pairs as {hash,'hash2'}, {'subj2',undefined}. A trailing NUL (git log -z) is harmless, but a mid-stream empty subject corrupts all subsequent records and can fabricate or drop task matches.\n  _Fix:_ Don't pre-filter empties; pair by index over the raw split, dropping only a single trailing empty. Or use two distinct separators (e.g. \\`--format='%H%x1f%s'\\` intra-record with \\`-z\\` inter-record) so an empty subject is preserved as an empty field rather than elided.\n- ⚪ **[INFO]** \\[correctness\\] Untraced marker on a bullet without a task ID is silently dropped — `agent-sdlc/checker/sdlc-check.mjs:549` · 1/4 models · _by:_ holistic _(correctness)_\n  \\`extractUntracedMarkers\\` records \\`from: null\\` when the owning bullet has no leading ID, and \\`checkBackwardCoverage\\` never matches \\`null\\` to a task, so the marker neither discharges coverage nor produces a finding.\n  _Fix:_ Emit a finding when an \\`AC: untraced\\` marker has no identifiable owning task ID.\n\n## Dismissed\n- [high] \\[correctness\\] Commit matching ignores task references outside conventional scopes — By-design and overseer-confirmed (T-6 corrective): AC-4 task-reference = the conventional-commit SCOPE position (feat(T-N):), which build MANDATES for every task. Verified in code (distinctTaskTokens, sdlc-check.mjs:936-958): scope-only matching is deliberate — whole-subject matching false-positived on docs-commit prose (the documented dogfood). The failure direction is SAFE: an unscoped implementing commit (feat: T-1) yields no match -\\> the task reads as no-commit -\\> BLOCK, never a silent pass; a second fix(T-N): commit is a non-atomic-history violation the exactly-one rule is meant to catch. Not a false pass.\n- [medium] \\[test-coverage\\] AC-4 tests do not exercise general task-ID references — Tied to the ::952:: by-design decision: the AC-4 tests correctly assert that unscoped/prose task mentions do NOT count, because scope-position matching is the intended AC-4 semantics (overseer-confirmed). A test asserting feat: T-1 (no scope) counts would contradict the design. Not a coverage gap. Advisory.\n- [medium] \\[test-coverage\\] AC-13 tests lock in missing NC proof rows — Tied to the ::1073:: by-design decision: NC out-of-scope for proof-map completeness is intentional (NCs verified via AC-11/12 folding + ship review per the spec verification map). The test correctly pins that scope. Advisory.\n- [medium] \\[correctness\\] Negative criteria are excluded from proof-map completeness — By-design (T-7, reviewed): the artifact is the AC-\\>proof map; parseSpec deliberately does not define NC ids (ID\\_DEFINITION\\_RE = AC\\|C\\|T). Per the spec verification map, NC-1/NC-2 are test-backed folded into the AC-11/AC-12 runs and NC-3/NC-4 are reviewer-checked at ship — so NCs ARE verified, just not via their own proof rows. Scoping AC-13 completeness to defined ACs is correct against the spec. Advisory (single model); logged as a possible follow-up if own-row NC proofs are ever wanted.\n- [medium] \\[security\\] Arbitrary file read via unvalidated spec path — Not in the threat model. Verified in code (run(), sdlc-check.mjs:63-80): the checker is a local, read-only dev/CI tool invoked by the pipeline stage with a spec path IT controls; there is no privilege boundary crossed — the caller already has the process file access. No untrusted/remote input reaches specPath. Path-traversal by someone who already controls the argv and runs the process locally is not an escalation. Advisory (single model).\n- [medium] \\[security\\] Unescaped feature path in checker command templates — Advisory: the checker-invocation lines are illustrative skill PROSE templates with a \\<feature\\> placeholder, not executed code; the feature slug is an author-controlled spec-directory name, not external/attacker input. Recommend a follow-up to state a slug constraint (\\[A-Za-z0-9.\\_-\\]+) and pass the path as a separate argv element, but no injection path exists in the shipped artifacts. Single model.",
+  "prComment": "## Review Gate — Round 1\n🚫 **BLOCK** — 7 blocking finding(s) must be resolved or justified.\n\nFindings: 19 total — 0 critical · 3 high · 10 medium · 5 low · 1 info.\n_Reviewed by:_ holistic + lens-security + lens-spec · models: ollama:glm-5.2:cloud, codex:gpt-5.5, ollama:kimi-k2.7-code:cloud, claude:claude-opus-4-8\n\n### Must fix\n- 🔴 **[HIGH]** \\[correctness\\] Missing component names are not reported as dangling trace references — `agent-sdlc/checker/sdlc-check.mjs:433` · 1/4 models · _by:_ lens-spec _(correctness)_\n  AC-1 requires a task citing a nonexistent component to fail, but component-name references are only added when they resolve to an existing component. A task with \\`\\*Component:\\* MissingWidget.\\` produces no ref at all, so trace integrity has nothing to report.\n  _Fix:_ Preserve unresolved non-empty component-field values as dangling component references, or add a dedicated component-reference validation rule that fails and names the unresolved component.\n- 🔴 **[HIGH]** \\[correctness\\] Mandated checker path is repo-relative and won't resolve for installed-plugin users, hard-blocking gate/build/ship — `agent-sdlc/skills/build/SKILL.md:44` · 2/4 models · _by:_ holistic, lens-spec _(correctness)_\n  gate/build/ship now MANDATE \\`node agent-sdlc/checker/sdlc-check.mjs specs/\\<feature\\>/\\<feature\\>.md ...\\` with a path relative to cwd, but agent-sdlc is a marketplace plugin whose files live under the plugin install dir, not the user's project. When a user runs \\`/agent-sdlc:build\\` in their own repo, \\`agent-sdlc/checker/sdlc-check.mjs\\` does not exist relative to cwd, \\`node\\` exits nonzero (module not found), and the skills' own fail-closed contract treats a nonzero/crashing checker as a failed check → stop-and-ask (build/ship) / blocked verdict (gate). The degraded-fallback path only covers \\`node\\` being ABSENT, so it does not rescue this. Net effect: the whole pipeline is blocked for every non-dogfooding user once these skills ship. (The spec path in the same command is correctly user-cwd-relative — the two paths assume different roots.)\n  _Fix:_ Resolve the checker via the plugin root, not cwd — e.g. \\`node \"${CLAUDE\\_PLUGIN\\_ROOT}/checker/sdlc-check.mjs\" specs/\\<feature\\>/\\<feature\\>.md ...\\`, or ship the checker as a PATH \\`bin\\` the way review-gate does (package.json \\`bin\\`). Update all invocation sites (build/SKILL.md, build/reference/subagent-loop.md, gate/SKILL.md, ship/SKILL.md, ship/reference/finishing.md) consistently.\n- 🟠 **[MEDIUM]** \\[test-coverage\\] AC-1 lacks a nonexistent component-name test — `agent-sdlc/checker/rules.test.mjs:42` · 1/4 models · _by:_ lens-spec _(test-coverage)_\n  The AC-1 tests cover dangling AC/T IDs, but none would fail if a task cited a nonexistent component by name and the checker silently dropped it. This leaves the component half of AC-1 unexercised.\n  _Fix:_ Add a unit test with a \\`\\*Component:\\* MissingWidget.\\` task reference and assert the check fails naming that unresolved component.\n- 🟠 **[MEDIUM]** \\[correctness\\] ledger-vs-git scans unscoped full git history; per-feature T-N reuse collides once a second feature merges — `agent-sdlc/checker/sdlc-check.mjs:968` · 2/4 models · _by:_ holistic _(correctness)_\n  readRepoFacts runs \\`git -C repoPath log -z --format=...\\` with no rev-range, so it walks HEAD's entire ancestor history (main + the feature branch). Task IDs T-1..T-N restart per feature, and the build SKILL.md mandates \\`feat(T-N):\\` as the commit scope for every task in every feature. Once a second feature using that convention has landed on main, a done task T-N in the current ledger matches BOTH the current feature's \\`feat(T-N):\\` and the prior feature's \\`feat(T-N):\\` -\\> \\`matches.length \\> 1\\` -\\> a false-positive \"N commits reference it (expected exactly one)\" finding. I confirmed this against a throwaway repo with two \\`feat(T-1):\\` commits: readRepoFacts returns 2 commits for task T-1. Today's dogfood passes only because enforcement-spine is the first feature to use the \\`feat(T-N):\\` scope (all prior features used area scopes); the very next pipeline-built feature breaks AC-4.\n  _Fix:_ Scope the git walk to the feature branch's own commits, or — cleaner — verify the per-task commit SHA the ledger already records (\\`t.commit\\`) instead of re-deriving matches from full history: for each done task, confirm its recorded SHA's subject references exactly that task. A rev-range form like \\`git log \\<merge-base(HEAD,default)\\>..HEAD\\` also bounds the search to this feature's commits.\n- 🟠 **[MEDIUM]** \\[correctness\\] fresh builds can block before a ledger exists — `agent-sdlc/skills/build/SKILL.md:43` · 1/4 models · _by:_ holistic _(correctness)_\n  The build loop tells the agent to run \\`sdlc-check ... --require ledger\\` before continuing from the ledger step, but on a fresh build \\`build-report.md\\` may not exist yet. That makes the new checker invocation fail before the first task even starts.\n  _Fix:_ Make the resume checker conditional on an existing initialized ledger, or create a valid initial \\`build-report.md\\` before invoking \\`--require ledger\\`; keep the unconditional ledger-required check for build-complete.\n- 🟠 **[MEDIUM]** \\[correctness\\] verification report is written but never committed — `agent-sdlc/skills/ship/SKILL.md:34` · 1/4 models · _by:_ holistic _(correctness)_\n  Ship now writes \\`specs/\\<feature\\>/verification-report.md\\` before pushing, but the sequence goes straight from writing/checking it to \\`git push\\` and PR creation with no add/commit step. The checker can pass against a local uncommitted report that is absent from the pushed branch and leaves the worktree dirty.\n  _Fix:_ Add an explicit step after the checker passes to commit \\`verification-report.md\\` before pushing, or stop making it a repository artifact and keep the proof map only in the PR body.\n- 🟠 **[MEDIUM]** \\[correctness\\] no-ledger ship path is now impossible — `agent-sdlc/skills/ship/SKILL.md:36` · 1/4 models · _by:_ holistic _(correctness)_\n  The hard gate still allows branches built outside the pipeline with no \\`build-report.md\\`, but step 3 unconditionally runs \\`sdlc-check\\` with \\`--require ledger\\`. That required artifact check will fail every documented no-ledger ship path unless the operator records an override.\n  _Fix:_ Branch the ship flow: on the no-ledger path, do not pass \\`--require ledger\\`; instead record that ledger-backed AC-14 corroboration is unavailable and rely on the direct suite verification plus review-gate as the hard gate describes.\n\n### Advisory (non-blocking)\n- ⚪ **[LOW]** \\[correctness\\] CLI main guard silently no-ops when invoked through a symlink — `agent-sdlc/checker/sdlc-check.mjs:1212` · 1/4 models · _by:_ holistic _(correctness)_\n  The main guard compares \\`import.meta.url\\` (real path) with \\`pathToFileURL(process.argv\\[1\\])\\` (symlink path), so a symlinked invocation loads the module but never runs \\`run()\\`, exiting 0 with no output and no check performed.\n  _Fix:_ Resolve \\`process.argv\\[1\\]\\` with \\`realpathSync\\` before comparing to \\`import.meta.url\\`, or document symlink invocation as unsupported rather than silent.\n- ⚪ **[LOW]** \\[correctness\\] Trace-field regex truncates at the first literal period — `agent-sdlc/checker/sdlc-check.mjs:244` · 1/4 models · _by:_ holistic _(correctness)_\n  \\`TRACE\\_FIELD\\_RE\\` captures until the first \\`.\\`, so an \\`\\*Advances:\\*\\` value such as \\`AC-1. Also see T-2.\\` would capture only \\`AC-1\\` and silently drop \\`T-2\\`, breaking coverage/trace rules for future specs.\n  _Fix:_ Terminate the field at the next \\`\\*Field:\\*\\` marker or the end of the owning bullet block instead of the first period.\n- ⚪ **[LOW]** \\[correctness\\] Component-by-name resolution uses substring matching — `agent-sdlc/checker/sdlc-check.mjs:394` · 1/4 models · _by:_ holistic _(correctness)_\n  \\`resolveComponentRefs\\` adds any component whose name is a substring of the citation text, so a component 'Widget' would be falsely resolved from a citation of 'WidgetManager', attributing the trace to the wrong C-N.\n  _Fix:_ Match component names as whole tokens (word boundaries) or prefer the longest matching component name, and fail/flag ambiguous citations.\n- ⚪ **[LOW]** \\[error-handling\\] Ragged markdown rows throw a TypeError instead of a typed failure, violating the parsers' never-throw contract — `agent-sdlc/checker/sdlc-check.mjs:605` · 1/4 models · _by:_ holistic _(error-handling)_\n  extractLedgerTasks reads \\`cells\\[col.commit\\].replace(...)\\`, \\`cells\\[col.ac\\].trim()\\`, \\`cells\\[col.notes\\].trim()\\` (and parseVerificationReport \\`cells\\[col.proof\\].trim()\\` at line 708) after only validating the task/criterion cell. A GFM-legal row that drops trailing cells (e.g. \\`\\| T-1 \\| done \\|\\` under a 5-column header) leaves those indexes undefined, so \\`.replace\\`/\\`.trim\\` throw a TypeError. parseLedger/parseVerificationReport are documented as pure and never-throwing (returning \\`{ok:false,error}\\`); instead this surfaces as an 'unexpected internal error' stack from the main guard. It is fail-closed (exits nonzero), so not a false pass, but it degrades a recoverable parse into a crash.\n  _Fix:_ Guard the later cells the same way the code already guards status/task, e.g. \\`(cells\\[col.commit\\] \\|\\| '').replace(...)\\` and \\`(cells\\[col.ac\\] \\|\\| '').trim()\\`, so a short row yields a typed model/failure rather than throwing.\n- ⚪ **[LOW]** \\[correctness\\] readRepoFacts drops empty NUL fields before pairing, so an empty commit subject mis-pairs every later record — `agent-sdlc/checker/sdlc-check.mjs:978` · 1/4 models · _by:_ holistic\n  stdout.split('\\\\0').filter((f) =\\> f !== '') removes ALL empty fields, including a mid-stream one from an empty commit subject (\\`%s\\` is empty when a commit is made with --allow-empty-message). The hash/subject pairing then shifts: \\`hash\\\\0\\\\0hash2\\\\0subj2\\` becomes \\['hash','hash2','subj2'\\] and pairs as {hash,'hash2'}, {'subj2',undefined}. A trailing NUL (git log -z) is harmless, but a mid-stream empty subject corrupts all subsequent records and can fabricate or drop task matches.\n  _Fix:_ Don't pre-filter empties; pair by index over the raw split, dropping only a single trailing empty. Or use two distinct separators (e.g. \\`--format='%H%x1f%s'\\` intra-record with \\`-z\\` inter-record) so an empty subject is preserved as an empty field rather than elided.\n- ⚪ **[INFO]** \\[correctness\\] Untraced marker on a bullet without a task ID is silently dropped — `agent-sdlc/checker/sdlc-check.mjs:549` · 1/4 models · _by:_ holistic _(correctness)_\n  \\`extractUntracedMarkers\\` records \\`from: null\\` when the owning bullet has no leading ID, and \\`checkBackwardCoverage\\` never matches \\`null\\` to a task, so the marker neither discharges coverage nor produces a finding.\n  _Fix:_ Emit a finding when an \\`AC: untraced\\` marker has no identifiable owning task ID.\n\n### Dismissed (with justification)\n- **[HIGH]** \\[correctness\\] Commit matching ignores task references outside conventional scopes — `agent-sdlc/checker/sdlc-check.mjs:952`\n  _Dismissed:_ By-design and overseer-confirmed (T-6 corrective): AC-4 task-reference = the conventional-commit SCOPE position (feat(T-N):), which build MANDATES for every task. Verified in code (distinctTaskTokens, sdlc-check.mjs:936-958): scope-only matching is deliberate — whole-subject matching false-positived on docs-commit prose (the documented dogfood). The failure direction is SAFE: an unscoped implementing commit (feat: T-1) yields no match -\\> the task reads as no-commit -\\> BLOCK, never a silent pass; a second fix(T-N): commit is a non-atomic-history violation the exactly-one rule is meant to catch. Not a false pass.\n- **[MEDIUM]** \\[test-coverage\\] AC-4 tests do not exercise general task-ID references — `agent-sdlc/checker/git.test.mjs:224`\n  _Dismissed:_ Tied to the ::952:: by-design decision: the AC-4 tests correctly assert that unscoped/prose task mentions do NOT count, because scope-position matching is the intended AC-4 semantics (overseer-confirmed). A test asserting feat: T-1 (no scope) counts would contradict the design. Not a coverage gap. Advisory.\n- **[MEDIUM]** \\[test-coverage\\] AC-13 tests lock in missing NC proof rows — `agent-sdlc/checker/rules.test.mjs:548`\n  _Dismissed:_ Tied to the ::1073:: by-design decision: NC out-of-scope for proof-map completeness is intentional (NCs verified via AC-11/12 folding + ship review per the spec verification map). The test correctly pins that scope. Advisory.\n- **[MEDIUM]** \\[correctness\\] Negative criteria are excluded from proof-map completeness — `agent-sdlc/checker/sdlc-check.mjs:1073`\n  _Dismissed:_ By-design (T-7, reviewed): the artifact is the AC-\\>proof map; parseSpec deliberately does not define NC ids (ID\\_DEFINITION\\_RE = AC\\|C\\|T). Per the spec verification map, NC-1/NC-2 are test-backed folded into the AC-11/AC-12 runs and NC-3/NC-4 are reviewer-checked at ship — so NCs ARE verified, just not via their own proof rows. Scoping AC-13 completeness to defined ACs is correct against the spec. Advisory (single model); logged as a possible follow-up if own-row NC proofs are ever wanted.\n- **[MEDIUM]** \\[security\\] Arbitrary file read via unvalidated spec path — `agent-sdlc/checker/sdlc-check.mjs:70`\n  _Dismissed:_ Not in the threat model. Verified in code (run(), sdlc-check.mjs:63-80): the checker is a local, read-only dev/CI tool invoked by the pipeline stage with a spec path IT controls; there is no privilege boundary crossed — the caller already has the process file access. No untrusted/remote input reaches specPath. Path-traversal by someone who already controls the argv and runs the process locally is not an escalation. Advisory (single model).\n- **[MEDIUM]** \\[security\\] Unescaped feature path in checker command templates — `agent-sdlc/skills/gate/SKILL.md:46`\n  _Dismissed:_ Advisory: the checker-invocation lines are illustrative skill PROSE templates with a \\<feature\\> placeholder, not executed code; the feature slug is an author-controlled spec-directory name, not external/attacker input. Recommend a follow-up to state a slug constraint (\\[A-Za-z0-9.\\_-\\]+) and pass the path as a separate argv element, but no injection path exists in the shipped artifacts. Single model."
+}
