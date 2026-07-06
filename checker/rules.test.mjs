@@ -514,7 +514,6 @@ test('the real enforcement-spine spec yields zero findings from all three rules 
   const specPath = path.join(
     path.dirname(fileURLToPath(import.meta.url)),
     '..',
-    '..',
     'specs',
     'enforcement-spine',
     'enforcement-spine.md',
@@ -706,7 +705,6 @@ test('the real enforcement-spine spec yields zero provenance-marker findings (no
   const specPath = path.join(
     path.dirname(fileURLToPath(import.meta.url)),
     '..',
-    '..',
     'specs',
     'enforcement-spine',
     'enforcement-spine.md',
@@ -724,7 +722,6 @@ test('the real enforcement-spine spec yields zero provenance-marker findings (no
 test('the real enforcement-spine ledger yields zero green-bar-evidence findings (T-1..T-4 done, each with captured evidence)', (t) => {
   const ledgerPath = path.join(
     path.dirname(fileURLToPath(import.meta.url)),
-    '..',
     '..',
     'specs',
     'enforcement-spine',
