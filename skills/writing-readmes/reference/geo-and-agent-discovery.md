@@ -52,7 +52,11 @@ private or metadata-less repo discoverable. Be honest about this with the user.
   ignored or paraphrased wrong.
 - **Accurate** — a wrong fact gets quoted wrong by every agent that reads it.
 
-## Set repo metadata (do this, it's cheap)
+## Repo metadata (propose it — the owner flips the switch)
+
+The GitHub description/topics are **remote settings**: propose the exact commands and values
+below to the owner and run them only on their explicit go — never mutate repo settings
+unasked. The package-manifest half is a normal in-repo edit.
 
 GitHub:
 

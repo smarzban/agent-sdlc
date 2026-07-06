@@ -1,11 +1,11 @@
 ---
 name: writing-repo-docs
-description: "Use when asked to write or overhaul the documentation a repository needs to be usable and contributable — a landing index, quickstart, installation, running-it-locally dev setup, contributing + community-health files (CONTRIBUTING, SECURITY, changelog, templates), and a comprehensive per-feature usage guide, plus at most a light architecture overview. Source-grounded, audience-separated, shaped to the repo type; doubles as an in-app help corpus. For deep internals — architecture rationale, data models, a complete module/API reference — use writing-technical-docs instead (or afterwards). Triggers: \"write the docs\", \"document this repo\", \"installation docs\", \"contributing guide\", \"how to run it locally\", \"usage guide\". Scope: standalone — for any repo's docs, independent of the Agent SDLC pipeline."
+description: "Use when asked to write or overhaul the documentation a repository needs to be usable and contributable — a landing index, quickstart, installation, running-it-locally dev setup, contributing + community-health files (CONTRIBUTING, SECURITY, changelog, templates), and a comprehensive per-feature usage guide, plus at most a light architecture overview — including the repo-root front-door README itself, produced by the writing-readmes method. Source-grounded, audience-separated, shaped to the repo type; doubles as an in-app help corpus. For deep internals — architecture rationale, data models, a complete module/API reference — use writing-technical-docs instead (or afterwards). Triggers: \"write the docs\", \"document this repo\", \"installation docs\", \"contributing guide\", \"how to run it locally\", \"usage guide\". Scope: standalone — for any repo's docs, independent of the Agent SDLC pipeline."
 ---
 
 # Writing Repo Docs (the essentials)
 
-Produce **everything a user, operator, or new contributor needs** — accurate, audience-separated, and adapted to what the repo actually is. The output is a tree of small, cross-linked Markdown files plus the repo-root community files. Maintainer internals are explicitly out of scope: that is `writing-technical-docs`.
+Produce **everything a user, operator, or new contributor needs** — accurate, audience-separated, and adapted to what the repo actually is. The output is a tree of small, cross-linked Markdown files plus the repo-root community files. Maintainer internals are explicitly out of scope: that is `writing-technical-docs`. The repo-root README is IN scope — this skill produces the whole essentials set including the front door, applying the `writing-readmes` method for that file; use `writing-readmes` alone when only the README is wanted.
 
 **Announce at start:** "I'm using the writing-repo-docs skill to document this repository."
 
@@ -54,6 +54,9 @@ development.md     running it locally: clone -> deps -> run -> test -> common ta
 architecture.md    (optional) LIGHT one-page overview; links to the technical docs
 
 repo root:
+README.md          the project front door — produce/refresh it BY the writing-readmes
+                   skill's method (read that skill; it owns front-door anatomy). docs/README.md
+                   above is the docs landing index, NOT a replacement for the root README.
 CONTRIBUTING.md    the contributor front door (see Phase 4)
 SECURITY.md        how to report a vulnerability (if the repo is public)
 CHANGELOG.md       only if a release process exists
@@ -93,7 +96,7 @@ These are conventions with sharp edges — some must never be invented:
 
 Read `reference/fact-check-and-verify.md` for the full checklist. At minimum:
 
-- **Link check** — every internal relative link resolves to a real file.
+- **Link check — mechanize it.** Every internal relative link resolves to a real file and every referenced path exists: run a short script that walks the written files and resolves each link/path (never eyeball this); zero broken is the bar.
 - **Fact-check pass** — re-read the docs against the source with fresh eyes; if a subagent is available, dispatch an adversarial fact-check ("find any statement contradicted by the code"). Fix every confirmed error.
 - **Command check** — the quickstart, install, and `development.md` command sequences are traced against CI/scripts. Execute only sandbox-safe dev/test commands to confirm them; deploy/ops sequences are trace-only.
 - **Placeholder scan** — no TBD/TODO/empty sections.
@@ -101,7 +104,7 @@ Read `reference/fact-check-and-verify.md` for the full checklist. At minimum:
 ## Phase 6 — Index + report
 
 - Ensure the landing `README.md` indexes everything and tells each audience where to start.
-- **Make the docs agent-discoverable (GEO).** Use the real category/stack terms in the landing description; when the docs are/will be published, add an [`llms.txt`](https://llmstxt.org/) at the root — a curated Markdown map linking the key pages.
+- **Make the docs agent-discoverable (GEO).** Use the real category/stack terms in the landing description; when the docs are/will be published, add an [`llms.txt`](https://llmstxt.org/) at the root — a curated Markdown map linking the key pages. Repo metadata (the GitHub description/topics) is a **remote setting: propose the exact values to the owner** — don't mutate it yourself unless they've said go.
 - Tell the user: where the docs live, the file tree, which community files were created vs **flagged as owner decisions** (security channel, code of conduct, license, templates), and any caveats — especially contradictions between existing docs and the code (surface them; offer to fix the code separately).
 - **State whether technical docs exist.** When the repo warrants internals documentation, recommend `writing-technical-docs` as the follow-on — the essentials tree deliberately stops short of it.
 
