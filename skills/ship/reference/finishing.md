@@ -93,13 +93,12 @@ gh pr create --base <base> --head <branch> --title "<title>" --body-file <genera
 
 Write the body to a file and pass `--body-file` — it keeps newlines and markdown intact.
 
-## Gate invocation contract (Empanel, formerly review-gate)
+## Gate invocation contract (the Empanel gate)
 
 The gate is a **post-PR merge gate**. It checks out the PR branch in its own worktree, diffs
 against the base, runs its reviewers, and returns a deterministic verdict:
 
-- Invoke: `/empanel:gate` against the open PR — or its legacy name `/review-gate:review-gate`,
-  whichever is installed; same contract either way.
+- Invoke: `/empanel:gate` against the open PR.
 - **Supply the spec explicitly.** The gate's reviewers explore the checked-out worktree; a spec
   that is gitignored or uncommitted is *absent* there, and the conformance (`lens-spec`) pass then
   has nothing to check and silently returns empty. Pass the feature's `## Acceptance Criteria` (and
@@ -120,7 +119,7 @@ least one connected model provider. It runs where those are present.
 
 ## Portable fallback (the gate absent)
 
-If neither gate skill is installed or its prerequisites are missing, do not skip the review —
+If the gate skill is not installed or its prerequisites are missing, do not skip the review —
 dispatch a **whole-PR reviewer subagent**:
 
 - Brief: the PR diff (base..head), the feature's `## Acceptance Criteria`, and the global

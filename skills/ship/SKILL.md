@@ -67,12 +67,11 @@ it stops and asks before changing anything — a PR is an outward artifact.
 6. **Linear** if sync is enabled in `.agent-sdlc/config.json`, attach the PR url to the feature's
    issues, post a project status update, and move the project to In Review — via the `linear-sync`
    skill.
-7. **Review** invoke the Empanel gate — `/empanel:gate` (or its legacy name
-   `/review-gate:review-gate`, whichever is installed) — on the open PR, passing it the spec
+7. **Review** invoke the Empanel gate — `/empanel:gate` — on the open PR, passing it the spec
    explicitly — the `## Acceptance Criteria` and the design — because its reviewers explore the
    committed worktree, where a gitignored or uncommitted spec is invisible and the conformance lens
    would otherwise check against nothing. It diffs the PR against the base, reviews, posts a verdict
-   comment, and returns **pass** or **block**. If neither gate skill is installed (or the
+   comment, and returns **pass** or **block**. If the gate skill is not installed (or the
    `@empanel/cli` runtime is missing), fall back to a dispatched whole-PR reviewer subagent and say
    so — the PR is still created and reviewed, by the portable path.
 8. **Verdict** **pass** → report "PR ready, gate ✅" with the URL. **block** → surface the
@@ -190,7 +189,7 @@ are in [reference/finishing.md](reference/finishing.md)):
   contract: present and clean → corroborated, proceed; present and failing (or crashing) →
   stop-and-ask, override recorded in the PR body; absent → an announced degraded fallback, never a
   silent skip.
-- Invokes `/empanel:gate` (the Empanel plugin — repo `smarzban/empanel`; legacy name `/review-gate:review-gate`) for the whole-PR review,
+- Invokes `/empanel:gate` (the Empanel plugin — repo `smarzban/empanel`) for the whole-PR review,
   with a portable reviewer-subagent fallback when it is absent.
 - Does not merge and does not clean the worktree on the PR path.
 - Downstream consumer: a human or the gate merges; a later `deploy` stage owns promotion.
