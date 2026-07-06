@@ -75,7 +75,15 @@ it stops and asks before changing anything — a PR is an outward artifact.
 8. **Verdict** **pass** → report "PR ready, review-gate ✅" with the URL. **block** → surface the
    blocking findings and recommended fixes, then STOP and ask whether to dispatch fixers and
    re-push, or hand it back. Do not auto-loop on an outward artifact.
-9. **Leave the worktree** the PR is open; do not clean up the workspace on the PR path.
+9. **Park with the reviewed head visible** when the merge is someone else's call (an overseer's or
+   maintainer's review — parking the PR instead of finishing): before declaring it parked, the branch
+   is **pushed** and the **PR head equals the local reviewed head** — `git rev-parse HEAD` ==
+   the PR's `headRefOid` (`gh pr view --json headRefOid -q .headRefOid`) — and the handoff message
+   **states that SHA**. A parked PR whose remote head trails the reviewed head shows the reviewer
+   stale code while the gate comments describe the new head. **Re-push before every re-park:** each
+   post-open fix round ends by pushing and re-syncing the PR head, never left behind after the first
+   push. (Mechanics in [reference/finishing.md](reference/finishing.md).)
+10. **Leave the worktree** the PR is open; do not clean up the workspace on the PR path.
 
 ## Principles
 
@@ -112,6 +120,7 @@ it stops and asks before changing anything — a PR is an outward artifact.
 | "sdlc-check isn't installed here, skip verification." | `node` absent is a degraded fallback, announced — not a silent skip. |
 | "The checker failed but the branch looks fine, open the PR anyway." | A failed checker run is a failed check — stop-and-ask. Proceeding needs an explicit human override, and it must be recorded in the PR body (AC-16), not just said aloud. |
 | "The proof map lives in `verification-report.md`, that's enough." | AC-18 requires it in the PR body. A map only in the spec tree is invisible to the reviewer and fails the criterion. |
+| "I gated it green locally and parked it for review — good enough." | Not until it's pushed. Parking hands off a PR; the reviewer sees the *remote* head. Push, confirm `HEAD` == the PR's `headRefOid`, state the SHA — and re-push before every re-park. |
 
 ## Red flags (stop and fix)
 
@@ -127,6 +136,9 @@ it stops and asks before changing anything — a PR is an outward artifact.
   body.
 - A test-backed proof-map row naming a test absent from the ledger's captured green-bar evidence.
 - The checker silently skipped when `node` was absent, instead of an announced degraded fallback.
+- A PR parked / handed off for review whose remote head does not equal the local reviewed head
+  (`git rev-parse HEAD` != the PR's `headRefOid`) — gate comments posted for a head the PR doesn't
+  show, so the reviewer reviews stale code — or a post-open fix round re-parked without re-pushing.
 
 ## Done when
 
@@ -140,6 +152,9 @@ it stops and asks before changing anything — a PR is an outward artifact.
   the plan was ingested, its provenance + the gate's mid-chain-entry / `untraced` note.
 - review-gate (or the fallback reviewer) has returned a verdict, posted on the PR.
 - On pass: the PR URL and the ✅ verdict are reported. On block: findings surfaced and the user asked.
+- If the PR is parked / handed off for review rather than finished: the branch is pushed, the PR head
+  equals the local reviewed head (`git rev-parse HEAD` == the PR's `headRefOid`), and the handoff
+  message states that SHA; every post-open fix round re-pushed before re-parking.
 - Linear PR attachment + project status update done where sync is enabled (or skipped cleanly).
 
 ## The artifact (output)

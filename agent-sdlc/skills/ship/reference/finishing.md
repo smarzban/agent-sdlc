@@ -128,6 +128,29 @@ Cursor/Codex), do not skip the review — dispatch a **whole-PR reviewer subagen
 - Map its result to the same pass/block decision and report which reviewer ran. Say plainly that the
   portable path was used.
 
+## Parking / handing off for review (the PR must show the reviewed head)
+
+When the merge is someone else's call — an overseer's review, a maintainer's sign-off — ship *parks*
+the PR for them instead of finishing. Parking is only honest if the **open PR shows the exact code
+that was reviewed**: gate comments and a proof map describe a head; the reviewer must be looking at
+that same head, not a stale one. So before declaring the PR parked / handed off:
+
+- **Push first, then park.** The branch is pushed and the PR head equals the local reviewed head —
+  `git rev-parse HEAD` must equal the PR's `headRefOid`
+  (`gh pr view --json headRefOid -q .headRefOid`). A remote head that trails the reviewed head shows
+  stale code while the gate comments describe the new one — the reviewer reads prose against a diff
+  that no longer exists.
+- **State the reviewed SHA in the handoff.** Name the reviewed head SHA in the parking message, so the
+  recipient can confirm at a glance that the PR shows it (`headRefOid == <sha>`).
+- **Re-push before every re-park.** Every post-open fix round (a blocking verdict fixed, a review
+  comment addressed) ends by pushing and re-parking — the PR head is re-synced to the new reviewed
+  head each time, never left behind after the first push. A gate re-run on a locally-fixed head that
+  was not re-pushed parks a PR whose diff the reviewer can't see.
+
+This is the same push-before-review discipline the normal flow already follows (the push in step 4,
+before `gh pr create`); the gap it closes is the *re-park after post-open fix commits*, where it is
+easy to gate a new head locally and hand it off without re-pushing.
+
 ## Worktree rule
 
 On the PR path the workspace is **preserved** — the PR is open and may need fixes. Do not run
