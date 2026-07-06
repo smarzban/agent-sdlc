@@ -65,4 +65,4 @@ what that looks like.
 
 ## License
 
-Not yet declared (owner decision pending).
+[Apache-2.0](LICENSE) — contributions are accepted under the same license.

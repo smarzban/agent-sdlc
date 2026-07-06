@@ -208,4 +208,4 @@ checker depends on preserved SHAs). Full conventions: [CONTRIBUTING.md](CONTRIBU
 
 ## License
 
-Not yet declared (owner decision pending).
+[Apache-2.0](LICENSE).

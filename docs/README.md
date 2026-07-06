@@ -33,4 +33,4 @@ authoritative method.
 - [Architecture](architecture.md) — the repo's shape in one page.
 - [`specs/`](../specs/) — this repo's own pipeline output: agent-sdlc builds itself through the
   pipeline it implements, and the spec chains are committed as evidence.
-- License: not yet declared (owner decision pending).
+- License: [Apache-2.0](../LICENSE).
