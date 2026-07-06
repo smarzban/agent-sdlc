@@ -33,7 +33,7 @@ Every report is stamped with the checker's version (so a stale cached copy is vi
 glance):
 
 ```
-sdlc-check 0.11.0: all checks passed — 0 findings, 0 notes.
+sdlc-check 0.12.0: all checks passed — 0 findings, 0 notes.
 ```
 
 - **Exit 0** — zero findings. Notes (advisory) don't affect the exit code.

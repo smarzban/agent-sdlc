@@ -20,7 +20,8 @@ sometimes heavier than needed.
 
 ## The compressed pass
 
-One authoring pass writes three sections into the normal `docs/specs/<feature>/<feature>.md`:
+One authoring pass writes three sections into the normal `docs/specs/<feature>/<feature>.md`
+(root `specs/` in a repo that already uses it — the back-compat rule):
 
 - `## Brief` — one paragraph: problem + scope.
 - `## Acceptance Criteria` — a handful of `AC-N`, same grammar and same verification types as the

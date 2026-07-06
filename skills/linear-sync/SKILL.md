@@ -94,7 +94,8 @@ of Linear, not a write — the only write is to the spec file, stamped with a pr
 - **Issue (`T-N`) -> a task** in the `## Plan` section; carry its `AC-N` if the issue records one,
   else mark the task `AC: untraced` (never fabricate a criterion).
 - **Milestone -> a build phase**; **Project -> the feature** (`docs/specs/<feature>/<feature>.md`);
-  **Initiative -> the product** (`docs/specs/overview.md`).
+  **Initiative -> the product** (`docs/specs/overview.md`). Reverse-mapped writes land in the repo's
+  actual spec tree (root `specs/` where one already exists — the back-compat rule in getting-started).
 - **Faithful, not creative.** Transcribe only what the Linear entities contain; do not invent tasks,
   criteria, or components to fill the chain. Missing upstream links stay `untraced` and surface in the
   gate's coverage note.

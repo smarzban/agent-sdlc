@@ -22,7 +22,8 @@ step.
 ## Checklist (do in order)
 
 1. **Explore context** files, docs, recent commits, and whether this is an existing project: look
-   for `docs/specs/overview.md`, a `constitution.md`, and a `CONTEXT.md`.
+   for `docs/specs/overview.md` (or root `specs/overview.md` — an existing root tree stays in use,
+   the back-compat rule in getting-started), a `constitution.md`, and a `CONTEXT.md`.
 2. **Set level and depth** *level*: **project** (clean repo, no overview/constitution, so you are
    shaping a whole app) or **feature** (existing project, so you are shaping one piece); *depth*:
    vague idea (diverge first) or specific (converge fast). Level decides what you produce and where

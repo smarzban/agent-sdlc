@@ -36,7 +36,9 @@ section first, then run.** The stage proceeds exactly as if a human had authored
   vanishes on compaction and leaves the gate nothing to walk. Materializing is therefore **forced,
   not optional**: there is no ephemeral mode that keeps the guarantees.
 - **Where.** Into the committed spec tree — `docs/specs/<feature>/<feature>.md` (feature) or
-  `docs/specs/overview.md` (project). The spec files that appear are a feature, not litter: a durable,
+  `docs/specs/overview.md` (project); in a repo that already has a root `specs/` tree, materialize
+  THERE (the back-compat rule in the getting-started SKILL — never split a repo across both
+  locations). The spec files that appear are a feature, not litter: a durable,
   reviewable record of what was built and where it came from, and the thing `ship` links from the PR.
 - **Idempotent.** Re-running reads the now-materialized section; it does not re-ingest the source or
   duplicate the section. Materialization writes once and is safe to repeat.

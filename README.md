@@ -161,8 +161,8 @@ agent-sdlc/                          ← repo root = the plugin AND its marketpl
 │   ├── writing-readmes/             ← documentation skill (front door) + reference/
 │   ├── writing-repo-docs/           ← documentation skill (repo essentials) + reference/
 │   └── writing-technical-docs/      ← documentation skill (full internals) + reference/
-├── docs/                            ← user + contributor documentation (see below)
-└── docs/specs/                      ← this repo's own dogfood spec tree (under docs/)
+└── docs/                            ← user + contributor documentation (see below)
+    └── specs/                       ← this repo's own dogfood spec tree
 ```
 
 A run produces, per feature:

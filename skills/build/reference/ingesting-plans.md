@@ -17,7 +17,9 @@ Linear, a doc, or the request itself, or a `## Plan` exists but has no gate verd
 1. **Resolve the plan.** Per the input-resolution rule: read the explicit source the request named
    (the Linear issue set, the doc). If a canonical `## Plan` already exists, use it — no ingest needed.
 2. **Materialize `## Plan` + trace.** Transcribe the source faithfully into the `## Plan` section of
-   `docs/specs/<feature>/<feature>.md` (reverse of `linear-sync`'s mapping for the Linear case), stamped
+   `docs/specs/<feature>/<feature>.md` (root `specs/` in a repo that already uses it — the back-compat
+   rule in getting-started; never split a repo across both locations), reverse of `linear-sync`'s
+   mapping for the Linear case, stamped
    with a provenance marker (`<!-- source: linear SMA-… · ingested <date> -->`). Carry each task's
    real `AC-N` if the source has one; otherwise mark it `AC: untraced` — never fabricate a criterion.
    Transcribe only what the source contains; do not invent tasks.

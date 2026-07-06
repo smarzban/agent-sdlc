@@ -178,9 +178,9 @@ reuse existing capabilities, and justify any addition.
 ## Conventions
 
 - Lives as the `## Tech Stack` section of `docs/specs/<feature>/<feature>.md` (project-level
-  cross-cutting choices in `docs/specs/overview.md`)
-  (root `specs/` in a repo that already uses it — the back-compat rule in getting-started) — process
-  record, apart from the repo's product documentation pages.
+  cross-cutting choices in `docs/specs/overview.md`; root `specs/` in a repo that already uses it —
+  the back-compat rule in getting-started) — process record, apart from the repo's product
+  documentation pages.
 - Reads the `## Design` and `## Acceptance Criteria` sections of the same file; references the
   design's component kinds and the `AC-N` IDs of any criterion that drives a choice.
 - Stops at product selection. How those products are wired up, task by task, is the plan stage.

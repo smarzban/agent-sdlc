@@ -12,8 +12,10 @@ or the gate's own merge step, and promotion belongs to a later `deploy` stage.
 
 <HARD-GATE>
 Precondition: a **green, build-finished branch with a clean working tree** — proven by
-`docs/specs/<feature>/build-report.md` (every task done; build always writes the ledger, ingested plan or
-not), or, when no ledger exists because the branch was built **outside the pipeline**, by verifying
+`docs/specs/<feature>/build-report.md` (every task done; build always writes the ledger, ingested plan
+or not; root `specs/` in a repo that already uses it — the back-compat rule in getting-started, so
+check the repo's actual spec tree before concluding "no ledger"), or, when no ledger exists because
+the branch was built **outside the pipeline**, by verifying
 the branch directly: the suite is green. On that no-ledger path the Empanel gate is the *sole* quality gate
 (no upstream spec-gate or per-task review ran) and completeness cannot be asserted from a ledger —
 lean on the spec coverage and the review, and say so. If a task is in-progress or blocked, STOP and
