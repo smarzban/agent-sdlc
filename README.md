@@ -8,16 +8,45 @@ between each — and `ship` opens the reviewed PR.
 
 Test and deploy are the next stages downstream, extending the same chain.
 
+- **You own the thinking; the agent owns the breakdown** — every stage leads with a
+  recommendation and alternatives, and you decide.
+- **A traceability spine** (`criterion -> component -> product -> task`) runs the whole pipeline;
+  a read-only gate walks it before any code exists.
+- **Test-first, subagent-driven build** — one fresh implementer per task, one atomic green commit
+  per task, resumable from a committed ledger.
+- **A deterministic checker** ([`sdlc-check`](docs/usage/sdlc-check.md), zero-dep Node) enforces
+  the mechanically-decidable promises — coverage, trace integrity, ledger↔git, proof maps —
+  fail-closed.
+- **Start anywhere** — enter at any stage, from any source (a prompt, a doc, a Linear issue set),
+  without weakening a single gate; a **light tier** compresses authoring for small fixes.
+- **Three standalone documentation skills** — `writing-readmes`, `writing-repo-docs`,
+  `writing-technical-docs` — for documenting what you build, usable on any repo.
+
 Packaged as a plugin for [Claude Code](https://claude.com/claude-code) and
-[Cursor](https://cursor.com) — **this repo is its own single-plugin marketplace** (`agent-sdlc`).
-The bundle also ships three standalone documentation skills — `writing-readmes`,
-`writing-repo-docs`, and `writing-technical-docs` — for the downstream job of documenting what you
-build. They sit outside the pipeline spine and can be used on their own, on any repo.
+[Cursor](https://cursor.com) — **this repo is its own single-plugin marketplace** (`agent-sdlc`),
+and the skills are plain Markdown to the open `SKILL.md` standard, portable to any agent that
+reads instruction files.
 
 > **Pairs with [Empanel](https://github.com/smarzban/empanel)** — a multi-model code-review gate
 > + whole-repo audit. `ship` hands the open PR to its gate skill (`/empanel:gate`) when installed,
 > and degrades to a portable reviewer subagent when it isn't. Empanel ships as its own plugin
 > marketplace plus the [`@empanel/cli`](https://www.npmjs.com/package/@empanel/cli) npm package.
+
+**Contents:** [Quickstart](#quickstart) · [The idea](#the-idea) · [Stages](#stages) ·
+[Documentation skills](#documentation-skills) · [Install](#install) · [Layout](#layout) ·
+[Documentation](#documentation) · [Contributing](#contributing) · [License](#license)
+
+## Quickstart
+
+```text
+/plugin marketplace add smarzban/agent-sdlc
+/plugin install agent-sdlc
+```
+
+Then, in the repo you want to build in, state what you want — *"I want to add a feature: …"* —
+and the pipeline picks it up at `idea`, or ask `/agent-sdlc:getting-started` to route you.
+A run leaves a committed spec chain in `specs/<feature>/` and ends in a reviewed PR.
+Full walkthrough: [docs/quickstart.md](docs/quickstart.md).
 
 ## The idea
 
@@ -52,7 +81,9 @@ from whatever you give it (the spec, a prompt, a doc, a Linear issue set, a repo
 materializes it into the spec with a provenance marker, then runs. A plan already in Linear? `build`
 ingests it, runs the `gate` inline, and builds — you don't have to hand-run the front half first. The
 gate, the per-task TDD loop, and traceability are never skipped; a missing upstream link is marked
-*untraced* and surfaced, never invented.
+*untraced* and surfaced, never invented. Details: [docs/usage/start-anywhere.md](docs/usage/start-anywhere.md).
+For a small self-contained fix, the **light tier** folds brief + criteria + plan into one short
+pass — same gate, build, and checker: [docs/usage/light-tier.md](docs/usage/light-tier.md).
 
 > **Invocation.** Installed as a plugin, every skill auto-activates when your request matches its
 > `description` — that's the primary path, and you rarely type a command. To invoke one explicitly,
@@ -73,6 +104,8 @@ They split by depth: the front door, the essentials, the internals.
 | `writing-repo-docs` | The essentials a repo needs to be usable and contributable — landing index + quickstart + install + comprehensive per-feature usage + running-it-locally + contributing/community-health files, plus at most a light architecture overview. |
 | `writing-technical-docs` | Full maintainer-grade internals — architecture with design rationale, data models, per-subsystem pages with invariants, the security model, and a complete module/API reference under a coverage-ledger contract (every exported symbol documented or explicitly excluded). |
 
+How they chain and when to pick which: [docs/usage/documentation-skills.md](docs/usage/documentation-skills.md).
+
 ## Install
 
 The repo is both a Claude Code marketplace (`.claude-plugin/marketplace.json`) and a Cursor
@@ -89,7 +122,8 @@ marketplace (`.cursor-plugin/marketplace.json`), each listing this one plugin at
 installed marketplace also offers a plugin named `agent-sdlc`.)
 
 Skills then trigger on their `description`, or invoke explicitly with the plugin namespace, e.g.
-`/agent-sdlc:idea` or `/agent-sdlc:writing-readmes`.
+`/agent-sdlc:idea` or `/agent-sdlc:writing-readmes`. Updates reach installed copies only via
+releases — the pull commands are in [docs/install.md](docs/install.md).
 
 ### Cursor
 
@@ -124,9 +158,10 @@ agent-sdlc/                          ← repo root = the plugin AND its marketpl
 │   ├── ship/                        ← SKILL.md + reference/finishing.md
 │   ├── getting-started/             ← SKILL.md + reference/ (input-resolution · light-tier)
 │   ├── linear-sync/                 ← SKILL.md + reference/mapping.md (optional engine)
-│   ├── writing-readmes/SKILL.md     ← documentation skill (front door)
-│   ├── writing-repo-docs/SKILL.md   ← documentation skill (repo essentials)
-│   └── writing-technical-docs/SKILL.md ← documentation skill (full internals)
+│   ├── writing-readmes/             ← documentation skill (front door) + reference/
+│   ├── writing-repo-docs/           ← documentation skill (repo essentials) + reference/
+│   └── writing-technical-docs/      ← documentation skill (full internals) + reference/
+├── docs/                            ← user + contributor documentation (see below)
 └── specs/                           ← this repo's own dogfood spec tree
 ```
 
@@ -148,27 +183,29 @@ spec.
 ## Linear sync (optional)
 
 Agent SDLC can mirror each stage into [Linear](https://linear.app) as you go — initiative (product)
-→ project (feature) → milestone (build phase) → issue (task) — driven by the `linear-sync` skill. As
-you build and ship, the `T-N` issues advance (Backlog → In Progress → In Review → Done) and the PR
-is attached to them. It's **off by default**; enable it by setting `linear.enabled: true` in `.agent-sdlc/config.json`
-(with the product's `initiative` and `team`). When the Linear MCP isn't connected, the steps are
-skipped, so an Agent SDLC run never depends on it.
+→ project (feature) → milestone (build phase) → issue (task) — and advance the `T-N` issues as you
+build and ship. **Off by default**; enabled via `.agent-sdlc/config.json`, and skipped cleanly when
+the Linear MCP isn't connected. Setup + mapping: [docs/usage/linear-sync.md](docs/usage/linear-sync.md).
 
-## Adding a skill
+## Documentation
 
-Skills live in `skills/`. To add one, create `skills/<skill-name>/SKILL.md`:
+- **Use it** → [docs/quickstart.md](docs/quickstart.md), then [docs/usage/](docs/README.md#usage)
+  — one page per capability (the pipeline, start-anywhere, the light tier, `sdlc-check`,
+  Linear sync, the documentation skills).
+- **Install / update it** → [docs/install.md](docs/install.md) — Claude Code, Cursor, any other
+  agent.
+- **Contribute to it** → [docs/development.md](docs/development.md) +
+  [CONTRIBUTING.md](CONTRIBUTING.md).
+- **Understand the repo** → [docs/architecture.md](docs/architecture.md); `specs/` is the repo
+  building itself through its own pipeline.
 
-```markdown
----
-name: <skill-name>
-description: Use when … — a precise trigger so the right tasks pick it up.
----
+## Contributing
 
-# <Skill Name>
+Zero-dependency by design: the skills are Markdown, and the only executable is the checker
+(Node ≥ 22, `node --test checker/*.test.mjs`). Skills are auto-discovered from `skills/<name>/SKILL.md`
+— a new skill needs no manifest edit. Branch → PR, Conventional Commits, fast-forward merges (the
+checker depends on preserved SHAs). Full conventions: [CONTRIBUTING.md](CONTRIBUTING.md).
 
-…the method…
-```
+## License
 
-Keep `SKILL.md` focused; put long templates/checklists in a `reference/` subdir the skill points to
-on demand. Both Claude Code and Cursor auto-discover any subdirectory of `skills/` that contains a
-`SKILL.md`, so no manifest edit is needed for a new skill.
+Not yet declared (owner decision pending).
