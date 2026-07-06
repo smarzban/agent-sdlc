@@ -1,9 +1,0 @@
-node_modules/
-*.log
-/tmp/
-.review-gate/
-HANDOFF.md
-AUDIT.md
-CLAUDE.md
-.agent-sdlc/
-docs/superpowers/
