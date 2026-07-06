@@ -132,3 +132,36 @@ $ for each of the 11 docs/specs/*/<feature>.md: node checker/sdlc-check.mjs <spe
 - Build-complete: `node checker/sdlc-check.mjs
   docs/specs/spec-location-under-docs/spec-location-under-docs.md --require ledger` → recorded at
   build-complete below. Repo checker run directly, never the on-PATH launcher.
+
+## Ship review (portable multi-lens fallback — R1 → R2)
+
+The Empanel gate was NOT invoked (its roster-precedence bug SMA-484 is open on this machine —
+overseer instruction); review ran as the sanctioned portable fallback: three independent reviewer
+subagents (correctness-of-sweep · docs/link accuracy · back-compat/user-impact), full
+`main...HEAD` diff each.
+
+- **R1 verdicts:** sweep lens PASS (2 LOW) · docs/link lens BLOCK (1 MEDIUM + 3 LOW) · back-compat
+  lens BLOCK (3 MEDIUM + 2 LOW). Convergent headline: the back-compat *reference* sat in
+  end-of-file Conventions sections but was absent at three operative decision points where a
+  legacy repo actually gets split or degraded — ship's HARD-GATE ledger lookup, idea's
+  existing-project probe, and the materialization write paths (input-resolution "Where",
+  ingesting-plans step 2, linear-sync reverse mapping). Plus: the README layout tree drew `docs/`
+  and `docs/specs/` as root-level siblings; techstack had back-to-back parentheticals; the
+  sdlc-check.md sample output was one version stale (`0.11.0`); start-anywhere/light-tier user
+  pages lacked the escape hatch.
+- **Fixes:** all applied in `c5faca6` (10 files). Not actioned, with reasons: the CHANGELOG 0.12.0
+  index line (the file indexes GitHub releases; 0.12.0's doesn't exist yet — a release-cut step
+  for the maintainer); the dangling `reference/probing.md` quotation inside the immutable
+  `evidence-gated-techstack/verification-report.md` (pre-existing on `main`, snapshots immutable
+  by policy); docs/architecture.md's map omitting a separate `docs/` line (pre-existing shorthand).
+- **R2 verdict: PASS** — an independent verification reviewer confirmed all 7 findings fixed at
+  their sites, no new issues (one informational line-wrap note), suite 153/153/0 skipped,
+  `sdlc-check --require ledger --require verification-report` exit 0, sweep grep clean,
+  strict-YAML 13/13, and the stated-once design intact.
+
+## Parked (ship terminal state — overseer handoff)
+
+Parked WITHOUT push on the overseer's explicit instruction (FF-merge discipline: the overseer
+merges; nothing is pushed from this run) — a recorded deviation from ship's push-before-park rule,
+authorized in the task brief. Branch: `feat/spec-location-under-docs`; reviewed head recorded in
+the handoff report. No PR opened; the verification report and this ledger ride the branch.
