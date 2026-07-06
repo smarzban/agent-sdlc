@@ -4,6 +4,10 @@ The authoritative release notes live on
 [GitHub Releases](https://github.com/smarzban/agent-sdlc/releases) — one release per version,
 cut with a plugin-scoped tag (`agent-sdlc-vX.Y.Z`). This file is the one-line index.
 
+- **[0.12.0](https://github.com/smarzban/agent-sdlc/releases/tag/agent-sdlc-v0.12.0)** (2026-07-06) —
+  spec trees live under `docs/specs/` (back-compat: existing root `specs/` repos keep theirs);
+  `writing-repo-docs` produces the front-door README too (by the `writing-readmes` method);
+  gate invocation simplified to `/empanel:gate`; runtime-corpus denoise.
 - **[0.11.0](https://github.com/smarzban/agent-sdlc/releases/tag/agent-sdlc-v0.11.0)** (2026-07-06) —
   standalone single-plugin repo: flattened layout, marketplace `agent-sdlc`, review-gate removed
   (now [Empanel](https://github.com/smarzban/empanel)), `ship` invokes `/empanel:gate`.
