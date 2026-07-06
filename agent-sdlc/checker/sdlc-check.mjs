@@ -196,7 +196,8 @@ export async function run(argv) {
     if (ledger) results.push(...checkProofEvidenceLinkage(verificationReport, ledger));
   }
 
-  const { text, exitCode } = formatReport(results);
+  const version = resolveCheckerVersion();
+  const { text, exitCode } = formatReport(results, version);
   process.stdout.write(text);
   process.exitCode = exitCode;
 }
@@ -1459,13 +1460,32 @@ function formatItem(item) {
   return `  - [${item.rule}] ${item.message} (ids: ${ids.join(', ')})`;
 }
 
-export function formatReport(results) {
+// SMA-480 — the checker stamps its own version into the report so a stale-checker run (a cached
+// installed-plugin copy trailing the repo) is self-diagnosing instead of reading as spec defects.
+// Read locally from the plugin manifest adjacent to the checker (never a network call); absent or
+// unparseable manifest -> null (the reporter renders "(version unknown)"). Never throws (mirrors the
+// parser discipline): any fs/JSON failure folds into the null fallback. The manifest URL is
+// injectable so the fallback is unit-testable without moving files.
+const CHECKER_MANIFEST_URL = new URL('../.claude-plugin/plugin.json', import.meta.url);
+
+export function resolveCheckerVersion(manifestUrl = CHECKER_MANIFEST_URL) {
+  try {
+    const parsed = JSON.parse(readFileSync(manifestUrl, 'utf8'));
+    const v = typeof parsed.version === 'string' ? parsed.version.trim() : '';
+    return v || null;
+  } catch {
+    return null;
+  }
+}
+
+export function formatReport(results, version) {
   const findings = results.filter((r) => r.type !== 'note');
   const notes = results.filter((r) => r.type === 'note');
   const exitCode = findings.length === 0 ? 0 : 1;
+  const label = version ? `sdlc-check ${version}` : 'sdlc-check (version unknown)';
 
   if (findings.length === 0 && notes.length === 0) {
-    return { text: 'sdlc-check: all checks passed — 0 findings, 0 notes.\n', exitCode };
+    return { text: `${label}: all checks passed — 0 findings, 0 notes.\n`, exitCode };
   }
 
   const lines = [];
@@ -1483,7 +1503,7 @@ export function formatReport(results) {
     for (const n of notes) lines.push(formatItem(n));
   }
   lines.push('');
-  lines.push(`sdlc-check: ${findings.length} finding(s), ${notes.length} note(s).`);
+  lines.push(`${label}: ${findings.length} finding(s), ${notes.length} note(s).`);
   return { text: lines.join('\n') + '\n', exitCode };
 }
 

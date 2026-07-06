@@ -140,6 +140,22 @@ test('AC-7 happy path: a fully valid fixture (spec + ledger + report + matching 
   }
 });
 
+// --- SMA-480: the real CLI stamps its own (adjacent-manifest) version into the report ---------
+
+test('SMA-480: the real CLI stamps the adjacent manifest semver version onto the clean-pass line', () => {
+  const dir = makeRepoDir();
+  try {
+    gitInit(dir);
+    const sha = gitCommit(dir, 'a', 'feat(T-1): implement widget');
+    const specPath = writeSpecTree(dir, { spec: HAPPY_SPEC, ledger: happyLedger(sha), report: HAPPY_REPORT });
+    const result = runCli([specPath], { cwd: dir });
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /sdlc-check \d+\.\d+\.\d+: all checks passed/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 // --- AC-7: mid-chain-entry variant — untraced links render as NOTES, not findings -------------
 
 test('AC-7 mid-chain-entry variant: well-formed provenance + untraced marker exits 0 with a coverage NOTE', () => {

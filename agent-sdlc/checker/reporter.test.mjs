@@ -2,7 +2,7 @@
 // The reporter is pure: results array in, { text, exitCode } out. No I/O, no process.exit.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatReport } from './sdlc-check.mjs';
+import { formatReport, resolveCheckerVersion } from './sdlc-check.mjs';
 
 function finding(rule, message, ids) {
   return { type: 'finding', rule, message, ids };
@@ -119,4 +119,46 @@ test('missing ids: formatReport does not throw and still renders (honest no-erro
   const { text, exitCode } = formatReport(results);
   assert.notEqual(exitCode, 0);
   assert.match(text, /no ids on this one/);
+});
+
+// --- SMA-480: the checker stamps its own version into every report ---------------------------
+
+test('SMA-480 AC-1: the version label appears exactly once on both the clean-pass and findings paths', () => {
+  const label = /sdlc-check v9\.9\.9-test:/g;
+
+  const pass = formatReport([], 'v9.9.9-test').text;
+  assert.match(pass, /sdlc-check v9\.9\.9-test:/);
+  assert.match(pass, /all checks passed/);
+  assert.equal((pass.match(label) || []).length, 1);
+
+  const withFinding = formatReport([finding('trace-integrity', 'x', ['AC-1'])], 'v9.9.9-test').text;
+  assert.match(withFinding, /sdlc-check v9\.9\.9-test:/);
+  assert.equal((withFinding.match(label) || []).length, 1);
+});
+
+test('SMA-480 AC-2: resolveCheckerVersion fails safe to null on a bogus path and formatReport renders (version unknown)', () => {
+  const bogus = new URL('file:///nonexistent/does-not-exist/plugin.json');
+  assert.doesNotThrow(() => resolveCheckerVersion(bogus));
+  assert.equal(resolveCheckerVersion(bogus), null);
+
+  const withFinding = formatReport([finding('trace-integrity', 'x', ['AC-1'])], null).text;
+  assert.match(withFinding, /sdlc-check \(version unknown\):/);
+
+  // The real default manifest (adjacent to the checker) resolves to a semver-shaped string.
+  assert.match(resolveCheckerVersion(), /^\d+\.\d+\.\d+/);
+});
+
+test('SMA-480 AC-3: the version is display-only — exit code and findings are unchanged with a version arg', () => {
+  assert.equal(formatReport([], 'x').exitCode, 0);
+  assert.notEqual(formatReport([finding('trace-integrity', 'msg', ['AC-1'])], 'x').exitCode, 0);
+
+  const { text } = formatReport(
+    [
+      finding('trace-integrity', 'T-1 cites AC-99, which is not defined', ['AC-99']),
+      finding('coverage-forward', 'AC-2 is not reached by any task', ['AC-2']),
+    ],
+    'x',
+  );
+  assert.match(text, /T-1 cites AC-99, which is not defined/);
+  assert.match(text, /AC-2 is not reached by any task/);
 });
