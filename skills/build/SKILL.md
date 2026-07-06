@@ -191,7 +191,7 @@ discipline exists to stop.
 - **Stop at a blocker, do not improvise.** Ambiguity, a contradicted plan, or a task that will not go
   green after bounded fixes: record it blocked and ask. Do not paper over an unsettled plan.
 - **Review at two scales.** Every task gets a cheap reviewer subagent here; the whole PR gets the
-  heavy `review-gate` once, at ship. Both are real gates; neither replaces the other.
+  heavy Empanel gate once, at ship. Both are real gates; neither replaces the other.
 - **Evidence is captured text, never a checkbox — and it is the conductor's OWN run.** Each
   green-bar run is recorded verbatim — the command plus its output tail (the per-test listing,
   bounded) — beside the task, from the first task onward. The recorded output is the conductor's own
@@ -216,7 +216,7 @@ discipline exists to stop.
 | "I'll just edit this file directly, it's faster." | The conductor delegates. Direct edits skip the review gate and bloat its context. Dispatch. |
 | "Write the code, add the test after." | Tests-after answers "what does it do"; tests-first answers "what should it do". The plan named the failing test — write it first. |
 | "Give the subagent the whole plan for context." | One brief = one task. The whole plan is noise that derails an autonomous run. |
-| "Skip the per-task review, review-gate catches it at ship." | A whole-PR gate cannot localize a per-task drift cheaply. Review early; fix while it is small. |
+| "Skip the per-task review, the ship gate catches it." | A whole-PR gate cannot localize a per-task drift cheaply. Review early; fix while it is small. |
 | "This task won't go green, I'll wire the next one and come back." | Errors compound. Stop the line: a blocked task is recorded and raised, not deferred. |
 | "Trust my memory of what's done after the compaction." | Re-running a done task is the costliest failure. Read the ledger and `git log`. |
 | "The plan came from Linear/a doc, it's already reviewed — skip the gate." | A source is not a verdict. An unvetted plan is unvetted whatever its origin — run the gate inline, then build. |

@@ -4,7 +4,7 @@
 # installed a skill can call `sdlc-check <spec> …` with no path to the plugin (a cwd-relative
 # `node agent-sdlc/checker/…` does NOT resolve in a user's own repo). The checker is a single
 # zero-dependency ESM file, so plain `node` on the committed source runs it (no install-time build,
-# no dependency — NC-3). Same launcher pattern as review-gate/bin/review-gate.
+# no dependency — NC-3).
 set -euo pipefail
 # Resolve through symlinks so the launcher works whether the plugin adds bin/ to PATH or symlinks
 # this script into a PATH dir, then locate the checker relative to the REAL script.

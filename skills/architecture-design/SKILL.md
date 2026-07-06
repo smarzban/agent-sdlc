@@ -193,4 +193,4 @@ deviation from existing patterns as an ADR.
   tradeoff).
 - Downstream consumers: the techstack stage (picks a product per component), the plan stage (built
   against this shape), the verify gate (checks the criterion -> component -> task chain), and the
-  review-gate (Architecture and Spec Conformance axes).
+  the Empanel gate (Architecture and Spec Conformance axes).

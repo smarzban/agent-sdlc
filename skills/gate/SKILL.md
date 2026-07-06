@@ -165,7 +165,7 @@ a verdict: ready to build, or not.
 - Lives at `specs/<feature>/gate-report.md`. Read-only over every other artifact.
 - Run after the `## Plan` section exists and before build. Re-run after any fix until the verdict is clean.
 - Invokes `sdlc-check` (bare `node`, no install) after its own chain walk for
-  mechanical corroboration, mirroring the existing ship <-> review-gate contract: present and clean ->
+  mechanical corroboration, mirroring the existing ship <-> Empanel contract: present and clean ->
   corroborated; present and failing (or crashing) -> stop-and-ask, override recorded; absent -> an
   announced degraded fallback, never a silent skip. The checker is read-only, same as the gate itself.
 - May be invoked **inline by `build`** on a freshly materialized plan (build runs the gate itself when

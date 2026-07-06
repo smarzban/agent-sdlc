@@ -21,7 +21,7 @@ PR. (Test and deploy are later additions to the same chain.)
 | 4 | `techstack` | `/agent-sdlc:techstack` | you (agent proposes) | `## Design`, `## Acceptance Criteria` | `## Tech Stack` (products per kind) |
 | 5 | `plan` | `/agent-sdlc:plan` | agent | `## Acceptance Criteria`, `## Design`, `## Tech Stack` | `## Plan` — atomic tasks (`T-N`) |
 | 6 | `build` | `/agent-sdlc:build` | agent | `## Plan`, `gate-report.md` | product code (a green branch) + `build-report.md` |
-| 7 | `ship` | `/agent-sdlc:ship` | agent | `build-report.md`, the spec | a reviewed PR (invokes `review-gate`) |
+| 7 | `ship` | `/agent-sdlc:ship` | agent | `build-report.md`, the spec | a reviewed PR (invokes the Empanel gate) |
 
 Feature-tier sections live in `specs/<feature>/<feature>.md`; project-tier sections (`## Overview`,
 `## Architecture`, `## Tech Stack`) live in `specs/overview.md`. Stages 1–5 each own and edit only

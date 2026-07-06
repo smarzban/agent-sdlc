@@ -185,4 +185,4 @@ reuse existing capabilities, and justify any addition.
 - Grounding is non-negotiable: choices are verified against current official docs via search, with
   versions and dates recorded.
 - Downstream consumers: the plan stage (built against these products), the verify gate (checks each
-  component has a product where one is needed), and review-gate.
+  component has a product where one is needed), and the Empanel gate.

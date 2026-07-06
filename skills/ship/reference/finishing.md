@@ -1,14 +1,14 @@
-# Finishing — push, PR, and review-gate invocation
+# Finishing — push, PR, and gate invocation
 
 Mechanics for ship: the verification report + AC → proof map, synthesizing the PR from the spec, the
-`review-gate` invocation contract, the portable fallback, and the worktree rule.
+gate invocation contract, the portable fallback, and the worktree rule.
 
 ## Verification report + proof map (pre-PR, AC-13/14/16/18)
 
 Before pushing or opening the PR, ship writes `specs/<feature>/verification-report.md` — a sibling of
 `gate-report.md`/`build-report.md` (process state kept beside the spec, per the artifact model) — and
 runs the checker against it. This is the terminal mechanical settle of "every AC met" against
-captured reality, distinct from the post-PR review-gate panel.
+captured reality, distinct from the post-PR gate panel.
 
 - **Row grammar:** a "Criterion | Type | Proof" table, one row per `AC-N` the spec defines (the
   checker's AC-13 completeness rule scopes to defined ACs only — `NC-N` rows are not required):
@@ -41,22 +41,21 @@ sdlc-check specs/<feature>/<feature>.md --require ledger \
 ```
 
 Sequence this **before** `gh pr create` — it is the mechanical spine gate; the post-PR
-`/review-gate:review-gate` panel (below) is the separate judgment gate. Runtime present → run,
+`/empanel:gate` panel (below) is the separate judgment gate. Runtime present → run,
 interpret the exit code: 0 = corroborated, proceed to push/PR. Nonzero, or the checker crashing, is
 itself a failed check (fail-closed) → **stop-and-ask**: do not open the PR, or if one is already open
 do not treat it as shipped. Any human override to proceed past a failed check must be **recorded in
 the PR body** (AC-16), not merely stated — see the PR body section below. Runtime absent → write an
 **announced degraded fallback** line — never a silent skip.
 
-`sdlc-check` is the plugin's bundled launcher (agent-sdlc adds its `bin/` to PATH on install, same as
-review-gate) — call it by name, never a cwd-relative `node checker/sdlc-check.mjs …` path, which does not
+`sdlc-check` is the plugin's bundled launcher (agent-sdlc adds its `bin/` to PATH on install) — call it by name, never a cwd-relative `node checker/sdlc-check.mjs …` path, which does not
 exist in a user's own repo and would fail-closed the whole pipeline.
 
 **No-ledger path** (a branch built outside the pipeline — the HARD-GATE's alternate precondition):
 there is no `build-report.md`, so **drop `--require ledger`** (`sdlc-check … --require
 verification-report` only). Without captured green-bar evidence the AC-14 name-appearance linkage
 cannot corroborate the proof map's test-backed rows — state that explicitly in the verification report
-and PR body, and rely on the direct suite verification plus the review-gate panel (the HARD-GATE's
+and PR body, and rely on the direct suite verification plus the gate panel (the HARD-GATE's
 sole-gate contract for this path).
 
 **Commit the verification report before pushing.** After the checker passes, `git add
@@ -94,13 +93,14 @@ gh pr create --base <base> --head <branch> --title "<title>" --body-file <genera
 
 Write the body to a file and pass `--body-file` — it keeps newlines and markdown intact.
 
-## review-gate invocation contract
+## Gate invocation contract (Empanel, formerly review-gate)
 
-review-gate is a **post-PR merge gate**. It checks out the PR branch in its own worktree, diffs
+The gate is a **post-PR merge gate**. It checks out the PR branch in its own worktree, diffs
 against the base, runs its reviewers, and returns a deterministic verdict:
 
-- Invoke: `/review-gate:review-gate` against the open PR.
-- **Supply the spec explicitly.** review-gate's reviewers explore the checked-out worktree; a spec
+- Invoke: `/empanel:gate` against the open PR — or its legacy name `/review-gate:review-gate`,
+  whichever is installed; same contract either way.
+- **Supply the spec explicitly.** The gate's reviewers explore the checked-out worktree; a spec
   that is gitignored or uncommitted is *absent* there, and the conformance (`lens-spec`) pass then
   has nothing to check and silently returns empty. Pass the feature's `## Acceptance Criteria` (and
   the design / ADRs) into the invocation so the contract review is real, not blind — never assume the
@@ -112,15 +112,16 @@ against the base, runs its reviewers, and returns a deterministic verdict:
 
 **Branch on the verdict, not on memory:** treat only an explicit `pass` as ready. On `block`, surface
 the blocking findings to the user and ask before any fix-and-re-push. ship never merges — even on a
-clean pass, the merge is a human's or review-gate's own step.
+clean pass, the merge is a human's or the gate's own step.
 
-review-gate depends on Node (its CLI) plus a backend CLI (`claude` / `codex` / `ollama`). It runs
-where those are present.
+The gate depends on Node plus the `@empanel/cli` npm package (the skills invoke it via
+`npx @empanel/cli@0`, so a network-reachable npm registry or a global install suffices) and at
+least one connected model provider. It runs where those are present.
 
-## Portable fallback (review-gate absent)
+## Portable fallback (the gate absent)
 
-If `/review-gate:review-gate` is not installed or its prerequisites are missing (common in
-Cursor/Codex), do not skip the review — dispatch a **whole-PR reviewer subagent**:
+If neither gate skill is installed or its prerequisites are missing, do not skip the review —
+dispatch a **whole-PR reviewer subagent**:
 
 - Brief: the PR diff (base..head), the feature's `## Acceptance Criteria`, and the global
   constraints.

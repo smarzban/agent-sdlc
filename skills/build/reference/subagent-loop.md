@@ -134,7 +134,7 @@ markers the diff introduced, so evidence and deferred ceilings are recorded besi
 
 Turn count beats token price: prefer a cheaper, faster model for mechanical implementer work, a
 mid-tier or better for reviewers, and the most capable for the final whole-PR review (that one is
-ship's `review-gate`). This is **guidance, not a requirement** — the per-dispatch model knob is
+ship's Empanel gate). This is **guidance, not a requirement** — the per-dispatch model knob is
 specific to some platforms (e.g. Claude Code's Agent tool) and absent in others. Where it is absent,
 dispatch with the default model; the loop is unchanged.
 

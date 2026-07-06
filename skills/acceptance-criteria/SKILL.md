@@ -196,4 +196,4 @@ Downstream, the gate/ship checker parses this section literally:
 - Downstream consumers: the design stage (built against these criteria), the verify gate (checks
   every criterion maps to a task), the ship-stage terminal AC verification (test-backed -> a named
   test in the captured green-bar evidence, via the `verification-report.md` proof map + `sdlc-check
-  --require verification-report`), and review-gate (reviewer-checked -> Spec Conformance).
+  --require verification-report`), and the Empanel gate (reviewer-checked -> Spec Conformance).
