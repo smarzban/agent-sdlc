@@ -1,0 +1,27 @@
+# Agent SDLC
+
+> A full-SDLC pipeline for AI coding agents — idea to a reviewed pull request — packaged as a Claude Code + Cursor plugin, with a zero-dependency enforcement checker (sdlc-check) and three standalone documentation skills.
+
+The skills in `skills/<name>/SKILL.md` are the authoritative method; `docs/` is the user- and
+contributor-facing guide; `specs/` is the repo's own pipeline output (it builds itself through the
+pipeline it implements).
+
+## Docs
+
+- [README](README.md): the front door — what it is, quickstart, install, layout.
+- [Quickstart](docs/quickstart.md): install + first run in two commands.
+- [Install](docs/install.md): Claude Code, Cursor, other agents, updates, requirements.
+- [The pipeline](docs/usage/pipeline.md): the stage chain, the traceability spine, the artifact model.
+- [Start anywhere](docs/usage/start-anywhere.md): enter at any stage, from any source.
+- [The light tier](docs/usage/light-tier.md): the compressed pass for small changes.
+- [sdlc-check](docs/usage/sdlc-check.md): the enforcement checker — invocation, rules, exit codes.
+- [Linear sync](docs/usage/linear-sync.md): the optional Linear mirror.
+- [Documentation skills](docs/usage/documentation-skills.md): writing-readmes / writing-repo-docs / writing-technical-docs.
+- [Development](docs/development.md): clone, tests, skill authoring, releases.
+- [Architecture](docs/architecture.md): the repo's shape in one page.
+- [Contributing](CONTRIBUTING.md): branch/merge flow, commit convention, what review expects.
+
+## Optional
+
+- [Project overview (living spec)](specs/overview.md): the pipeline applied to this repo itself.
+- [Skill: getting-started](skills/getting-started/SKILL.md): the router + shared operating rules.
