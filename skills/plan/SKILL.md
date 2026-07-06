@@ -12,7 +12,7 @@ context to follow. This is the one stage the agent owns end to end.
 
 <HARD-GATE>
 Input is the `## Acceptance Criteria`, `## Design`, and `## Tech Stack` sections of
-`specs/<feature>/<feature>.md`, plus `constitution.md`. Resolve these per the input-resolution rule
+`docs/specs/<feature>/<feature>.md`, plus `constitution.md`. Resolve these per the input-resolution rule
 ([input-resolution](../getting-started/reference/input-resolution.md)): a non-canonical source is
 materialized into the named sections (with a provenance marker) before planning. Output is the `## Plan` section of the same
 file. Produce the plan and task breakdown only;
@@ -43,7 +43,7 @@ A task is done being written only when:
 ## Checklist (do in order)
 
 1. **Load inputs** read the `## Acceptance Criteria`, `## Design`, and `## Tech Stack` sections of
-   `specs/<feature>/<feature>.md`, root `CONTEXT.md`, and `constitution.md`. If they contradict each
+   `docs/specs/<feature>/<feature>.md`, root `CONTEXT.md`, and `constitution.md`. If they contradict each
    other, loop back to the owning stage or run the gate first.
 2. **Derive tasks from the design** walk the components and their contracts; for each, produce the
    smallest tasks that build it up, test-first.
@@ -104,7 +104,7 @@ A task is done being written only when:
 
 ## The artifact (output)
 
-The `## Plan` section of `specs/<feature>/<feature>.md`, containing only:
+The `## Plan` section of `docs/specs/<feature>/<feature>.md`, containing only:
 - **Tasks** ordered, each with: ID (`T-1`, `T-2`, ...), title, exact files, the failing test to
   write first, the `AC-N` advanced, the component touched, and dependencies.
 - **Task-to-criterion coverage map** `AC-N` -> the tasks that advance it, so coverage is visible.
@@ -142,7 +142,9 @@ links parse as zero (the retro that motivated this: a plan written to this skill
 
 ## Conventions
 
-- Lives as the `## Plan` section of `specs/<feature>/<feature>.md`. Kept out of the repo's product `docs/`.
+- Lives as the `## Plan` section of `docs/specs/<feature>/<feature>.md`
+  (root `specs/` in a repo that already uses it — the back-compat rule in getting-started) — process
+  record, apart from the repo's product documentation pages.
 - Reads the `## Acceptance Criteria`, `## Design`, and `## Tech Stack` sections of the same file;
   references `AC-N` IDs and design component names.
 - Task IDs (`T-N`) are stable handles the gate and build reference.

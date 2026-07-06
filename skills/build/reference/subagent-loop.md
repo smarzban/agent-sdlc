@@ -123,7 +123,7 @@ bounded form (still the conductor's own run, never a transcription); this is the
 summary alone suffices. (If a full per-task listing is impractical, at minimum a build-complete
 comprehensive block carrying the full per-test listing satisfies the union AC-14 searches — but the
 per-test names, never mere counts, are the load-bearing content.) The canonical worked example is this very feature's own ledger —
-`specs/enforcement-spine/build-report.md`'s `## Green-bar evidence` section.
+`docs/specs/enforcement-spine/build-report.md`'s `## Green-bar evidence` section.
 
 The message states the task and the `AC-N` (e.g. `feat(T-3): root resolver — advances AC-1`). Then
 updates the ledger — the captured green-bar evidence block for this task, plus any `SHORTCUT(T-N)`
@@ -145,7 +145,7 @@ dispatch with the default model; the loop is unchanged.
 2. Cross-check with `git log` — a task with a commit is done even if the ledger missed the write.
 3. Resume at the first task not marked done. **Never re-run a done task.**
 4. **Invoke the checker before continuing** (resume invocation point, AC-15) — a second, mechanical
-   witness to 1–3: `sdlc-check specs/<feature>/<feature>.md --require
+   witness to 1–3: `sdlc-check docs/specs/<feature>/<feature>.md --require
    ledger` (never `--require verification-report` here — that artifact is ship's). Runtime present →
    interpret the exit code: 0 proceeds; nonzero, or the checker crashing, is a failed check
    (fail-closed) — **stop-and-ask**, do not resume task work, and record any human override in

@@ -13,7 +13,7 @@ choose a stack, plan, or build.
 <HARD-GATE>
 Input is the settled brief (problem + scope), resolved per the input-resolution rule
 ([input-resolution](../getting-started/reference/input-resolution.md)) — the `## Brief` section of
-`specs/<feature>/<feature>.md`, or an explicitly supplied source (a prompt, doc, or Linear item)
+`docs/specs/<feature>/<feature>.md`, or an explicitly supplied source (a prompt, doc, or Linear item)
 materialized into `## Brief` with a provenance marker first; the precondition is a settled brief, not
 the file's presence. Output is the `## Acceptance Criteria` section of the same file and nothing else. Stay tech-agnostic: criteria state
 WHAT must be true and WHY, never HOW (no architecture, no stack, no API names, no code). Do NOT
@@ -64,7 +64,7 @@ is no auto-tracing: pick that task and name the AC in its `*Advances:*`.
 
 ## Checklist (do in order)
 
-1. **Load the inputs** read the `## Brief` section of `specs/<feature>/<feature>.md`, the root
+1. **Load the inputs** read the `## Brief` section of `docs/specs/<feature>/<feature>.md`, the root
    `CONTEXT.md` glossary, and `constitution.md`. Confirm intent and scope are actually settled. If they are fuzzy, loop back
    to idea; do not invent intent here.
 2. **Derive candidates** turn each distinct observable outcome implied by intent + scope into one
@@ -150,7 +150,7 @@ is no auto-tracing: pick that task and name the AC in its `*Advances:*`.
 
 ## The artifact (output)
 
-The `## Acceptance Criteria` section of `specs/<feature>/<feature>.md`, containing only:
+The `## Acceptance Criteria` section of `docs/specs/<feature>/<feature>.md`, containing only:
 - **Criteria** each with: ID (`AC-1`, `AC-2`, ...), the statement, verification type
   (test-backed + oracle-kind, or reviewer-checked + axis + pass/fail question + justification).
 - **Negative criteria** the non-goals restated as out-of-bounds checks.
@@ -187,8 +187,9 @@ Downstream, the gate/ship checker parses this section literally:
 
 ## Conventions
 
-- Lives as the `## Acceptance Criteria` section of `specs/<feature>/<feature>.md`, between
-  `## Brief` and `## Design`, kept out of the repo's product `docs/`.
+- Lives as the `## Acceptance Criteria` section of `docs/specs/<feature>/<feature>.md`
+  (root `specs/` in a repo that already uses it — the back-compat rule in getting-started), between `## Brief`
+  and `## Design` — process record, apart from the repo's product documentation pages.
 - Criterion IDs (`AC-N`) are stable handles the design, plan, tasks, and verify gate all
   reference. Do not renumber; deprecate instead.
 - Reads the `## Brief` section of the same file; resolves terms against root `CONTEXT.md` (or the

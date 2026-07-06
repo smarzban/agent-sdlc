@@ -93,8 +93,8 @@ of Linear, not a write — the only write is to the spec file, stamped with a pr
 
 - **Issue (`T-N`) -> a task** in the `## Plan` section; carry its `AC-N` if the issue records one,
   else mark the task `AC: untraced` (never fabricate a criterion).
-- **Milestone -> a build phase**; **Project -> the feature** (`specs/<feature>/<feature>.md`);
-  **Initiative -> the product** (`specs/overview.md`).
+- **Milestone -> a build phase**; **Project -> the feature** (`docs/specs/<feature>/<feature>.md`);
+  **Initiative -> the product** (`docs/specs/overview.md`).
 - **Faithful, not creative.** Transcribe only what the Linear entities contain; do not invent tasks,
   criteria, or components to fill the chain. Missing upstream links stay `untraced` and surface in the
   gate's coverage note.

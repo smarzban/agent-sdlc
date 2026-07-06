@@ -11,13 +11,13 @@ memory, and pin a version. Human-owned, agent-proposed: lead with a recommended 
 alternatives with tradeoffs, the user decides.
 
 <HARD-GATE>
-Input is the `## Design` and `## Acceptance Criteria` sections of `specs/<feature>/<feature>.md`
-(and the `## Architecture` section of `specs/overview.md` at project level), plus `constitution.md`.
+Input is the `## Design` and `## Acceptance Criteria` sections of `docs/specs/<feature>/<feature>.md`
+(and the `## Architecture` section of `docs/specs/overview.md` at project level), plus `constitution.md`.
 Resolve these per the input-resolution rule
 ([input-resolution](../getting-started/reference/input-resolution.md)): materialize any non-canonical
 source into the named sections (with a provenance marker) before choosing.
-Output is the `## Tech Stack` section of `specs/<feature>/<feature>.md` (the `## Tech Stack` section
-of `specs/overview.md` at project level). Choose concrete products per component; do NOT change the design
+Output is the `## Tech Stack` section of `docs/specs/<feature>/<feature>.md` (the `## Tech Stack` section
+of `docs/specs/overview.md` at project level). Choose concrete products per component; do NOT change the design
 shape (if a product would force a shape change, STOP and loop back to design), and do NOT write a
 plan, break down tasks, or write code. Exempt from that "only output is `## Tech Stack`, no code"
 boundary are throwaway **spike** files (never merged — gitignored or deleted) and the durable
@@ -55,7 +55,7 @@ A choice is done only when:
 ## Checklist (do in order)
 
 1. **Load inputs** read the `## Design` and `## Acceptance Criteria` sections of
-   `specs/<feature>/<feature>.md`, root `CONTEXT.md`, and `constitution.md`. At feature level, read
+   `docs/specs/<feature>/<feature>.md`, root `CONTEXT.md`, and `constitution.md`. At feature level, read
    the existing stack (manifests, lockfiles, the `## Tech Stack` already recorded in `overview.md`).
    Confirm the design is settled; if not, loop back.
 2. **Set level** project (choosing the whole stack, including cross-cutting choices like language,
@@ -137,7 +137,7 @@ A choice is done only when:
 
 ## The artifact (output)
 
-The `## Tech Stack` section of `specs/<feature>/<feature>.md` (or of `specs/overview.md` at project
+The `## Tech Stack` section of `docs/specs/<feature>/<feature>.md` (or of `docs/specs/overview.md` at project
 level), containing only:
 - **Choices** per component: the design kind -> chosen product, version, the date checked and a
   doc link, and why over the alternatives. Each load-bearing claim on a choice is tagged
@@ -177,8 +177,10 @@ reuse existing capabilities, and justify any addition.
 
 ## Conventions
 
-- Lives as the `## Tech Stack` section of `specs/<feature>/<feature>.md` (project-level
-  cross-cutting choices in `specs/overview.md`). Kept out of the repo's product `docs/`.
+- Lives as the `## Tech Stack` section of `docs/specs/<feature>/<feature>.md` (project-level
+  cross-cutting choices in `docs/specs/overview.md`)
+  (root `specs/` in a repo that already uses it — the back-compat rule in getting-started) — process
+  record, apart from the repo's product documentation pages.
 - Reads the `## Design` and `## Acceptance Criteria` sections of the same file; references the
   design's component kinds and the `AC-N` IDs of any criterion that drives a choice.
 - Stops at product selection. How those products are wired up, task by task, is the plan stage.

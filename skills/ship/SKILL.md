@@ -12,14 +12,14 @@ or the gate's own merge step, and promotion belongs to a later `deploy` stage.
 
 <HARD-GATE>
 Precondition: a **green, build-finished branch with a clean working tree** — proven by
-`specs/<feature>/build-report.md` (every task done; build always writes the ledger, ingested plan or
+`docs/specs/<feature>/build-report.md` (every task done; build always writes the ledger, ingested plan or
 not), or, when no ledger exists because the branch was built **outside the pipeline**, by verifying
 the branch directly: the suite is green. On that no-ledger path the Empanel gate is the *sole* quality gate
 (no upstream spec-gate or per-task review ran) and completeness cannot be asserted from a ledger —
 lean on the spec coverage and the review, and say so. If a task is in-progress or blocked, STOP and
 route back to `/agent-sdlc:build`. Input is the green
 feature branch plus the spec (for the PR body). Output is a pushed branch, a written
-`specs/<feature>/verification-report.md`, an open PR (body carrying the published AC → proof map),
+`docs/specs/<feature>/verification-report.md`, an open PR (body carrying the published AC → proof map),
 and a gate verdict. ship creates and reviews the PR; it does NOT merge. On a blocking verdict
 it stops and asks before changing anything — a PR is an outward artifact.
 </HARD-GATE>
@@ -34,9 +34,9 @@ it stops and asks before changing anything — a PR is an outward artifact.
    straight from the command, never through a pipe that hands you the pager's `$?`, and the suite
    verdict from a machine-readable reporter, not a scraped human summary. Red → stop; do not push a
    red branch.
-3. **Verify criteria** build the AC → proof map, write `specs/<feature>/verification-report.md`, then
+3. **Verify criteria** build the AC → proof map, write `docs/specs/<feature>/verification-report.md`, then
    **invoke the checker** (pre-PR invocation point, AC-15) with the report required:
-   `sdlc-check specs/<feature>/<feature>.md --require ledger --require verification-report`. Runtime
+   `sdlc-check docs/specs/<feature>/<feature>.md --require ledger --require verification-report`. Runtime
    present → run, interpret the exit code: 0 = every AC settled mechanically, proceed; nonzero, or the
    checker crashing, is itself a failed check (fail-closed) — **stop-and-ask**, do not open the PR
    (or, if one is already open, do not treat it as shipped); any human override must be **recorded in
@@ -46,7 +46,7 @@ it stops and asks before changing anything — a PR is an outward artifact.
    verification-report` only) and state in the verification report + PR body that ledger-backed AC-14
    corroboration is unavailable — the direct suite verification (step 2) plus the gate panel
    (step 7) are the quality gate, as the HARD-GATE says. Then **commit the verification report** so it
-   rides the PR: `git add specs/<feature>/verification-report.md && git commit` (a sibling of the
+   rides the PR: `git add docs/specs/<feature>/verification-report.md && git commit` (a sibling of the
    already-committed `gate-report.md`/`build-report.md`; without this the pushed branch omits it and
    the worktree is left dirty). This all runs *before* `gh pr create`, distinct from the *post-PR*
    gate panel (step 7): sdlc-check is the mechanical spine, Empanel is the judgment panel,
@@ -133,7 +133,7 @@ it stops and asks before changing anything — a PR is an outward artifact.
 - The workspace cleaned up while the PR is still open.
 - A PR opened while `sdlc-check --require verification-report` failed, with no override recorded in
   the PR body.
-- The AC → proof map left only in `specs/<feature>/verification-report.md`, never copied into the PR
+- The AC → proof map left only in `docs/specs/<feature>/verification-report.md`, never copied into the PR
   body.
 - A test-backed proof-map row naming a test absent from the ledger's captured green-bar evidence.
 - The checker silently skipped when `node` was absent, instead of an announced degraded fallback.
@@ -144,7 +144,7 @@ it stops and asks before changing anything — a PR is an outward artifact.
 ## Done when
 
 - The suite is verified green and the branch is pushed.
-- `specs/<feature>/verification-report.md` is written with one AC → proof-map row per criterion, and
+- `docs/specs/<feature>/verification-report.md` is written with one AC → proof-map row per criterion, and
   `sdlc-check --require ledger --require verification-report` corroborated it pre-PR — or, when
   `node` was absent, an announced degraded fallback is recorded in its place. A failed checker run
   either blocked the PR or was overridden with the override recorded in the PR body.
@@ -160,8 +160,9 @@ it stops and asks before changing anything — a PR is an outward artifact.
 
 ## The artifact (output)
 
-- `specs/<feature>/verification-report.md` — the AC → proof map, a sibling of `gate-report.md` /
-  `build-report.md` (process state beside the spec).
+- `docs/specs/<feature>/verification-report.md`
+  (root `specs/` in a repo that already uses it — the back-compat rule in getting-started) —
+  the AC → proof map, a sibling of `gate-report.md` / `build-report.md` (process state beside the spec).
 - An open pull request with the spec-derived description (including the published proof map) and a
   gate verdict comment.
 - No other new files in the repo; ship's remaining output is the PR and the review, not a document.
@@ -182,7 +183,7 @@ are in [reference/finishing.md](reference/finishing.md)):
 
 - Reads `build-report.md` and the spec; references `AC-N` and the feature branch. When no ledger
   exists (a branch built outside the pipeline), verifies the branch directly instead.
-- Invokes `sdlc-check specs/<feature>/<feature>.md --require ledger --require
+- Invokes `sdlc-check docs/specs/<feature>/<feature>.md --require ledger --require
   verification-report` (bare `node`, no install) pre-PR, mirroring gate's and build's checker
   contract: present and clean → corroborated, proceed; present and failing (or crashing) →
   stop-and-ask, override recorded in the PR body; absent → an announced degraded fallback, never a

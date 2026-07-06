@@ -15,12 +15,12 @@ subagents read, not here.
 Precondition: a **gate verdict of ready to build** (no Critical or High findings) exists **for the
 plan in hand**. The plan is resolved per the input-resolution rule
 ([input-resolution](../getting-started/reference/input-resolution.md)) — the `## Plan` section of
-`specs/<feature>/<feature>.md`, or an external plan (a Linear issue set, a doc) materialized into
+`docs/specs/<feature>/<feature>.md`, or an external plan (a Linear issue set, a doc) materialized into
 `## Plan` with a provenance marker first (see [reference/ingesting-plans.md](reference/ingesting-plans.md)).
 If no verdict exists for that plan, **run `/agent-sdlc:gate` inline** and proceed only on a clean
 verdict — never build on an unblessed chain, whatever the plan's source. Input is the `## Plan`
 section (plus the sections it references) and the gate report. Output is product code on a feature branch, one atomic
-commit per task, and `specs/<feature>/build-report.md` (the ledger). The terminal action is a green
+commit per task, and `docs/specs/<feature>/build-report.md` (the ledger). The terminal action is a green
 branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
 </HARD-GATE>
 
@@ -67,7 +67,7 @@ branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
    this corroborates the work already recorded, so it runs ONLY when a `build-report.md` already
    exists; a fresh build has no ledger yet (this step CREATES it), so skip the checker here and let
    the build-complete run (step 5) be the first invocation. Command (when resuming):
-   `sdlc-check specs/<feature>/<feature>.md --require ledger` (never
+   `sdlc-check docs/specs/<feature>/<feature>.md --require ledger` (never
    `--require verification-report` at build — that artifact is ship's, T-12). Runtime present → run,
    interpret the exit code: 0 = corroborated, proceed; nonzero, or the checker crashing, is itself a
    failed check (fail-closed) — **stop-and-ask**, do not resume task work; any human override must be
@@ -284,7 +284,9 @@ discipline exists to stop.
 ## The artifact (output)
 
 - Product code on a feature branch: one atomic, reviewed, green commit per task.
-- `specs/<feature>/build-report.md` — the resumable ledger: per task `T-N` its status (done /
+- `docs/specs/<feature>/build-report.md`
+  (root `specs/` in a repo that already uses it — the back-compat rule in getting-started) —
+  the resumable ledger: per task `T-N` its status (done /
   in-progress / blocked), commit SHA, the `AC-N` advanced, any blocker note, a captured green-bar
   evidence block (fenced command + output tail, from the first task onward), and any
   deferred-shortcut ceilings (`SHORTCUT(T-N)`) the task left in the code, plus the checker's
@@ -317,7 +319,7 @@ mis-fires:
 
 ## Conventions
 
-- Reads the `## Plan` and `## Tech Stack` sections of `specs/<feature>/<feature>.md` (the latter for
+- Reads the `## Plan` and `## Tech Stack` sections of `docs/specs/<feature>/<feature>.md` (the latter for
   the green bar — the commands that define a passing build) and `gate-report.md`; references `T-N`
   and `AC-N` IDs.
 - Writes only product code + `build-report.md`. Does not **author** the front-half spec sections (the
@@ -328,7 +330,7 @@ mis-fires:
 - Runs after a clean gate verdict; re-run is safe and resumes from the ledger. The plan may be
   materialized from an external source (Linear/doc) — build runs the gate inline when no verdict
   exists for it (see [reference/ingesting-plans.md](reference/ingesting-plans.md)).
-- Invokes `sdlc-check specs/<feature>/<feature>.md --require ledger` (bare
+- Invokes `sdlc-check docs/specs/<feature>/<feature>.md --require ledger` (bare
   `node`, no install) at resume and at build-complete, mirroring gate's and ship's checker contract:
   present and clean → corroborated; present and failing (or crashing) → stop-and-ask, override
   recorded in `build-report.md`; absent → an announced degraded fallback, never a silent skip. Never

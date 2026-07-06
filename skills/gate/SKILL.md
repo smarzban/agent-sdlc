@@ -12,12 +12,12 @@ everything and changes nothing, routing each fix to the stage that owns it.
 
 <HARD-GATE>
 Reads the `## Brief`, `## Acceptance Criteria`, `## Design`, `## Tech Stack`, and `## Plan` sections
-of `specs/<feature>/<feature>.md` (plus `specs/overview.md` at project level), `constitution.md`,
+of `docs/specs/<feature>/<feature>.md` (plus `docs/specs/overview.md` at project level), `constitution.md`,
 `CONTEXT.md`, and any probe-output artifact a `## Tech Stack` load-bearing claim references
 (read-only, for presence + shape only). A section may be materialized from a non-canonical source (a provenance marker on
 its first line) and the chain may be entered mid-way (some upstream links marked `untraced`); the
 gate honours both — see [input-resolution](../getting-started/reference/input-resolution.md).
-Writes only `specs/<feature>/gate-report.md`. Modifies NO other file, fixes
+Writes only `docs/specs/<feature>/gate-report.md`. Modifies NO other file, fixes
 NOTHING, writes no code and no plan. Findings are reported with the owning stage
 named, so the fix happens there and the gate stays trustworthy. The terminal action is a report and
 a verdict: ready to build, or not.
@@ -63,7 +63,7 @@ a verdict: ready to build, or not.
    human-in-loop — never in the gate.
 5. **Hygiene.** No unresolved TBDs, placeholders, or "decide later" markers remain.
 6. **Mechanical corroboration.** After checks 1–5, run the bundled checker as a second, automated
-   witness to the same chain: `sdlc-check specs/<feature>/<feature>.md`
+   witness to the same chain: `sdlc-check docs/specs/<feature>/<feature>.md`
    (bare `node`, no install; a plain run auto-scopes to whatever artifacts exist at gate time — do
    not `--require` the ledger or verification report, they don't exist yet). `node` present -> run it
    and interpret the exit code: 0 = corroborated; **nonzero, or the checker crashing, is itself a
@@ -73,7 +73,7 @@ a verdict: ready to build, or not.
 
 ## Checklist (do in order)
 
-1. **Load every artifact** every section of `specs/<feature>/<feature>.md` plus `specs/overview.md`
+1. **Load every artifact** every section of `docs/specs/<feature>/<feature>.md` plus `docs/specs/overview.md`
    and root `constitution.md` and `CONTEXT.md`.
 2. **Build the chain map** for each `AC-N`, assemble criterion -> component -> product -> task(s)
    from the artifacts.
@@ -149,7 +149,7 @@ a verdict: ready to build, or not.
 
 ## The artifact (output)
 
-`specs/<feature>/gate-report.md`, containing only:
+`docs/specs/<feature>/gate-report.md`, containing only:
 - **Chain coverage table** `AC-N` -> component -> product -> task(s), with gaps marked.
 - **Findings by severity** each with: location (which artifact and where), the issue, the owning
   stage, and a suggested next action.
@@ -162,7 +162,9 @@ a verdict: ready to build, or not.
 
 ## Conventions
 
-- Lives at `specs/<feature>/gate-report.md`. Read-only over every other artifact.
+- Lives at `docs/specs/<feature>/gate-report.md`
+  (root `specs/` in a repo that already uses it — the back-compat rule in getting-started). Read-only
+  over every other artifact.
 - Run after the `## Plan` section exists and before build. Re-run after any fix until the verdict is clean.
 - Invokes `sdlc-check` (bare `node`, no install) after its own chain walk for
   mechanical corroboration, mirroring the existing ship <-> Empanel contract: present and clean ->

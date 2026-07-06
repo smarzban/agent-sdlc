@@ -22,7 +22,7 @@ step.
 ## Checklist (do in order)
 
 1. **Explore context** files, docs, recent commits, and whether this is an existing project: look
-   for `specs/overview.md`, a `constitution.md`, and a `CONTEXT.md`.
+   for `docs/specs/overview.md`, a `constitution.md`, and a `CONTEXT.md`.
 2. **Set level and depth** *level*: **project** (clean repo, no overview/constitution, so you are
    shaping a whole app) or **feature** (existing project, so you are shaping one piece); *depth*:
    vague idea (diverge first) or specific (converge fast). Level decides what you produce and where
@@ -47,12 +47,13 @@ step.
 8. **Settle and write the artifact** present the settled problem, scope, non-goals, chosen
    approach, and resolved decisions in sections scaled to complexity, and get approval. Where it
    lands depends on the level (see Two levels): a **feature** writes the `## Brief` section of
-   `specs/<feature>/<feature>.md` and appends the feature to `overview.md`'s feature list; a
-   **project** writes the `## Overview` section of `specs/overview.md` and seeds root-level
-   `constitution.md` and `CONTEXT.md`. Either way, keep it out of the repo's product `docs/`.
+   `docs/specs/<feature>/<feature>.md` and appends the feature to `overview.md`'s feature list; a
+   **project** writes the `## Overview` section of `docs/specs/overview.md` and seeds root-level
+   `constitution.md` and `CONTEXT.md`. Either way, the spec is process record — it lives in the
+   spec tree, apart from the repo's product documentation pages.
 9. **Hand off** for a **feature**, tell the user it is ready for the acceptance-criteria step. For
    a **project**, hand back the feature list and offer to shape the first feature next (its own
-   `specs/<feature>/<feature>.md` pass). Do not start the next step yourself. If Linear sync is
+   `docs/specs/<feature>/<feature>.md` pass). Do not start the next step yourself. If Linear sync is
    enabled in `.agent-sdlc/config.json`, also perform this stage's action via the `linear-sync` skill.
 
 ## Principles
@@ -84,8 +85,8 @@ A short file containing only:
 - **Any ADRs**
 
 No requirements, no success criteria, no design detail. Those are the next stage. This content is
-the `## Brief` section of `specs/<feature>/<feature>.md`. At **project** level the same shape is
-the `## Overview` section of `specs/overview.md`, plus the feature decomposition (the list of
+the `## Brief` section of `docs/specs/<feature>/<feature>.md`. At **project** level the same shape is
+the `## Overview` section of `docs/specs/overview.md`, plus the feature decomposition (the list of
 features the project breaks into).
 
 ## Two levels: project vs feature
@@ -94,7 +95,7 @@ The same skill runs at two scopes, decided in step 2.
 
 **Project** (clean repo, "I want to build an app for X"): you are shaping the whole project.
 Outputs are the north-star plus the breakdown into features:
-- `specs/overview.md` `## Overview` problem, scope, overall shape, and the feature decomposition
+- `docs/specs/overview.md` `## Overview` problem, scope, overall shape, and the feature decomposition
 - `constitution.md` (root) standing principles, seeded here
 - `CONTEXT.md` (root) the initial glossary
 
@@ -102,7 +103,7 @@ A project pass ends by handing over the feature list; each feature is then its o
 pass.
 
 **Feature** (existing project, "I want to add X"): you are shaping one piece:
-- the `## Brief` section of `specs/<feature>/<feature>.md` — this feature's settled intent (later
+- the `## Brief` section of `docs/specs/<feature>/<feature>.md` — this feature's settled intent (later
   joined by the `## Acceptance Criteria`, `## Design`, `## Tech Stack`, and `## Plan` sections in
   the same file).
 
@@ -111,7 +112,7 @@ Layout:
 /
 ├── constitution.md          ← standing principles (project-wide)
 ├── CONTEXT.md               ← glossary (project-wide)
-└── specs/
+└── docs/specs/
     ├── overview.md          ← project tier: ## Overview · ## Architecture · ## Tech Stack
     ├── adr/                 ← decision records
     └── <feature>/
@@ -119,12 +120,17 @@ Layout:
         └── gate-report.md   ← gate output
 ```
 
+A repo that already has a spec tree at root `specs/` keeps using it — the back-compat rule in
+getting-started (never split a repo across both locations, never auto-migrate); new spec trees
+are created at `docs/specs/`.
+
 ## Conventions
 
 - `CONTEXT.md` is a glossary and nothing else, devoid of implementation detail, not a spec or
   scratchpad. It lives at the repo root (canonical vocabulary the whole repo shares). Create it
   lazily, when the first term is resolved.
-- ADRs live under `specs/adr/` and are created only when the three-part test above is met.
+- ADRs live under `docs/specs/adr/` (beside the spec tree, wherever it lives) and are created only
+  when the three-part test above is met.
 - If a `CONTEXT-MAP.md` exists at the root, the repo has multiple contexts; resolve terms in the
   context they belong to.
 - Keep the trigger distinct from any `brainstorming` skill you may also have installed, so this

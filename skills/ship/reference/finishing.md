@@ -5,7 +5,7 @@ gate invocation contract, the portable fallback, and the worktree rule.
 
 ## Verification report + proof map (pre-PR, AC-13/14/16/18)
 
-Before pushing or opening the PR, ship writes `specs/<feature>/verification-report.md` — a sibling of
+Before pushing or opening the PR, ship writes `docs/specs/<feature>/verification-report.md` — a sibling of
 `gate-report.md`/`build-report.md` (process state kept beside the spec, per the artifact model) — and
 runs the checker against it. This is the terminal mechanical settle of "every AC met" against
 captured reality, distinct from the post-PR gate panel.
@@ -36,7 +36,7 @@ captured reality, distinct from the post-PR gate panel.
 **Run the checker pre-PR, report required:**
 
 ```bash
-sdlc-check specs/<feature>/<feature>.md --require ledger \
+sdlc-check docs/specs/<feature>/<feature>.md --require ledger \
   --require verification-report
 ```
 
@@ -59,13 +59,13 @@ and PR body, and rely on the direct suite verification plus the gate panel (the 
 sole-gate contract for this path).
 
 **Commit the verification report before pushing.** After the checker passes, `git add
-specs/<feature>/verification-report.md && git commit` it — a sibling of the already-committed
+docs/specs/<feature>/verification-report.md && git commit` it — a sibling of the already-committed
 `gate-report.md`/`build-report.md`, so it rides the PR branch. Skipping this leaves the report absent
 from the pushed branch and the worktree dirty.
 
 ## PR body — synthesized from the spec
 
-Build the PR title and body from `specs/<feature>/<feature>.md` (and the `SHORTCUT` ceilings from
+Build the PR title and body from `docs/specs/<feature>/<feature>.md` (and the `SHORTCUT` ceilings from
 `build-report.md`), never from memory:
 
 - **Title:** the feature name (concise), e.g. `feat: <feature>`.
@@ -74,7 +74,7 @@ Build the PR title and body from `specs/<feature>/<feature>.md` (and the `SHORTC
   - **Acceptance criteria** — the `AC-N` list (the contract this PR claims to meet).
   - **Coverage** — the task→criterion map from the `## Plan`: which `T-N` advanced which `AC-N`.
   - **Verification** — the full AC → proof map copied verbatim from
-    `specs/<feature>/verification-report.md` (AC-18 — it must appear here, not only in the spec
+    `docs/specs/<feature>/verification-report.md` (AC-18 — it must appear here, not only in the spec
     tree, so it is visible whenever ship completes) plus the checker corroboration result (pass, or
     stop-and-ask with the recorded human override, or an announced degraded fallback); if a checker
     failure was overridden, state the override and its justification explicitly in this section
@@ -84,7 +84,7 @@ Build the PR title and body from `specs/<feature>/<feature>.md` (and the `SHORTC
   - **Provenance** — when the plan was ingested from a non-canonical source (a Linear issue set, a
     doc), name the source and carry the gate's mid-chain-entry / `untraced` note, so the reviewer sees
     what was not vetted upstream; omit when the chain ran in full from `idea`.
-  - **Spec** — a link or path to `specs/<feature>/<feature>.md`.
+  - **Spec** — a link or path to `docs/specs/<feature>/<feature>.md`.
 - Base branch: the project's default (e.g. `main`) unless configured otherwise.
 
 ```bash
