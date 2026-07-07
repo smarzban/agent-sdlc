@@ -84,23 +84,13 @@ branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
       (compile, test, lint, format-check) after the reviewer passes / before the commit, and reads
       the output (verification-before-completion). Not just tests: lint or format drift caught now
       is a clean commit; caught later is a reactive scramble. **Capture that run's actual output**
-      as the task's green-bar evidence — the command line(s) plus the output, piped/pasted verbatim
-      — a **harness-captured fact**, *never* a transcription of the subagent's reported `Tests N
-      passed` summary or count. Two holes this closes: **(i) trust-the-subagent** — a subagent can
-      report a false count, so the recorded count must be the conductor's *own* observed run, not
-      the subagent's word; **(ii) summary-only degradation** — transcription drifts to summaries,
-      losing the per-test names the proof-evidence linkage needs. So the captured block is the **per-test listing** (e.g.
-      `node --test`'s `ok N - <name>` lines), not summary counts — those names are what ship's
-      `proof-evidence-linkage` rule matches against. **Bounded for large suites:** cap the block to a tail, but
-      retain in full the per-test `ok N - <name>` lines for **the tests this task adds or exercises**
-      — the failing test(s) the plan named for `T-N` (test-first) — since those are exactly what a
-      later proof map can cite; the rest of a large **pre-existing** suite (tests this task did not
-      add) may be capped to its summary tail. **A task that adds no tests** (e.g. a prose/doc task)
-      has no task-specific per-test names to retain — its suite summary (e.g. `# pass N`) is then the
-      correct bounded form (still the conductor's own run, never a transcription); this is the ONLY
-      case where a summary alone suffices. If a full per-task listing is impractical, the fallback is
-      a build-complete comprehensive block carrying the full per-test listing — per-task capture stays
-      the norm. (Vacuous-green and staged-isolation handling below are unchanged.)
+      as the task's green-bar evidence — the command line(s) plus the per-test listing
+      (`node --test`'s `ok N - <name>` lines), *never* a transcription of the subagent's reported
+      count — the names are what ship's `proof-evidence-linkage` matches against. **Bounded for
+      large suites:** retain in full the per-test lines for tests this task adds/exercises; the rest
+      may be capped to its summary tail. **A task that adds no tests** (e.g. a prose/doc task) has
+      no task-specific per-test names — its suite summary (e.g. `# pass N`) is the correct bounded
+      form (still the conductor's own run); this is the ONLY case where a summary alone suffices.
    e. Commit: one atomic commit for the task, reflecting the reviewed code. Verify it compiles **in
       isolation** — run the bar against the staged snapshot (`git stash --keep-index
       --include-untracked` → bar → pop), not just the working tree: an under-staged commit can pass a
@@ -192,17 +182,11 @@ discipline exists to stop.
   green after bounded fixes: record it blocked and ask. Do not paper over an unsettled plan.
 - **Review at two scales.** Every task gets a cheap reviewer subagent here; the whole PR gets the
   heavy Empanel gate once, at ship. Both are real gates; neither replaces the other.
-- **Evidence is captured text, never a checkbox — and it is the conductor's OWN run.** Each
-  green-bar run is recorded verbatim — the command plus its output tail (the per-test listing,
-  bounded) — beside the task, from the first task onward. The recorded output is the conductor's own
-  post-review run, never a transcription of the subagent's reported count: a subagent's self-report
-  is not evidence (trust-the-subagent), and a transcribed summary loses the per-test names the proof-evidence linkage
-  needs (summary-only degradation). A task marked done with no evidence block is not done.
-- **Read the bar, don't glance at it.** A misread green bar is worse than a red one — it ships. Read
-  exit codes straight from the command (never through a pipe that hands you the pager's `$?`), take
-  suite verdicts from a machine-readable reporter (not a scraped human summary), and investigate any
-  human/machine reporter discrepancy via the machine one — never wave it off as "probably a flake."
-  See *Reading the green bar* above.
+- **Evidence is the conductor's own captured run.** Each task's green-bar evidence is the
+  conductor's post-review run recorded verbatim — the command plus its per-test listing (bounded)
+  — never a subagent's reported count, never a summary that names no test, and never a verdict
+  read through a pipe or scraped from a human summary. The full discipline is *Reading the green
+  bar* above. A task marked done with no evidence block is not done.
 - **Corroborate at resume and at hand-off.** The checker is a second, mechanical witness to the
   ledger/trace/commits so far — run it before continuing after a break and again before ship. A
   nonzero exit or a crash is a failed check, not noise.
@@ -214,55 +198,34 @@ discipline exists to stop.
 | Excuse | Rebuttal |
 | --- | --- |
 | "I'll just edit this file directly, it's faster." | The conductor delegates. Direct edits skip the review gate and bloat its context. Dispatch. |
-| "Write the code, add the test after." | Tests-after answers "what does it do"; tests-first answers "what should it do". The plan named the failing test — write it first. |
+| "Write the code, add the test after." | The plan named the failing test — write it first. Tests-after answers "what does it do", not "what should it do". |
 | "Give the subagent the whole plan for context." | One brief = one task. The whole plan is noise that derails an autonomous run. |
 | "Skip the per-task review, the ship gate catches it." | A whole-PR gate cannot localize a per-task drift cheaply. Review early; fix while it is small. |
 | "This task won't go green, I'll wire the next one and come back." | Errors compound. Stop the line: a blocked task is recorded and raised, not deferred. |
 | "Trust my memory of what's done after the compaction." | Re-running a done task is the costliest failure. Read the ledger and `git log`. |
-| "The plan came from Linear/a doc, it's already reviewed — skip the gate." | A source is not a verdict. An unvetted plan is unvetted whatever its origin — run the gate inline, then build. |
-| "The checker isn't installed here, just skip resume/build-complete." | `node` absent is a degraded fallback, announced in `build-report.md` — not a silent skip. |
-| "`sdlc-check` failed but the task looks fine, proceed anyway." | A failed checker run is a failed check — stop-and-ask. Proceeding needs an explicit, recorded human override. |
-| "I'll add the evidence block later, once more tasks land." | Evidence is captured from the first task, never deferred — a gap left for later is a hole the checker (`green-bar-evidence` / `proof-evidence-linkage`) will find. |
-| "The subagent already ran the tests and reported them green — I'll record its count." | A subagent's self-report is not evidence. The conductor runs the declared command itself and records that run's actual per-test output — a false or summarized count is exactly the hole this closes. |
-| "`sdlc-check … \| head` printed nothing scary and `$?` was 0 — green." | `$?` after a pipe is the pager's exit, not the checker's. Read the command's own exit code — capture to a file first, or use `pipefail`/`${PIPESTATUS[0]}`. A pipe is how a red bar passes as green. |
-| "The human reporter shows a couple of failures — probably a flake, ship it." | Investigate via the machine reporter (exit code, `# fail N`, `--reporter=json` `numFailedTests`), never explain a discrepancy away. Normalizing "some failures are flake" is how a real red ships. |
-| "The baseline is red because the target files don't exist yet — stop." | Absence of the declared paths is vacuous green, not red — greenfield has nothing to fail. Proceed; the bar binds once the paths exist. |
-| "The baseline is red, must be my code." | First check the command itself ran — a malformed green-bar command is a techstack declaration bug, not red code; route it there. |
-| "The implementer agent type isn't available — I'll swap in a stand-in whenever I hit a dispatch." | Per-dispatch rediscovery is improvisation. Resolve the roster once at build start, announce the substitution up front, and record it in the ledger. |
-| "The subagent died mid-task — I'll just finish it myself and move on." | Not without the policy: capture the partial work, retry once fresh, only then conductor-take-over, and record the deviation. A silent takeover erases which agent did the work. |
-| "The plan's path is wrong, I'll just fix it inline." | Silent adaptation drifts the spec from the code and breaks the trace. Route the delta through the plan method + inline gate — that's the amendment loop ([reference/plan-amendments.md](reference/plan-amendments.md)), not a detour. Scope changes stop-and-ask. |
+| "The plan came from Linear/a doc, it's already reviewed — skip the gate." | A source is not a verdict. Run the gate inline, then build. |
+| "`sdlc-check` failed but the work looks fine, proceed anyway." | A failed checker run is a failed check — stop-and-ask; any override is recorded in the ledger. Runtime absent is an announced degraded fallback, never a silent skip. |
 
 ## Red flags (stop and fix)
 
 - The conductor edited product code itself instead of dispatching a subagent.
-- A commit with a red or unrun green bar (tests, lint, or format-check failing or never run), or
-  more than one task in a single commit.
-- A commit that is green against the working tree but not in isolation — a needed file left unstaged
-  (the green bar ran; the `git add` did not).
+- A commit with a red or unrun green bar, more than one task in a single commit, or a commit green
+  against the working tree but not in isolation (a needed file left unstaged).
 - An implementer that wrote code before a failing test, or whose brief carried the whole plan.
 - A reviewer prompt told what *not* to flag (pre-judging disqualifies the review).
-- A task marked done with no commit SHA, or work re-run because the ledger was not consulted.
+- A task marked done with no commit SHA, no captured evidence block, or an evidence block that is a
+  transcribed subagent summary / bare count instead of the conductor's own per-test run.
+- A green bar read through a pipe, scraped from a human summary, or a reporter discrepancy waved
+  off as flake instead of investigated via the machine reporter.
 - Building past a blocked task instead of stopping to ask.
-- An ingested/external plan built without an inline gate verdict, or with fabricated `AC-N` trace
-  links instead of an honest `untraced` mark.
-- A task marked done with no captured green-bar evidence block.
-- A green-bar evidence block that is a transcribed subagent summary or a bare `# pass N` count
-  rather than the conductor's own captured per-test run.
-- A green bar whose exit code was read through a pipe (`cmd | filter; $?`) — the status was the
-  pipe's last stage, not the command's — or a suite verdict scraped from a human summary instead of a
-  machine-readable reporter, or a reporter discrepancy explained away as flake rather than
-  investigated via the machine one, or a captured evidence block that doesn't note the verification
-  form (the command, its directly-read exit code, the reporter counts).
-- Proceeded to the next task at resume, or to ship at build-complete, while `sdlc-check` failed with
-  no recorded override.
-- The checker silently skipped when `node` was absent, instead of an announced degraded fallback.
-- The baseline halted on a greenfield absence instead of recording vacuous green.
-- A baseline halt blamed on "red code" when the declared command was actually unrunnable — the
-  declaration was never checked.
-- An agent-type substitution discovered per-dispatch instead of pinned + announced at build start.
-- A dead subagent's work silently conductor-completed with no retry and no ledger record.
-- A plan/reality mismatch silently adapted in code instead of amended through the plan method +
-  inline gate (or a scope change amended in-loop instead of stopped-and-asked).
+- An ingested/external plan built without an inline gate verdict, or fabricated trace links instead
+  of an honest `untraced` mark.
+- Proceeding at resume or build-complete while `sdlc-check` failed with no recorded override, or the
+  checker silently skipped when the runtime was absent.
+- A baseline halt misrouted: greenfield absence is vacuous green; an unrunnable declared command is
+  a techstack declaration defect, not "red code".
+- A roster substitution discovered per-dispatch, or a dead subagent silently conductor-completed
+  with no retry and no ledger record.
 
 ## Done when
 
