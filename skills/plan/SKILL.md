@@ -30,7 +30,10 @@ A task is done being written only when:
 1. **Atomic.** It is the smallest change that leaves the repo green — including the *compile fallout*
    of the change. A change with non-local compile consequences (a new enum variant against an
    exhaustive match; a new required interface/trait method; a new non-optional field or parameter)
-   must satisfy those consequences in the same task. If it cannot finish green in one go, split it.
+   must satisfy those consequences in the same task. **Measure the blast radius before sizing it:**
+   grep the changed surface's consumers (match sites, implementors, construction/call sites) and
+   let the count decide one task vs a split — at plan time, not mid-build. If it cannot finish
+   green in one go, split it.
 2. **Exact files.** It names the precise files to create or change. No "update the relevant
    module".
 3. **Test-first.** It states the failing test to write first (the red of red-green), or the
