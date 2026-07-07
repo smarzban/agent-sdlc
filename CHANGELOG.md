@@ -4,6 +4,11 @@ The authoritative release notes live on
 [GitHub Releases](https://github.com/smarzban/agent-sdlc/releases) — one release per version,
 cut with a plugin-scoped tag (`agent-sdlc-vX.Y.Z`). This file is the one-line index.
 
+- **[0.13.0](https://github.com/smarzban/agent-sdlc/releases/tag/agent-sdlc-v0.13.0)** (2026-07-07) —
+  review-hardening: checker fixes (git anchored to the spec's repo, whole-word proof types,
+  shallow-clone hints), CI, one checker-resolution rule for non-Claude-Code harnesses,
+  runtime-corpus de-leak, build-skill compression, spec-tree pruned to exemplars, a five-minute
+  example run.
 - **[0.12.0](https://github.com/smarzban/agent-sdlc/releases/tag/agent-sdlc-v0.12.0)** (2026-07-06) —
   spec trees live under `docs/specs/` (back-compat: existing root `specs/` repos keep theirs);
   `writing-repo-docs` produces the front-door README too (by the `writing-readmes` method);
