@@ -85,6 +85,10 @@ Stated once here; the stage skills reference them by name rather than restating.
   holds optional depth and mechanics. Where a reference doc IS load-bearing at a specific step, the
   owning SKILL body **mandates reading it at that step**, not merely links it — an agent may
   legitimately never open a doc that is only linked.
+- **Rules ratchet down, not up.** A new rule added to a pipeline skill (usually after an incident)
+  must displace, generalize, or merge with an existing line — appending is the exception and needs
+  justifying in the PR. Pipeline SKILL bodies hold a soft ceiling of ~300 lines; a change that
+  breaches it says why. Instruction sets only ever grow unless subtraction is a rule too.
 
 ## Routing: project vs feature
 
