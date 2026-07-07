@@ -1205,7 +1205,7 @@ export async function isShallowRepo(repoPath) {
   try {
     const { stdout } = await execFileAsync(
       'git', ['-C', repoPath, 'rev-parse', '--is-shallow-repository'],
-      { timeout: GIT_TIMEOUT_MS },
+      { encoding: 'utf8', timeout: GIT_TIMEOUT_MS },
     );
     return stdout.trim() === 'true';
   } catch {

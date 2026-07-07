@@ -70,7 +70,7 @@ fast-path covers component → product).
 `build` dispatches a fresh implementer per task, reviews the diff, runs the green bar itself, and
 commits. The ledger (`build-report.md`) records each task with the conductor's own captured run:
 
-```markdown
+````markdown
 ## Task ledger
 
 | Task | Status | Commit | AC advanced | Notes |
@@ -80,12 +80,14 @@ commits. The ledger (`build-report.md`) records each task with the conductor's o
 
 ### T-1 (@ `a1b2c3d`)
 
-    $ npm test
-    ok 1 - resets the count on successful login
-    ok 2 - prunes entries older than 15 minutes
-    # pass 2
-    # fail 0
 ```
+$ npm test
+ok 1 - resets the count on successful login
+ok 2 - prunes entries older than 15 minutes
+# pass 2
+# fail 0
+```
+````
 
 ## 4. Ship (proof map, checker, PR, review)
 
