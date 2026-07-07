@@ -11,21 +11,25 @@ the disciplines the subagents follow are in the sibling reference files.
 2. **Native tool, then fallback.** Use the platform's worktree/branch tool if there is one; else
    `git worktree add` under `.worktrees/<feature>` from the base branch.
 3. **Baseline green.** Run the full green bar once before any task — the commands `## Tech Stack`
-   declares (compile, test, lint, format-check). If the baseline is red, stop — you cannot tell your
-   regressions from pre-existing ones. Report "baseline N passing" and proceed. **Vacuous-green
-   exception (general rule, not a per-feature carve-out):** a green bar whose target paths do not yet
-   exist (greenfield — nothing to compile or test yet) is not red, it is **vacuously green** — there
-   is nothing to fail. Report it as such and proceed; the bar becomes binding from the first task
-   that creates those paths, not before.
+   declares. If the baseline is red, stop — you cannot tell your regressions from pre-existing
+   ones. Report "baseline N passing" and proceed. Greenfield target paths that do not exist yet
+   are **vacuously green**, not red — the full rule and the baseline-failure routing are normative
+   in the SKILL body (step 2); do not re-derive them here.
 4. **Provenance for cleanup.** Note whether you created the worktree (`.worktrees/`) or inherited it.
    ship preserves the worktree on the PR path; only an explicitly created, finished one is cleaned.
 
-## File briefs — the rule
+## File hand-offs — the rule
 
-A brief is written to a file (e.g. `.agent-sdlc/briefs/T-N.md` in the workspace) and the subagent is
-told to read it. The dispatch prompt is one or two lines ("Implement task T-N. Read your brief at
-<path>. Follow the disciplines it names."). Never paste the plan, the session history, or other
-tasks into the prompt — that is the context bloat subagent-driven development exists to avoid.
+Artifacts move as files in BOTH directions. A brief is written to a file (e.g.
+`.agent-sdlc/briefs/T-N.md` in the workspace) and the subagent is told to read it. The dispatch
+prompt is one or two lines ("Implement task T-N. Read your brief at <path>. Follow the disciplines
+it names."). Never paste the plan, the session history, or other tasks into the prompt. The same
+rule governs what comes BACK: reports and findings land in files beside the brief; a subagent's
+final message is a short status, never the artifact itself. And the conductor produces the
+reviewer's diff file **blind** — `git diff > .agent-sdlc/briefs/T-N-review.diff` — never by
+reading the diff into its own context first: the reviewer is the diff's reader, the conductor is
+its courier. Context bloat in the conductor is the failure subagent-driven development exists to
+avoid.
 
 ## The three roles
 
@@ -38,21 +42,27 @@ tasks into the prompt — that is the context bloat subagent-driven development 
 - Which disciplines to follow: `tdd.md` (red-green-refactor), `source-driven.md` (verify framework
   APIs against official docs before using them), `simplicity.md` (one vertical slice, Rule-0).
 
-**Returns:** an uncommitted diff plus a one-line statement of which test now passes. Before
-returning, the implementer runs the project's formatter and linter so the diff is already
+**Returns:** a short status — which test now passes, the files touched, any concern — never the
+diff itself: the working tree already holds it, and pasting it back into the conductor defeats
+the isolation. Before returning, the implementer runs the project's formatter and linter so the diff is already
 format-clean and lint-clean — the conductor's green-bar check is the authoritative gate, not a
 surprise. The implementer does **not** commit — the conductor commits after review, so the commit
 reflects reviewed code.
 
 ### Reviewer
 
-**Brief contains:** the diff, the task's contract (the `AC-N`, the named files, the test it had to
-make pass), and the bearing global constraints. The reviewer runs the code, reads the changed files
-and their call-sites, and returns a verdict: spec met (does the diff satisfy `T-N`'s contract?) plus
-quality findings rated Critical / Important / Minor. One axis is always in scope: **over-build** — an
-abstraction, indirection, layer, or dependency the `AC-N` did not call for, where a simpler form
-passes the same test. Flag it like any other finding; the cheapest code to review is the code that
-was never written.
+**Brief contains:** the diff file (produced blind — see the hand-off rule), the task's contract
+(the `AC-N`, the named files, the test it had to make pass), and the bearing global constraints.
+The reviewer **reads, it does not re-run**: it reads the diff, the changed files, and their
+call-sites, and returns spec-met (does the diff satisfy `T-N`'s contract?) plus quality findings
+rated Critical / Important / Minor — the findings written to a file beside the brief
+(`.agent-sdlc/briefs/T-N-findings.md`), verdict and counts in the return message. The conductor's
+own green-bar run (SKILL step 4d) is the loop's authoritative execution — a reviewer re-running
+the suite duplicates it and buys nothing; it may run a *focused* check only for a specific doubt
+its reading raised, naming the doubt and what it ran in its findings. One axis is always in scope:
+**over-build** — an abstraction, indirection, layer, or dependency the `AC-N` did not call for,
+where a simpler form passes the same test. Flag it like any other finding; the cheapest code to
+review is the code that was never written.
 
 **Never tell the reviewer what not to flag.** "Treat X as minor", "don't worry about Y" — pre-judging
 disqualifies the review. State the contract and let it judge. Optionally add a **doubt lens**: a
@@ -62,7 +72,7 @@ it does not loop.
 
 ### Fixer (only when the reviewer finds Critical/Important)
 
-**Brief contains:** the findings and the diff. The fixer follows `tdd.md` (a fix gets a guarding
+**Brief contains:** the findings file and the diff file. The fixer follows `tdd.md` (a fix gets a guarding
 test) and `debugging.md` (stop-the-line: root cause, not symptom). Re-review after each fix. **Bound
 the cycle to ~2–3 rounds**; if it still fails, the task is blocked — record it and raise it, do not
 grind.
@@ -90,40 +100,16 @@ there is not re-announced per death.
 
 ## Commit (conductor, after the reviewer passes)
 
-The conductor — not a subagent — verifies the green bar green (runs the full declared set — compile,
-test, lint, format-check — and reads the output itself, never trusting a subagent's reported test
-counts or pass/fail claim) and makes one atomic commit per task. One task = one commit.
+The conductor — not a subagent — verifies and commits: one task = one atomic commit. The
+verification is SKILL step 4d's single staged-snapshot run — stage the task's changes, run the
+full declared bar against exactly what will be committed (`git stash --keep-index
+--include-untracked` → bar → pop, or commit first and run the bar on a clean checkout of HEAD),
+reading the output itself, never trusting a subagent's reported counts. An under-staged commit is
+a broken commit even when the working tree is green.
 
-**Verify the staged snapshot, not just the working tree.** The green bar runs against the working
-tree, which can hold files the commit will omit — so a green check can still produce a commit that
-fails to compile in isolation (a needed file left unstaged). Before committing: stage the task's
-changes, then run the bar against exactly what will be committed — `git stash --keep-index
---include-untracked`, run the bar, `git stash pop` — or, after committing, build a clean checkout of
-HEAD. An under-staged commit is a broken commit even when the working tree is green.
-
-**Capture the evidence block.** The task's evidence is the **conductor's own** verification run above
-— the full declared bar the conductor (not a subagent) runs after the reviewer passes / before commit
-— captured **verbatim**: a fenced block recording the command line(s) exactly as run plus the run's
-actual output (the per-test `ok N - <name>` listing), never a checkbox and **never a transcription of
-the implementer subagent's reported counts**. The implementer's own red→green TDD test runs during
-the task are the subagent's business, not the recorded evidence — the conductor never trusts a
-subagent's reported test counts (above), so the authoritative recorded run is the conductor's, not the
-subagent's word for it. Capture it from the first task onward, never deferred: it is what the checker's `green-bar-evidence` and `proof-evidence-linkage` rules read, so a test-backed proof-map row's cited
-test identifier must literally appear in this text (ADR-0001). **Capture the per-test listing, not
-just summary counts.** A test runner that prints one line per test (e.g. `node --test` → `ok N -
-<name>`) must have those `ok - <name>` lines recorded in the block — a summary tail (`# pass N`)
-alone names no test, so ship's proof-evidence linkage cannot match any proof row against it and the terminal
-gate blocks. **Bounded for large suites:** retain in full the `ok N - <name>` lines for **the tests
-this task adds or exercises** — the failing test(s) the plan named for `T-N` (test-first), which the
-conductor knows at capture time; the rest of a large **pre-existing** suite (tests this task did not
-add) may be capped to its summary tail. **A task that adds no tests** (e.g. a prose/doc task) has no
-task-specific per-test names to retain — its suite summary (e.g. `# pass N`) is then the correct
-bounded form (still the conductor's own run, never a transcription); this is the ONLY case where a
-summary alone suffices. (If a full per-task listing is impractical, at minimum a build-complete
-comprehensive block carrying the full per-test listing satisfies the union the linkage rule searches — but the
-per-test names, never mere counts, are the load-bearing content.)
-
-A well-formed evidence block looks like this (command exactly as run, then the run's own output):
+**Capture the evidence block from that run** — file-first, then extract. The capture, boundedness,
+and no-transcription rules are normative in SKILL step 4d and *Reading the green bar*; they are
+not restated here. A well-formed block (command exactly as run, then the run's own output):
 
     ### T-3 (@ `4ddd29e`)
 
@@ -135,18 +121,19 @@ A well-formed evidence block looks like this (command exactly as run, then the r
     # fail 0
     ```
 
-The message states the task and the `AC-N` (e.g. `feat(T-3): root resolver — advances AC-1`). Then
-updates the ledger — the captured green-bar evidence block for this task, plus any `SHORTCUT(T-N)`
-markers the diff introduced, so evidence and deferred ceilings are recorded beside the task in
-`build-report.md` rather than buried in the code or lost after the run.
+The message states the task and the `AC-N` (e.g. `feat(T-3): root resolver — advances AC-1`).
+Then update the ledger — the evidence block, plus any `SHORTCUT(T-N)` markers the diff introduced,
+so evidence and deferred ceilings are recorded beside the task in `build-report.md`.
 
-## Model selection (optional, platform-dependent)
+## Model selection (specify it where the platform can)
 
-Turn count beats token price: prefer a cheaper, faster model for mechanical implementer work, a
-mid-tier or better for reviewers, and the most capable for the final whole-PR review (that one is
-ship's Empanel gate). This is **guidance, not a requirement** — the per-dispatch model knob is
-specific to some platforms (e.g. Claude Code's Agent tool) and absent in others. Where it is absent,
-dispatch with the default model; the loop is unchanged.
+Turn count beats token price — but an **unspecified dispatch inherits the session's model, usually
+the most expensive**, so on platforms with a per-dispatch model knob (e.g. Claude Code's Agent
+tool), specify it on every dispatch. Tiering: a task whose plan text contains the complete
+code/content to write is transcription — cheapest tier; a prose-spec or multi-file integration
+task — mid-tier; reviewers — mid-tier floor, scaled to the diff's size and risk; the whole-PR
+review is ship's Empanel gate on the most capable model. Where the platform has no knob, dispatch
+with the default model; the loop is unchanged.
 
 ## Ledger recovery (after a compaction or crash)
 
