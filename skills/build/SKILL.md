@@ -28,7 +28,8 @@ branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
 
 1. **Precondition** resolve the plan (input-resolution rule); if it came from an external source,
    **ingest it first** — **read [reference/ingesting-plans.md](reference/ingesting-plans.md) now,
-   before materializing anything** (it is the load-bearing ingest contract): materialize `## Plan` +
+   before materializing anything** (the provenance-marker grammar and the minimal green-bar
+   materialization live only there): materialize `## Plan` +
    minimal trace links + the green bar, provenance-marked, then run `/agent-sdlc:gate` inline.
    Confirm a ready-to-build verdict exists for the plan in hand. Proceed only on a clean verdict;
    else stop.
@@ -45,22 +46,19 @@ branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
    - **runs & passes** → green; proceed.
    - **nonzero exit** → **STOP** (as today) — but read the command's output and label *which* kind,
      because the label routes the fix:
-     - **unrunnable command** — the declared command is malformed / bad-form (e.g. the enforcement-spine
-       `node --test checker/` bare-directory invocation): the failure is about the command's
-       *form*, not the code. This is a **green-bar DECLARATION defect** — STOP, show the command's
+     - **unrunnable command** — the declared command is malformed / bad-form: the failure is about
+       the command's *form*, not the code. This is a **green-bar DECLARATION defect** — STOP, show the command's
        **actual output**, and route the fix back to **`techstack`** (the green-bar owner), not a
        misleading "the repo is red" halt. Record it in `build-report.md`.
      - **genuinely-red repo** — the command runs fine but reports real failures on existing code: the
        normal red-baseline stop (the repo isn't green) — STOP and fix the code, as today.
-   The **deterministic** part is fixed: a nonzero baseline exit *always* STOPS. The unrunnable-vs-red
-   label is only a routing hint (which stage owns the fix), decided by reading the command's output; it
-   never changes the stop decision, so the baseline stays deterministic.
+   A nonzero baseline exit *always* STOPS; the unrunnable-vs-red label is only a routing hint and
+   never changes the stop decision.
    **Pin the agent-type roster here, once.** Resolve the implementer/reviewer/fixer agent types the
    loop will dispatch before the per-task loop begins. If a declared type is unavailable, **announce
    the substitution ONCE up front and record it in `build-report.md`** (e.g. `implementer →
-   general-purpose stand-in: <reason>`) — never rediscover the degradation per dispatch. A pinned
-   roster plus a single up-front announcement is deterministic; per-dispatch rediscovery is
-   improvisation that hides which agent actually did the work.
+   general-purpose stand-in: <reason>`) — never rediscover the degradation per dispatch. Per-dispatch
+   rediscovery hides which agent actually did the work.
 3. **Ledger** open `build-report.md`. If it already exists, resume from it plus `git log` — never
    re-run a task already marked done. Re-doing completed work is the most expensive failure here.
    **When resuming an existing ledger, invoke the checker first** (the resume invocation point) —
@@ -74,43 +72,43 @@ branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
    recorded in `build-report.md` (who/what, why continuing despite the failed check). Runtime absent
    → write an **announced degraded fallback** line into `build-report.md` now — never a silent skip.
 4. **For each task `T-N`, in dependency order** (before the first dispatch, **read
-   [reference/subagent-loop.md](reference/subagent-loop.md) now** — it is the load-bearing dispatch
-   contract: the dispatch mechanics, the three subagent briefs, the bounded fix cycle, and the
-   subagent-death policy):
+   [reference/subagent-loop.md](reference/subagent-loop.md) now** — the brief contents, the
+   fix-cycle bound, the file hand-off mechanics, and the death sequence live ONLY there; a loop
+   run from this body alone improvises all four):
    a. Dispatch the **implementer** subagent with a file brief for `T-N` only.
    b. Dispatch the **reviewer** subagent on the resulting diff.
    c. If the reviewer finds Critical/Important issues, dispatch a **fixer** and re-review (bounded).
-   d. Verify the **green bar** is green — the **conductor itself runs** the full declared set
-      (compile, test, lint, format-check) after the reviewer passes / before the commit, and reads
-      the output (verification-before-completion). Not just tests: lint or format drift caught now
-      is a clean commit; caught later is a reactive scramble. **Capture that run's actual output**
-      as the task's green-bar evidence — the command line(s) plus the per-test listing
-      (`node --test`'s `ok N - <name>` lines), *never* a transcription of the subagent's reported
-      count — the names are what ship's `proof-evidence-linkage` matches against. **Bounded for
-      large suites:** retain in full the per-test lines for tests this task adds/exercises; the rest
-      may be capped to its summary tail. **A task that adds no tests** (e.g. a prose/doc task) has
-      no task-specific per-test names — its suite summary (e.g. `# pass N`) is the correct bounded
-      form (still the conductor's own run); this is the ONLY case where a summary alone suffices.
-   e. Commit: one atomic commit for the task, reflecting the reviewed code. Verify it compiles **in
-      isolation** — run the bar against the staged snapshot (`git stash --keep-index
-      --include-untracked` → bar → pop), not just the working tree: an under-staged commit can pass a
-      working-tree check yet fail to build on checkout.
-   f. Update `build-report.md`: `T-N` done, the commit SHA, the `AC-N` it advanced, and the captured
-      green-bar evidence as a fenced block beside the task — **the conductor's own run output (step
-      4d), not a restatement of what the subagent said** — from the first task onward, never
-      deferred. This is the write side the checker's `green-bar-evidence` and
-      `proof-evidence-linkage` rules read: a test-backed proof-map row's cited test
-      identifier must literally appear in this text (ADR-0001) — so the block must record the
-      per-test names, not a summary count that names no test. **Note the verification form** beside
-      the evidence — the exact command, its directly-read exit code, and the machine-reporter counts
-      (per *Reading the green bar* above) — so the record shows the bar was read correctly, not merely
-      that something was run.
+   d. Verify the **green bar on the staged snapshot** — after the reviewer passes, the **conductor
+      itself** stages the task's changes and runs the full declared set (compile, test, lint,
+      format-check) once against exactly what will be committed: `git stash --keep-index
+      --include-untracked` → bar → `git stash pop` (or commit first and run the bar on a clean
+      checkout of HEAD — the robust form when a pop could conflict). One run is both the green
+      verification and the in-isolation check: an under-staged commit fails here, not on checkout.
+      Capture the run file-first (`cmd > out.txt 2>&1; rc=$?` — *Reading the green bar* below),
+      then extract the evidence FROM the file: the command line(s), the per-test listing for the
+      tests this task adds/exercises (`node --test`'s `ok N - <name>` lines), and the summary tail.
+      Never stream a large suite's full output through your own context, and *never* transcribe
+      the subagent's reported count — the names are what ship's `proof-evidence-linkage` rule
+      matches against. **A task that adds no tests** (a prose/doc task) has no task-specific
+      per-test names — its suite summary (`# pass N`, still the conductor's own run) is then the
+      correct bounded form; the ONLY case where a summary alone suffices.
+   e. Commit: one atomic commit for the task, reflecting the reviewed code — step 4d just proved
+      the staged snapshot green.
+   f. Update `build-report.md`: `T-N` done, the commit SHA, the `AC-N` it advanced, and the
+      captured green-bar evidence as a fenced block beside the task — **the conductor's own
+      step-4d run, never a restatement of what the subagent said** — from the first task onward,
+      never deferred. This is the write side the checker's `green-bar-evidence` and
+      `proof-evidence-linkage` rules read (a test-backed proof-map row's cited test identifier
+      must literally appear in this text — ADR-0001). **Note the verification form** beside the
+      evidence — the exact command, its directly-read exit code, and the machine-reporter counts
+      (per *Reading the green bar*).
    g. If Linear sync is enabled in `.agent-sdlc/config.json`, transition `T-N`'s issue via the
       `linear-sync` skill.
 
    If an implementer reports a **plan/reality mismatch** (a named file/path is wrong, a symbol was
    renamed, the task must split, an assumed dependency differs), **read
-   [reference/plan-amendments.md](reference/plan-amendments.md) now** and follow the amendment loop —
+   [reference/plan-amendments.md](reference/plan-amendments.md) now** (the delta-routing mechanics
+   live only there) and follow the amendment loop —
    STOP the task, route the delta through the `plan` method, materialize it into `## Plan` with a
    provenance marker, run `/agent-sdlc:gate` inline on the delta, record it in `build-report.md`. Do
    **not** silently adapt and do **not** free-author the plan. Mechanical drift is amendable in-loop; a
@@ -136,8 +134,8 @@ The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and le
 ## Reading the green bar (how you run it, not just when)
 
 The bar only means something if you read it correctly — a green bar *misread* is worse than a red
-one, because it ships. Every green-bar run in this loop — the baseline (step 2), each per-task
-verification (step 4d), the in-isolation check (step 4e), and ship's re-verify — obeys three rules:
+one, because it ships. Every green-bar run in this loop — the baseline (step 2), each per-task staged-snapshot
+verification (step 4d), and ship's re-verify — obeys three rules:
 
 - **Read the exit code directly, never through a pipe.** `cmd | filter; echo $?` reports the *last*
   pipeline stage's exit (the pager's, the `grep`'s, the `head`'s), not `cmd`'s — so a command that
@@ -220,6 +218,7 @@ discipline exists to stop.
 - Building past a blocked task instead of stopping to ask.
 - An ingested/external plan built without an inline gate verdict, or fabricated trace links instead
   of an honest `untraced` mark.
+- A `## Deviations` entry with no amendment disposition — its plan text was never materialized.
 - Proceeding at resume or build-complete while `sdlc-check` failed with no recorded override, or the
   checker silently skipped when the runtime was absent.
 - A baseline halt misrouted: greenfield absence is vacuous green; an unrunnable declared command is
@@ -254,7 +253,10 @@ discipline exists to stop.
   evidence block (fenced command + output tail, from the first task onward), and any
   deferred-shortcut ceilings (`SHORTCUT(T-N)`) the task left in the code, plus the checker's
   resume/build-complete corroboration result (pass, stop-and-ask with any recorded override, or an
-  announced degraded fallback). It also carries the build-start **agent-type roster** and any
+  announced degraded fallback), and a `## Deviations` section indexing every in-loop
+  departure from the plan's letter — each entry: the task, the divergence, and its **amendment
+  disposition** (the materialized `## Plan` delta + provenance marker, or the death/takeover
+  note). An entry with no disposition is silent adaptation, written down. It also carries the build-start **agent-type roster** and any
   announced substitution, and any **subagent-death deviation** (which task, what died, what was
   recovered, whether isolation was lost, whether conductor-takeover was reached). Mirrors
   `gate-report.md`'s role — process state beside the spec, never inside it.
