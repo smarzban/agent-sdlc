@@ -136,7 +136,7 @@ export async function run(argv) {
       let readerFailure = null;
       for (const t of doneTasks) {
         if (!t.commit || subjectsBySha.has(t.commit)) continue;
-        const res = await readCommitSubject(process.cwd(), t.commit);
+        const res = await readCommitSubject(specDir, t.commit);
         if (res.ok) {
           subjectsBySha.set(t.commit, { found: true, reachable: true, subject: res.subject });
         } else if (res.unreachable) {
