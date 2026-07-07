@@ -3,7 +3,7 @@
 Mechanics for ship: the verification report + AC → proof map, synthesizing the PR from the spec, the
 gate invocation contract, the portable fallback, and the worktree rule.
 
-## Verification report + proof map (pre-PR, AC-13/14/16/18)
+## Verification report + proof map (pre-PR)
 
 Before pushing or opening the PR, ship writes `docs/specs/<feature>/verification-report.md` — a sibling of
 `gate-report.md`/`build-report.md` (process state kept beside the spec, per the artifact model) — and
@@ -11,27 +11,27 @@ runs the checker against it. This is the terminal mechanical settle of "every AC
 captured reality, distinct from the post-PR gate panel.
 
 - **Row grammar:** a "Criterion | Type | Proof" table, one row per `AC-N` the spec defines (the
-  checker's AC-13 completeness rule scopes to defined ACs only — `NC-N` rows are not required):
+  checker's `proof-map-completeness` rule scopes to defined ACs only — `NC-N` rows are not required):
 
   ```markdown
   | Criterion | Type | Proof |
   | --- | --- | --- |
   | AC-1 | test-backed | tests/foo.test.mjs > rejects a dangling ID |
-  | AC-15 | reviewer-checked | Do gate/build/ship each mandate the checker at a defined point? Yes — see SKILL.md step 3/step-N. |
+  | AC-2 | reviewer-checked | Is the proof map published in the PR body? Yes — see the Verification section of the PR body. |
   ```
 
 - **test-backed rows** name the test identifier(s) that prove the criterion (comma-separated if more
   than one). Each named identifier **must appear verbatim** in the ledger's captured green-bar
-  evidence text (ADR-0001's name-appearance linkage) — the checker's AC-14 fails naming the row
+  evidence text (ADR-0001's name-appearance linkage) — the checker's `proof-evidence-linkage` rule fails, naming the row
   otherwise. Pull identifiers from `build-report.md`'s evidence blocks; never name a test that was not
   actually captured running green.
 - **reviewer-checked rows** record the ANSWERED pass/fail question — the answer itself is the proof.
-  The checker's AC-13 only requires the `Proof` cell be non-empty; it does not, and cannot, judge
-  whether the answer is correct (NC-4 — not mechanically decidable). Ship supplies these answers
+  The checker's `proof-map-completeness` rule only requires the `Proof` cell be non-empty; it does not, and cannot, judge
+  whether the answer is correct (not mechanically decidable). Ship supplies these answers
   pre-PR from its own Spec-Conformance read of the skill/spec text, and may note where the post-PR
   review corroborates them.
-- **Every defined `AC-N` needs a row.** A missing row, or a row with an empty `Proof` cell, is an
-  AC-13 finding naming the criterion.
+- **Every defined `AC-N` needs a row.** A missing row, or a row with an empty `Proof` cell, is a
+  `proof-map-completeness` finding naming the criterion.
 
 **Run the checker pre-PR, report required:**
 
@@ -45,15 +45,18 @@ Sequence this **before** `gh pr create` — it is the mechanical spine gate; the
 interpret the exit code: 0 = corroborated, proceed to push/PR. Nonzero, or the checker crashing, is
 itself a failed check (fail-closed) → **stop-and-ask**: do not open the PR, or if one is already open
 do not treat it as shipped. Any human override to proceed past a failed check must be **recorded in
-the PR body** (AC-16), not merely stated — see the PR body section below. Runtime absent → write an
+the PR body**, not merely stated — see the PR body section below. Runtime absent → write an
 **announced degraded fallback** line — never a silent skip.
 
-`sdlc-check` is the plugin's bundled launcher (agent-sdlc adds its `bin/` to PATH on install) — call it by name, never a cwd-relative `node checker/sdlc-check.mjs …` path, which does not
-exist in a user's own repo and would fail-closed the whole pipeline.
+`sdlc-check` is the plugin's bundled launcher. Resolve it per getting-started's
+checker-resolution rule (bare name → `"${CLAUDE_PLUGIN_ROOT}/bin/sdlc-check"` →
+`node <plugin-install-dir>/checker/sdlc-check.mjs`) — never a cwd-relative
+`node checker/sdlc-check.mjs …`, which does not exist in a user's own repo. Command-not-found
+with `node` present means try the next form, not degrade.
 
 **No-ledger path** (a branch built outside the pipeline — the HARD-GATE's alternate precondition):
 there is no `build-report.md`, so **drop `--require ledger`** (`sdlc-check … --require
-verification-report` only). Without captured green-bar evidence the AC-14 name-appearance linkage
+verification-report` only). Without captured green-bar evidence the name-appearance linkage (`proof-evidence-linkage`)
 cannot corroborate the proof map's test-backed rows — state that explicitly in the verification report
 and PR body, and rely on the direct suite verification plus the gate panel (the HARD-GATE's
 sole-gate contract for this path).
@@ -74,11 +77,11 @@ Build the PR title and body from `docs/specs/<feature>/<feature>.md` (and the `S
   - **Acceptance criteria** — the `AC-N` list (the contract this PR claims to meet).
   - **Coverage** — the task→criterion map from the `## Plan`: which `T-N` advanced which `AC-N`.
   - **Verification** — the full AC → proof map copied verbatim from
-    `docs/specs/<feature>/verification-report.md` (AC-18 — it must appear here, not only in the spec
+    `docs/specs/<feature>/verification-report.md` (it must appear here, not only in the spec
     tree, so it is visible whenever ship completes) plus the checker corroboration result (pass, or
     stop-and-ask with the recorded human override, or an announced degraded fallback); if a checker
     failure was overridden, state the override and its justification explicitly in this section
-    (AC-16 — the override lives in the PR body, not just in conversation).
+    (the override lives in the PR body, not just in conversation).
   - **Known compromises** — any `SHORTCUT(T-N)` ceilings recorded in `build-report.md` (the
     deferred-but-bounded simplifications the build accepted); omit the section if there are none.
   - **Provenance** — when the plan was ingested from a non-canonical source (a Linear issue set, a

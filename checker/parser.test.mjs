@@ -653,3 +653,18 @@ test('a proof-map row with an empty proof cell still parses (empty proof, for T-
   const row = result.rows.find((r) => r.criterion === 'AC-2');
   assert.equal(row.proof, '');
 });
+
+test('a Type cell merely containing "test" as a substring is NOT normalized to test-backed', () => {
+  const report = [
+    '| Criterion | Type | Proof |',
+    '| --- | --- | --- |',
+    '| AC-1 | attested | someone vouched for it |',
+    '| AC-2 | test-backed | tests/foo.test.mjs > proves it |',
+    '| AC-3 | unit test | tests/bar.test.mjs > proves it too |',
+  ].join('\n');
+  const parsed = parseVerificationReport(report, 'verification-report.md');
+  assert.equal(parsed.ok, true);
+  assert.equal(parsed.rows[0].type, 'attested');      // raw passthrough, not 'test-backed'
+  assert.equal(parsed.rows[1].type, 'test-backed');
+  assert.equal(parsed.rows[2].type, 'test-backed');   // whole word "test" still matches
+});

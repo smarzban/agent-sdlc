@@ -8,6 +8,7 @@ authoritative method.
 ## Who starts where
 
 - **You want to try it** → [Quickstart](quickstart.md) — install + first run in two commands.
+- **You want a worked example** → [A five-minute example run](example-run.md) — a curated fictional feature, idea → reviewed PR.
 - **You're installing or updating** → [Install](install.md) — Claude Code, Cursor, other agents,
   and how updates actually reach you.
 - **You're using the pipeline** → [Usage](#usage) below — one page per capability.

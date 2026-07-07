@@ -140,6 +140,26 @@ test('AC-7 happy path: a fully valid fixture (spec + ledger + report + matching 
   }
 });
 
+test('ledger-vs-git resolves against the spec\'s repo when the CLI is invoked from an unrelated cwd', async (t) => {
+  const dir = makeRepoDir();
+  try {
+    gitInit(dir);
+    const sha = gitCommit(dir, 'a', 'feat(T-1): implement widget');
+    const specPath = writeSpecTree(dir, { spec: HAPPY_SPEC, ledger: happyLedger(sha), report: HAPPY_REPORT });
+    // Run the CLI from a directory that is NOT inside the fixture repo
+    const elsewhere = mkdtempSync(path.join(tmpdir(), 'sdlc-elsewhere-'));
+    try {
+      const res = runCli([specPath], { cwd: elsewhere });
+      assert.equal(res.status, 0, `expected exit 0, got ${res.status}\n${res.stdout}\n${res.stderr}`);
+      assert.doesNotMatch(res.stdout + res.stderr, /unavailable|not a git repo/i);
+    } finally {
+      rmSync(elsewhere, { recursive: true, force: true });
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 // --- SMA-480: the real CLI stamps its own (adjacent-manifest) version into the report ---------
 
 test('SMA-480: the real CLI stamps the adjacent manifest semver version onto the clean-pass line', () => {

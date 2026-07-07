@@ -15,13 +15,14 @@ single-plugin restructure.
 
 ### Features
 
-Each `docs/specs/<feature>/` chain below shipped through the pipeline itself (spec → gate → build →
-ship → reviewed PR); see the per-feature spec and reports for scope and evidence. Shipped:
-`enforcement-spine` (0.7.0, the `sdlc-check` checker + terminal AC verification) and its
-hardening/adoption successors (`checker-correctness`, `checker-semantics`, `build-gate-robustness`,
-`contract-visibility`, 0.8.0), `evidence-gated-techstack`, `plan-ac-contracts`,
-`harness-captured-evidence`, `adoption-quickwins` (0.10.0), `diagnosability-pool` (0.10.1), and
-`spec-location-under-docs` (0.12.0, the canonical spec tree moves under `docs/`).
+Each `docs/specs/<feature>/` chain shipped through the pipeline itself (spec → gate → build →
+ship → reviewed PR). Three exemplar runs are kept in-tree: `enforcement-spine` (0.7.0, the
+`sdlc-check` checker + terminal AC verification), `adoption-quickwins` (0.10.0), and
+`spec-location-under-docs` (0.12.0, the canonical spec tree moves under `docs/`). The other
+shipped chains (`checker-correctness`, `checker-semantics`, `build-gate-robustness`,
+`contract-visibility`, `evidence-gated-techstack`, `plan-ac-contracts`,
+`harness-captured-evidence`, `diagnosability-pool`) were pruned from the working tree in 0.13.0
+— their full spec chains live in git history (`git log --diff-filter=D -- docs/specs/`).
 
 ## Architecture
 

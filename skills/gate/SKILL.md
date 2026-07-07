@@ -64,7 +64,7 @@ a verdict: ready to build, or not.
 5. **Hygiene.** No unresolved TBDs, placeholders, or "decide later" markers remain.
 6. **Mechanical corroboration.** After checks 1–5, run the bundled checker as a second, automated
    witness to the same chain: `sdlc-check docs/specs/<feature>/<feature>.md`
-   (bare `node`, no install; a plain run auto-scopes to whatever artifacts exist at gate time — do
+   (resolve per getting-started's checker-resolution rule; degrade only when no form resolves; a plain run auto-scopes to whatever artifacts exist at gate time — do
    not `--require` the ledger or verification report, they don't exist yet). `node` present -> run it
    and interpret the exit code: 0 = corroborated; **nonzero, or the checker crashing, is itself a
    failed check** (fail-closed) — it blocks the verdict exactly like a Critical finding, even if
@@ -166,7 +166,7 @@ a verdict: ready to build, or not.
   (root `specs/` in a repo that already uses it — the back-compat rule in getting-started). Read-only
   over every other artifact.
 - Run after the `## Plan` section exists and before build. Re-run after any fix until the verdict is clean.
-- Invokes `sdlc-check` (bare `node`, no install) after its own chain walk for
+- Invokes `sdlc-check` (resolve per getting-started's checker-resolution rule; degrade only when no form resolves) after its own chain walk for
   mechanical corroboration, mirroring the existing ship <-> Empanel contract: present and clean ->
   corroborated; present and failing (or crashing) -> stop-and-ask, override recorded; absent -> an
   announced degraded fallback, never a silent skip. The checker is read-only, same as the gate itself.

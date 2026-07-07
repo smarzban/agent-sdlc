@@ -37,15 +37,15 @@ it stops and asks before changing anything — a PR is an outward artifact.
    verdict from a machine-readable reporter, not a scraped human summary. Red → stop; do not push a
    red branch.
 3. **Verify criteria** build the AC → proof map, write `docs/specs/<feature>/verification-report.md`, then
-   **invoke the checker** (pre-PR invocation point, AC-15) with the report required:
+   **invoke the checker** (the pre-PR invocation point) with the report required:
    `sdlc-check docs/specs/<feature>/<feature>.md --require ledger --require verification-report`. Runtime
    present → run, interpret the exit code: 0 = every AC settled mechanically, proceed; nonzero, or the
    checker crashing, is itself a failed check (fail-closed) — **stop-and-ask**, do not open the PR
    (or, if one is already open, do not treat it as shipped); any human override must be **recorded in
-   the PR body** (AC-16). Runtime absent → an **announced degraded fallback** — never a silent skip.
+   the PR body**. Runtime absent → an **announced degraded fallback** — never a silent skip.
    **No-ledger path** (a branch built outside the pipeline — the HARD-GATE's alternate precondition):
    there is no `build-report.md`, so drop `--require ledger` (run `sdlc-check … --require
-   verification-report` only) and state in the verification report + PR body that ledger-backed AC-14
+   verification-report` only) and state in the verification report + PR body that ledger-backed proof-evidence
    corroboration is unavailable — the direct suite verification (step 2) plus the gate panel
    (step 7) are the quality gate, as the HARD-GATE says. Then **commit the verification report** so it
    rides the PR: `git add docs/specs/<feature>/verification-report.md && git commit` (a sibling of the
@@ -61,8 +61,8 @@ it stops and asks before changing anything — a PR is an outward artifact.
    recorded in `build-report.md` (surface the known compromises so the reviewer sees them), the
    **provenance** of an ingested plan plus the gate's mid-chain-entry / `untraced` note when the chain
    was entered partway (so the reviewer sees what was not vetted upstream), the **AC → proof map**
-   built in step 3 (AC-18 — it must land in the PR body, not stay only in the spec tree) plus any
-   checker-failure override recorded there (AC-16), and a link to the spec. (Mechanics + template in
+   built in step 3 (it must land in the PR body, not stay only in the spec tree) plus any
+   checker-failure override recorded there, and a link to the spec. (Mechanics + template in
    [reference/finishing.md](reference/finishing.md).)
 6. **Linear** if sync is enabled in `.agent-sdlc/config.json`, attach the PR url to the feature's
    issues, post a project status update, and move the project to In Review — via the `linear-sync`
@@ -104,7 +104,7 @@ it stops and asks before changing anything — a PR is an outward artifact.
   captured reality — a second, automated witness, sequenced before the PR exists at all, distinct
   from the gate's post-PR judgment panel.
 - **A proof map that isn't in the PR body doesn't count.** Writing `verification-report.md` alone
-  satisfies neither AC-18 nor the reviewer who never opens the spec tree — copy the map into the PR
+  satisfies neither the contract nor the reviewer who never opens the spec tree — copy the map into the PR
   body every time.
 - **Degrade, never block.** No gate plugin, no Linear — ship still produces a PR. Optional
   dependencies are optional; say what was skipped and carry on.
@@ -118,10 +118,10 @@ it stops and asks before changing anything — a PR is an outward artifact.
 | "It blocked, I'll just fix and re-push." | A PR is outward. Surface the findings and ask first — do not silently rewrite an open PR. |
 | "Merge it, the review passed." | ship's finish line is a *reviewed* PR. Merging is a human's or the gate's call, not ship's. |
 | "The gate isn't installed, skip the review." | Degrade to the portable reviewer subagent. A PR ships reviewed, one way or another. |
-| "Write the proof map after the PR is up, or skip it — build already proved things." | Sequenced pre-PR, before `gh pr create`. The report settles AC-13/14 mechanically against the ledger's captured evidence; a PR opened first is a PR opened unproven. |
+| "Write the proof map after the PR is up, or skip it — build already proved things." | Sequenced pre-PR, before `gh pr create`. The report settles proof-map completeness and evidence linkage mechanically against the ledger's captured evidence; a PR opened first is a PR opened unproven. |
 | "sdlc-check isn't installed here, skip verification." | `node` absent is a degraded fallback, announced — not a silent skip. |
-| "The checker failed but the branch looks fine, open the PR anyway." | A failed checker run is a failed check — stop-and-ask. Proceeding needs an explicit human override, and it must be recorded in the PR body (AC-16), not just said aloud. |
-| "The proof map lives in `verification-report.md`, that's enough." | AC-18 requires it in the PR body. A map only in the spec tree is invisible to the reviewer and fails the criterion. |
+| "The checker failed but the branch looks fine, open the PR anyway." | A failed checker run is a failed check — stop-and-ask. Proceeding needs an explicit human override, and it must be recorded in the PR body, not just said aloud. |
+| "The proof map lives in `verification-report.md`, that's enough." | The contract requires it in the PR body. A map only in the spec tree is invisible to the reviewer and fails the criterion. |
 | "I gated it green locally and parked it for review — good enough." | Not until it's pushed. Parking hands off a PR; the reviewer sees the *remote* head. Push, confirm `HEAD` == the PR's `headRefOid`, state the SHA — and re-push before every re-park. |
 
 ## Red flags (stop and fix)
@@ -185,7 +185,7 @@ are in [reference/finishing.md](reference/finishing.md)):
 - Reads `build-report.md` and the spec; references `AC-N` and the feature branch. When no ledger
   exists (a branch built outside the pipeline), verifies the branch directly instead.
 - Invokes `sdlc-check docs/specs/<feature>/<feature>.md --require ledger --require
-  verification-report` (bare `node`, no install) pre-PR, mirroring gate's and build's checker
+  verification-report` (resolve per getting-started's checker-resolution rule; degrade only when no form resolves) pre-PR, mirroring gate's and build's checker
   contract: present and clean → corroborated, proceed; present and failing (or crashing) →
   stop-and-ask, override recorded in the PR body; absent → an announced degraded fallback, never a
   silent skip.

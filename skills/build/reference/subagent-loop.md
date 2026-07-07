@@ -108,12 +108,11 @@ actual output (the per-test `ok N - <name>` listing), never a checkbox and **nev
 the implementer subagent's reported counts**. The implementer's own red→green TDD test runs during
 the task are the subagent's business, not the recorded evidence — the conductor never trusts a
 subagent's reported test counts (above), so the authoritative recorded run is the conductor's, not the
-subagent's word for it. Capture it from the first task onward, never deferred: it is what the checker's evidence-presence
-check (AC-5) and name-appearance-linkage check (AC-14) read, so a test-backed proof-map row's cited
+subagent's word for it. Capture it from the first task onward, never deferred: it is what the checker's `green-bar-evidence` and `proof-evidence-linkage` rules read, so a test-backed proof-map row's cited
 test identifier must literally appear in this text (ADR-0001). **Capture the per-test listing, not
 just summary counts.** A test runner that prints one line per test (e.g. `node --test` → `ok N -
 <name>`) must have those `ok - <name>` lines recorded in the block — a summary tail (`# pass N`)
-alone names no test, so ship's AC-14 linkage cannot match any proof row against it and the terminal
+alone names no test, so ship's proof-evidence linkage cannot match any proof row against it and the terminal
 gate blocks. **Bounded for large suites:** retain in full the `ok N - <name>` lines for **the tests
 this task adds or exercises** — the failing test(s) the plan named for `T-N` (test-first), which the
 conductor knows at capture time; the rest of a large **pre-existing** suite (tests this task did not
@@ -121,9 +120,20 @@ add) may be capped to its summary tail. **A task that adds no tests** (e.g. a pr
 task-specific per-test names to retain — its suite summary (e.g. `# pass N`) is then the correct
 bounded form (still the conductor's own run, never a transcription); this is the ONLY case where a
 summary alone suffices. (If a full per-task listing is impractical, at minimum a build-complete
-comprehensive block carrying the full per-test listing satisfies the union AC-14 searches — but the
-per-test names, never mere counts, are the load-bearing content.) The canonical worked example is this very feature's own ledger —
-`docs/specs/enforcement-spine/build-report.md`'s `## Green-bar evidence` section.
+comprehensive block carrying the full per-test listing satisfies the union the linkage rule searches — but the
+per-test names, never mere counts, are the load-bearing content.)
+
+A well-formed evidence block looks like this (command exactly as run, then the run's own output):
+
+    ### T-3 (@ `4ddd29e`)
+
+    ```
+    $ node --test tests/*.test.mjs
+    ok 1 - resolver rejects a dangling ID
+    ok 2 - resolver accepts a defined ID
+    # pass 2
+    # fail 0
+    ```
 
 The message states the task and the `AC-N` (e.g. `feat(T-3): root resolver — advances AC-1`). Then
 updates the ledger — the captured green-bar evidence block for this task, plus any `SHORTCUT(T-N)`
@@ -144,7 +154,7 @@ dispatch with the default model; the loop is unchanged.
 1. Read `build-report.md` for the per-task status.
 2. Cross-check with `git log` — a task with a commit is done even if the ledger missed the write.
 3. Resume at the first task not marked done. **Never re-run a done task.**
-4. **Invoke the checker before continuing** (resume invocation point, AC-15) — a second, mechanical
+4. **Invoke the checker before continuing** (the resume invocation point) — a second, mechanical
    witness to 1–3: `sdlc-check docs/specs/<feature>/<feature>.md --require
    ledger` (never `--require verification-report` here — that artifact is ship's). Runtime present →
    interpret the exit code: 0 proceeds; nonzero, or the checker crashing, is a failed check

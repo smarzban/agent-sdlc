@@ -126,7 +126,7 @@ export async function run(argv) {
     if (capFinding) {
       results.push(capFinding);
     } else {
-      // AC-4 option-(b): the ledger is the authoritative task↔commit link, so verify each done
+      // recorded-commit model: the ledger is the authoritative task↔commit link, so verify each done
       // task's own RECORDED commit rather than re-deriving matches by walking git history. Read each
       // distinct recorded SHA once (the reader does the git I/O; checkLedgerVsGit stays pure over
       // the resolved `sha -> { found, reachable, subject }` map). A done task with no recorded SHA
@@ -136,7 +136,7 @@ export async function run(argv) {
       let readerFailure = null;
       for (const t of doneTasks) {
         if (!t.commit || subjectsBySha.has(t.commit)) continue;
-        const res = await readCommitSubject(process.cwd(), t.commit);
+        const res = await readCommitSubject(specDir, t.commit);
         if (res.ok) {
           subjectsBySha.set(t.commit, { found: true, reachable: true, subject: res.subject });
         } else if (res.unreachable) {
@@ -148,7 +148,7 @@ export async function run(argv) {
           // Fail-closed (## Design trust/failure boundaries): a systemic reader failure — git absent,
           // `process.cwd()` not a repo, or a per-command timeout — while the ledger's rules would run
           // is itself a failed check, NEVER silently treated as "no facts" and skipped. Distinct from
-          // a per-SHA not-found/unreachable (real AC-4 findings the rule renders below).
+          // a per-SHA not-found/unreachable (real ledger-vs-git findings the rule renders below).
           readerFailure = res.error;
           break;
         }
@@ -161,7 +161,9 @@ export async function run(argv) {
           ids: ['ledger'],
         });
       } else {
-        results.push(...checkLedgerVsGit(ledger, subjectsBySha));
+        const anyNotFound = [...subjectsBySha.values()].some((e) => !e.found);
+        const shallowRepo = anyNotFound ? await isShallowRepo(specDir) : false;
+        results.push(...checkLedgerVsGit(ledger, subjectsBySha, { shallowRepo }));
       }
     }
   }
@@ -202,7 +204,7 @@ export async function run(argv) {
   process.exitCode = exitCode;
 }
 
-// --- Spec parser (T-2): sections, AC/C/T IDs, trace references ------------------------------
+// --- Spec parser: sections, AC/C/T IDs, trace references ------------------------------
 //
 // parseSpec() is pure — it takes text, not a path (a thin fs read belongs at the CLI edge, wired
 // in a later task) — so it is trivially testable with inline fixture strings. It never throws:
@@ -222,13 +224,13 @@ export async function run(argv) {
 //                raw, line }. `refs` are the cited IDs — a *Component:* field citing a component by
 //                NAME is resolved against `components` to its C-N id. T-4's rules consume this to
 //                find dangling/unreached links; this task only produces the model.
-//   provenance — (T-3) a materialized section's leading HTML-comment marker (see
+//   provenance — a materialized section's leading HTML-comment marker (see
 //                getting-started/reference/input-resolution.md): { section, line, raw, source,
 //                date, malformed }. `source`/`date` are `null` when absent; `malformed` is true
 //                when either is missing OR `date` is not an absolute `YYYY-MM-DD` date — this is a
 //                MODEL fact (AC-6's rule flags it), never a parse failure. A hand-authored section
 //                (no leading HTML comment) contributes no entry.
-//   untraced   — (T-3) an explicit `AC: untraced (reason)` marker on a task, scoped to the same
+//   untraced   — an explicit `AC: untraced (reason)` marker on a task, scoped to the same
 //                top-level-bullet ownership as a trace field: { from, reason, raw, section, line }.
 //                `reason` is `''` when no parenthetical is given (still recorded, never dropped) —
 //                T-4's rule renders this as a coverage note rather than a dangling-reference failure.
@@ -243,7 +245,7 @@ export async function run(argv) {
 //                reads it to sharpen the reviewer-checked unreached-AC hint (D2: parsed from the spec,
 //                not the report).
 
-// --- Ledger (build-report.md) — task table + green-bar evidence blocks (T-3) ----------------
+// --- Ledger (build-report.md) — task table + green-bar evidence blocks ----------------
 //
 // parseLedger() mirrors parseSpec(): pure (text in, model or typed failure out), never throws.
 //   success: { ok: true, tasks, evidence }
@@ -260,7 +262,7 @@ export async function run(argv) {
 //   A typed failure is reserved for genuinely unreadable input: missing/non-string/empty text, or
 //   text with neither a task table nor any evidence heading at all (not a ledger).
 
-// --- Verification report (verification-report.md) — AC → proof-map rows (T-3) ---------------
+// --- Verification report (verification-report.md) — AC → proof-map rows ---------------
 //
 // parseVerificationReport() mirrors parseSpec(): pure, never throws.
 //   success: { ok: true, rows }
@@ -719,7 +721,7 @@ function extractUntracedMarkers(sections) {
   return markers;
 }
 
-// --- Ledger parser (T-3): task table + green-bar evidence blocks ----------------------------
+// --- Ledger parser: task table + green-bar evidence blocks ----------------------------
 
 export function parseLedger(text, file = '<unknown ledger file>') {
   if (typeof text !== 'string' || text.trim() === '') {
@@ -832,7 +834,7 @@ function extractCommandLines(blockText) {
     .map((l) => l.trim().slice(2).trim());
 }
 
-// --- Verification report parser (T-3): AC → proof-map rows ----------------------------------
+// --- Verification report parser: AC → proof-map rows ----------------------------------
 //
 // No verification-report.md exists yet (ship writes it at T-12) — this grammar is designed from
 // the `## Design` data contract + AC-13/14 wording: a "Criterion | Type | Proof" table, one row
@@ -840,8 +842,8 @@ function extractCommandLines(blockText) {
 
 function normalizeProofType(raw) {
   const t = raw.trim();
-  if (/test/i.test(t)) return 'test-backed';
-  if (/reviewer/i.test(t)) return 'reviewer-checked';
+  if (/\btest\b/i.test(t)) return 'test-backed';
+  if (/\breviewer\b/i.test(t)) return 'reviewer-checked';
   return t;
 }
 
@@ -901,11 +903,11 @@ export function parseVerificationReport(text, file = '<unknown verification repo
   return { ok: true, rows };
 }
 
-// --- Rules (T-4): trace integrity + bidirectional coverage ----------------------------------
+// --- Rules: trace integrity + bidirectional coverage ----------------------------------
 //
 // Pure predicates over a parseSpec() SUCCESS model (the `{ ok: true, ... }` payload itself) — no
 // file reads, no git, no process.exit. Each rule returns an array of items sharing one shape so a
-// later reporter (T-8) can tell findings from notes by one field alone, and later rule tasks
+// later reporter can tell findings from notes by one field alone, and later rule tasks
 // (T-5/T-6/T-7) reuse the same shape:
 //   { type: 'finding' | 'note', rule, message, ids }
 //   type    — 'finding' fails the gate; 'note' is informational (an explicit `untraced` marker is
@@ -1108,7 +1110,7 @@ export function checkGreenBarEvidence(ledger) {
   return findings;
 }
 
-// --- Commit-subject reader (AC-4, option-(b)): read-only git, per recorded SHA -------------
+// --- Commit-subject reader (recorded-commit model): read-only git, per recorded SHA -------------
 //
 // A per-git-command timeout (FIX 2 — bound the subprocesses): every git call carries a wall-clock
 // `timeout`; on expiry Node kills the child and rejects with `err.killed === true`, which
@@ -1144,14 +1146,14 @@ function classifyGitError(err, repoPath) {
 //   reachable ancestor: { ok: true, subject }         — the commit's subject line (`%s`, no body).
 //   exists, unreachable:{ ok: false, unreachable: true }— the object resolves but is NOT an ancestor
 //                                                       of HEAD (a stale/orphaned pre-amend/pre-rebase
-//                                                       SHA); a per-task AC-4 finding, NOT a pass.
+//                                                       SHA); a per-task ledger-vs-git finding, NOT a pass.
 //   unknown object:     { ok: false, notFound: true } — git ran but the SHA is not in this repo; a
-//                                                       per-task AC-4 finding, NOT a crash.
+//                                                       per-task ledger-vs-git finding, NOT a crash.
 //   systemic failure:   { ok: false, unavailable: true, error: { path, problem } } — git absent
 //                                                       (ENOENT), `repoPath` not a repo, or a
 //                                                       per-command timeout; the CLI treats this as
 //                                                       fail-closed (a lost check), never a pass.
-// FIX 1 (reachability, AC-4/AC-8): "exists in the repository" now means "exists AND is reachable
+// FIX 1 (reachability): "exists in the repository" now means "exists AND is reachable
 // from HEAD". `git show` alone resolves ANY object in the store — including a dangling pre-amend
 // commit that is not in the shipped history — so a ledger recording a stale SHA used to false-pass
 // (a fail-open regression from the old reachable-only `git log` walk). `git merge-base
@@ -1197,6 +1199,20 @@ export async function readCommitSubject(repoPath, sha) {
   }
 }
 
+// Shallow clones (CI's default checkout) make ancestry lookups fail as "not found" for commits
+// behind the fetch boundary — name that case instead of letting it read as a corrupt ledger.
+export async function isShallowRepo(repoPath) {
+  try {
+    const { stdout } = await execFileAsync(
+      'git', ['-C', repoPath, 'rev-parse', '--is-shallow-repository'],
+      { encoding: 'utf8', timeout: GIT_TIMEOUT_MS },
+    );
+    return stdout.trim() === 'true';
+  } catch {
+    return false;
+  }
+}
+
 const TASK_TOKEN_RE = /\bT-\d+\b/g;
 
 // Conventional-commit header: `type(scope): …` (optionally `type(scope)!: …`). Captures group 1 =
@@ -1208,11 +1224,11 @@ const COMMIT_HEADER_RE = /^\s*\w+(?:\(([^)]*)\))?!?:/;
 // Distinct T-N tokens appearing in a commit's SUBJECT LINE's SCOPE POSITION only — the `type(scope):`
 // parens — not the whole subject (the `%s` readCommitSubject captures via `git show -s --format=%s`;
 // the commit body is never read either way). This is a corrective narrowing of the original
-// subject-wide match (T-6): the repo's commit convention puts the authoritative task in the scope
+// subject-wide match: the repo's commit convention puts the authoritative task in the scope
 // (`feat(T-N): …`), while docs/chore/area commits use an area scope (`docs(enforcement-spine): …`)
 // and only ever mention a task in PROSE after the colon — e.g. "...(T-1 checkpoint)..." or
 // "...evidence capture from T-1" — which whole-subject matching wrongly counted as a reference,
-// false-positiving AC-4 (a healthy task with exactly one `feat(T-N):` commit read as having
+// false-positiving ledger-vs-git (a healthy task with exactly one `feat(T-N):` commit read as having
 // multiple). A commit with no parens at all (`docs: …`) has an undefined scope and therefore
 // references no task. `\bT-\d+\b`'s `\d+` is greedy so it always consumes the FULL run of digits
 // before the trailing `\b` is checked — "T-1" can never match as a prefix inside "T-12" (the same
@@ -1257,7 +1273,7 @@ export function checkLedgerCommitCap(ledger) {
   return null;
 }
 
-// AC-4 — ledger-vs-git (option-(b), SMA-420): the ledger is the AUTHORITATIVE task↔commit link, so
+// recorded-commit model — ledger-vs-git (SMA-420): the ledger is the AUTHORITATIVE task↔commit link, so
 // for each `done` task this verifies the task's OWN ledger-RECORDED commit — no git-history walk.
 // The recorded SHA (the first SHA-shaped token in the commit cell, extracted at parse time into
 // `t.commit`; see extractFirstSha) must (a) exist in the repo and (b) have a subject whose scope
@@ -1276,7 +1292,7 @@ export function checkLedgerCommitCap(ledger) {
 // A commit scoping two tasks (`feat(T-3, T-4): ...`) recorded for both therefore fails BOTH (each
 // sees its recorded commit's token set as `{T-3, T-4}`, not `{itself}`).
 // Exhaustive: every offending done task is reported, never just the first.
-export function checkLedgerVsGit(ledger, subjectsBySha) {
+export function checkLedgerVsGit(ledger, subjectsBySha, opts = {}) {
   const findings = [];
   for (const t of ledger.tasks) {
     if (!/^done$/i.test(t.status)) continue;
@@ -1291,17 +1307,20 @@ export function checkLedgerVsGit(ledger, subjectsBySha) {
     }
     const entry = subjectsBySha.get(t.commit);
     if (!entry || !entry.found) {
+      const shallowHint = opts.shallowRepo
+        ? ' (note: this clone is shallow — the commit may exist beyond the fetch depth; run `git fetch --unshallow`, or set fetch-depth: 0 in CI)'
+        : '';
       findings.push({
         type: 'finding',
         rule: 'ledger-vs-git',
-        message: `${t.task} is marked done but the ledger-recorded commit ${t.commit} for it was not found in the repo`,
+        message: `${t.task} is marked done but the ledger-recorded commit ${t.commit} for it was not found in the repo${shallowHint}`,
         ids: [t.task],
       });
       continue;
     }
     // FIX 1 (reachability): the object resolves but is NOT reachable from HEAD — a stale/orphaned
     // commit (e.g. a pre-amend/pre-rebase SHA) that is not in the shipped history. Distinct from
-    // not-found above (`git show` would still resolve it) and its own AC-4 finding.
+    // not-found above (`git show` would still resolve it) and its own ledger-vs-git finding.
     if (!entry.reachable) {
       findings.push({
         type: 'finding',
@@ -1424,11 +1443,11 @@ export function checkProofEvidenceLinkage(verificationReport, ledger) {
   return findings;
 }
 
-// --- Reporter (T-8): exhaustive findings + exit derivation ----------------------------------
+// --- Reporter: exhaustive findings + exit derivation ----------------------------------
 //
 // formatReport() is pure: `results` in (the flat concatenation of every rule's output — findings
 // and notes, in whatever order the caller supplied), `{ text, exitCode }` out. No I/O, no
-// `process.exit`, no writes, no git — the CLI (T-9) is the only thing that prints `text` and sets
+// `process.exit`, no writes, no git — the CLI is the only thing that prints `text` and sets
 // `process.exitCode = exitCode`. No error path: `results` is always an already-produced array of
 // well-shaped items (every rule task before this one guarantees the shape), so there is nothing
 // here to fail on.
