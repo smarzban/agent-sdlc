@@ -840,8 +840,8 @@ function extractCommandLines(blockText) {
 
 function normalizeProofType(raw) {
   const t = raw.trim();
-  if (/test/i.test(t)) return 'test-backed';
-  if (/reviewer/i.test(t)) return 'reviewer-checked';
+  if (/\btest\b/i.test(t)) return 'test-backed';
+  if (/\breviewer\b/i.test(t)) return 'reviewer-checked';
   return t;
 }
 
