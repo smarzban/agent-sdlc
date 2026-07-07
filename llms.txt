@@ -10,6 +10,7 @@ pipeline it implements).
 
 - [README](README.md): the front door — what it is, quickstart, install, layout.
 - [Quickstart](docs/quickstart.md): install + first run in two commands.
+- [Example run](docs/example-run.md): a five-minute worked example, idea to reviewed PR.
 - [Install](docs/install.md): Claude Code, Cursor, other agents, updates, requirements.
 - [The pipeline](docs/usage/pipeline.md): the stage chain, the traceability spine, the artifact model.
 - [Start anywhere](docs/usage/start-anywhere.md): enter at any stage, from any source.

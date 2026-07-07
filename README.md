@@ -171,7 +171,7 @@ the Linear MCP isn't connected. Setup + mapping: [docs/usage/linear-sync.md](doc
 
 ## Documentation
 
-- **Use it** → [docs/quickstart.md](docs/quickstart.md), then [docs/usage/](docs/README.md#usage)
+- **Use it** → [docs/quickstart.md](docs/quickstart.md), the [five-minute example run](docs/example-run.md), then [docs/usage/](docs/README.md#usage)
   — one page per capability (the pipeline, start-anywhere, the light tier, `sdlc-check`,
   Linear sync, the documentation skills).
 - **Install / update it** → [docs/install.md](docs/install.md) — Claude Code, Cursor, any other
