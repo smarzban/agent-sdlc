@@ -90,7 +90,7 @@ commits. The ledger (`build-report.md`) records each task with the conductor's o
 ## 4. Ship (proof map, checker, PR, review)
 
 `ship` re-runs the suite, writes `verification-report.md`, and the checker corroborates it pre-PR
-(every cited test name must appear in the captured evidence above):
+(every cited test name must appear in the captured evidence — T-2's block is elided from the excerpt above for brevity):
 
 ```markdown
 | Criterion | Type | Proof |
