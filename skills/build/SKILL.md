@@ -63,12 +63,12 @@ branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
    improvisation that hides which agent actually did the work.
 3. **Ledger** open `build-report.md`. If it already exists, resume from it plus `git log` — never
    re-run a task already marked done. Re-doing completed work is the most expensive failure here.
-   **When resuming an existing ledger, invoke the checker first** (resume invocation point, AC-15) —
+   **When resuming an existing ledger, invoke the checker first** (the resume invocation point) —
    this corroborates the work already recorded, so it runs ONLY when a `build-report.md` already
    exists; a fresh build has no ledger yet (this step CREATES it), so skip the checker here and let
    the build-complete run (step 5) be the first invocation. Command (when resuming):
    `sdlc-check docs/specs/<feature>/<feature>.md --require ledger` (never
-   `--require verification-report` at build — that artifact is ship's, T-12). Runtime present → run,
+   `--require verification-report` at build — that artifact is ship's). Runtime present → run,
    interpret the exit code: 0 = corroborated, proceed; nonzero, or the checker crashing, is itself a
    failed check (fail-closed) — **stop-and-ask**, do not resume task work; any human override must be
    recorded in `build-report.md` (who/what, why continuing despite the failed check). Runtime absent
@@ -89,9 +89,9 @@ branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
       passed` summary or count. Two holes this closes: **(i) trust-the-subagent** — a subagent can
       report a false count, so the recorded count must be the conductor's *own* observed run, not
       the subagent's word; **(ii) summary-only degradation** — transcription drifts to summaries,
-      losing the per-test names AC-14 needs. So the captured block is the **per-test listing** (e.g.
+      losing the per-test names the proof-evidence linkage needs. So the captured block is the **per-test listing** (e.g.
       `node --test`'s `ok N - <name>` lines), not summary counts — those names are what ship's
-      AC-14 linkage matches against. **Bounded for large suites:** cap the block to a tail, but
+      `proof-evidence-linkage` rule matches against. **Bounded for large suites:** cap the block to a tail, but
       retain in full the per-test `ok N - <name>` lines for **the tests this task adds or exercises**
       — the failing test(s) the plan named for `T-N` (test-first) — since those are exactly what a
       later proof map can cite; the rest of a large **pre-existing** suite (tests this task did not
@@ -108,8 +108,8 @@ branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
    f. Update `build-report.md`: `T-N` done, the commit SHA, the `AC-N` it advanced, and the captured
       green-bar evidence as a fenced block beside the task — **the conductor's own run output (step
       4d), not a restatement of what the subagent said** — from the first task onward, never
-      deferred. This is the write side the checker's evidence-presence (AC-5) and
-      name-appearance-linkage (AC-14) checks read: a test-backed proof-map row's cited test
+      deferred. This is the write side the checker's `green-bar-evidence` and
+      `proof-evidence-linkage` rules read: a test-backed proof-map row's cited test
       identifier must literally appear in this text (ADR-0001) — so the block must record the
       per-test names, not a summary count that names no test. **Note the verification form** beside
       the evidence — the exact command, its directly-read exit code, and the machine-reporter counts
@@ -131,8 +131,8 @@ branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
    conductor-takeover, with the deviation recorded in `build-report.md`
    ([reference/subagent-loop.md](reference/subagent-loop.md)). A dead subagent is not a licence to
    silently finish the task yourself.
-5. **Hand off** when every task is done and green: **invoke the checker again** (build-complete
-   invocation point, AC-15) — same command as step 3 (`--require ledger`, never
+5. **Hand off** when every task is done and green: **invoke the checker again** (the build-complete
+   invocation point) — same command as step 3 (`--require ledger`, never
    `--require verification-report`). Same interpretation: nonzero or a crash is a failed check →
    stop-and-ask, do not hand off, human override recorded in `build-report.md`; runtime absent →
    announced degraded fallback recorded in `build-report.md`. Only once corroborated (or the
@@ -196,7 +196,7 @@ discipline exists to stop.
   green-bar run is recorded verbatim — the command plus its output tail (the per-test listing,
   bounded) — beside the task, from the first task onward. The recorded output is the conductor's own
   post-review run, never a transcription of the subagent's reported count: a subagent's self-report
-  is not evidence (trust-the-subagent), and a transcribed summary loses the per-test names AC-14
+  is not evidence (trust-the-subagent), and a transcribed summary loses the per-test names the proof-evidence linkage
   needs (summary-only degradation). A task marked done with no evidence block is not done.
 - **Read the bar, don't glance at it.** A misread green bar is worse than a red one — it ships. Read
   exit codes straight from the command (never through a pipe that hands you the pager's `$?`), take
@@ -222,7 +222,7 @@ discipline exists to stop.
 | "The plan came from Linear/a doc, it's already reviewed — skip the gate." | A source is not a verdict. An unvetted plan is unvetted whatever its origin — run the gate inline, then build. |
 | "The checker isn't installed here, just skip resume/build-complete." | `node` absent is a degraded fallback, announced in `build-report.md` — not a silent skip. |
 | "`sdlc-check` failed but the task looks fine, proceed anyway." | A failed checker run is a failed check — stop-and-ask. Proceeding needs an explicit, recorded human override. |
-| "I'll add the evidence block later, once more tasks land." | Evidence is captured from the first task, never deferred — a gap left for later is a hole the checker (AC-5/AC-14) will find. |
+| "I'll add the evidence block later, once more tasks land." | Evidence is captured from the first task, never deferred — a gap left for later is a hole the checker (`green-bar-evidence` / `proof-evidence-linkage`) will find. |
 | "The subagent already ran the tests and reported them green — I'll record its count." | A subagent's self-report is not evidence. The conductor runs the declared command itself and records that run's actual per-test output — a false or summarized count is exactly the hole this closes. |
 | "`sdlc-check … \| head` printed nothing scary and `$?` was 0 — green." | `$?` after a pipe is the pager's exit, not the checker's. Read the command's own exit code — capture to a file first, or use `pipefail`/`${PIPESTATUS[0]}`. A pipe is how a red bar passes as green. |
 | "The human reporter shows a couple of failures — probably a flake, ship it." | Investigate via the machine reporter (exit code, `# fail N`, `--reporter=json` `numFailedTests`), never explain a discrepancy away. Normalizing "some failures are flake" is how a real red ships. |
@@ -309,7 +309,7 @@ mis-fires:
 - **Green-bar evidence:** one ``### T-N (@ `SHA`)`` heading per done task, each with **at least one
   non-empty fenced code block**. A done task with no block, or an empty one, is an unbacked-claim
   finding. The block must capture the **per-test names** (e.g. `node --test`'s `ok N - <name>`
-  lines), not just summary counts — ship's AC-14 matches a proof-map test identifier as a substring
+  lines), not just summary counts — ship's `proof-evidence-linkage` rule matches a proof-map test identifier as a substring
   of this text.
 - **Ledger-vs-git (recorded-commit model):** for each done task the recorded SHA must **exist, be
   reachable from HEAD, and its subject's scope position reference exactly that task** — so commit as
@@ -334,5 +334,5 @@ mis-fires:
   `node`, no install) at resume and at build-complete, mirroring gate's and ship's checker contract:
   present and clean → corroborated; present and failing (or crashing) → stop-and-ask, override
   recorded in `build-report.md`; absent → an announced degraded fallback, never a silent skip. Never
-  `--require verification-report` at build — that artifact is ship's (T-12).
+  `--require verification-report` at build — that artifact is ship's.
 - Downstream consumer: `/agent-sdlc:ship` takes the green branch to a reviewed PR.

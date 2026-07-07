@@ -126,7 +126,7 @@ export async function run(argv) {
     if (capFinding) {
       results.push(capFinding);
     } else {
-      // AC-4 option-(b): the ledger is the authoritative task↔commit link, so verify each done
+      // recorded-commit model: the ledger is the authoritative task↔commit link, so verify each done
       // task's own RECORDED commit rather than re-deriving matches by walking git history. Read each
       // distinct recorded SHA once (the reader does the git I/O; checkLedgerVsGit stays pure over
       // the resolved `sha -> { found, reachable, subject }` map). A done task with no recorded SHA
@@ -204,7 +204,7 @@ export async function run(argv) {
   process.exitCode = exitCode;
 }
 
-// --- Spec parser (T-2): sections, AC/C/T IDs, trace references ------------------------------
+// --- Spec parser: sections, AC/C/T IDs, trace references ------------------------------
 //
 // parseSpec() is pure — it takes text, not a path (a thin fs read belongs at the CLI edge, wired
 // in a later task) — so it is trivially testable with inline fixture strings. It never throws:
@@ -245,7 +245,7 @@ export async function run(argv) {
 //                reads it to sharpen the reviewer-checked unreached-AC hint (D2: parsed from the spec,
 //                not the report).
 
-// --- Ledger (build-report.md) — task table + green-bar evidence blocks (T-3) ----------------
+// --- Ledger (build-report.md) — task table + green-bar evidence blocks ----------------
 //
 // parseLedger() mirrors parseSpec(): pure (text in, model or typed failure out), never throws.
 //   success: { ok: true, tasks, evidence }
@@ -262,7 +262,7 @@ export async function run(argv) {
 //   A typed failure is reserved for genuinely unreadable input: missing/non-string/empty text, or
 //   text with neither a task table nor any evidence heading at all (not a ledger).
 
-// --- Verification report (verification-report.md) — AC → proof-map rows (T-3) ---------------
+// --- Verification report (verification-report.md) — AC → proof-map rows ---------------
 //
 // parseVerificationReport() mirrors parseSpec(): pure, never throws.
 //   success: { ok: true, rows }
@@ -721,7 +721,7 @@ function extractUntracedMarkers(sections) {
   return markers;
 }
 
-// --- Ledger parser (T-3): task table + green-bar evidence blocks ----------------------------
+// --- Ledger parser: task table + green-bar evidence blocks ----------------------------
 
 export function parseLedger(text, file = '<unknown ledger file>') {
   if (typeof text !== 'string' || text.trim() === '') {
@@ -834,7 +834,7 @@ function extractCommandLines(blockText) {
     .map((l) => l.trim().slice(2).trim());
 }
 
-// --- Verification report parser (T-3): AC → proof-map rows ----------------------------------
+// --- Verification report parser: AC → proof-map rows ----------------------------------
 //
 // No verification-report.md exists yet (ship writes it at T-12) — this grammar is designed from
 // the `## Design` data contract + AC-13/14 wording: a "Criterion | Type | Proof" table, one row
@@ -903,7 +903,7 @@ export function parseVerificationReport(text, file = '<unknown verification repo
   return { ok: true, rows };
 }
 
-// --- Rules (T-4): trace integrity + bidirectional coverage ----------------------------------
+// --- Rules: trace integrity + bidirectional coverage ----------------------------------
 //
 // Pure predicates over a parseSpec() SUCCESS model (the `{ ok: true, ... }` payload itself) — no
 // file reads, no git, no process.exit. Each rule returns an array of items sharing one shape so a
@@ -1110,7 +1110,7 @@ export function checkGreenBarEvidence(ledger) {
   return findings;
 }
 
-// --- Commit-subject reader (AC-4, option-(b)): read-only git, per recorded SHA -------------
+// --- Commit-subject reader (recorded-commit model): read-only git, per recorded SHA -------------
 //
 // A per-git-command timeout (FIX 2 — bound the subprocesses): every git call carries a wall-clock
 // `timeout`; on expiry Node kills the child and rejects with `err.killed === true`, which
@@ -1273,7 +1273,7 @@ export function checkLedgerCommitCap(ledger) {
   return null;
 }
 
-// AC-4 — ledger-vs-git (option-(b), SMA-420): the ledger is the AUTHORITATIVE task↔commit link, so
+// recorded-commit model — ledger-vs-git (SMA-420): the ledger is the AUTHORITATIVE task↔commit link, so
 // for each `done` task this verifies the task's OWN ledger-RECORDED commit — no git-history walk.
 // The recorded SHA (the first SHA-shaped token in the commit cell, extracted at parse time into
 // `t.commit`; see extractFirstSha) must (a) exist in the repo and (b) have a subject whose scope
@@ -1443,7 +1443,7 @@ export function checkProofEvidenceLinkage(verificationReport, ledger) {
   return findings;
 }
 
-// --- Reporter (T-8): exhaustive findings + exit derivation ----------------------------------
+// --- Reporter: exhaustive findings + exit derivation ----------------------------------
 //
 // formatReport() is pure: `results` in (the flat concatenation of every rule's output — findings
 // and notes, in whatever order the caller supplied), `{ text, exitCode }` out. No I/O, no

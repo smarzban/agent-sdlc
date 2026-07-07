@@ -182,7 +182,7 @@ Downstream, the gate/ship checker parses this section literally:
   fails for a **reviewer-checked** AC, the `coverage-forward` finding **appends a carrying-task hint**
   ("— this criterion is reviewer-checked, which still needs a carrying task: name it in some task's
   `*Advances:*` …"); a test-backed / type-unknown unreached AC keeps the base message unchanged. The
-  checker only **sharpens the message** — it does NOT auto-create the link (NC-1): forward coverage
+  checker only **sharpens the message** — it does NOT auto-create the link: forward coverage
   still requires a real `*Advances:*` / coverage-map link.
 
 ## Conventions

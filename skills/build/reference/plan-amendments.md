@@ -70,7 +70,7 @@ The crisp test: **does this change WHAT we build, or just HOW/WHERE a task touch
 When unsure which side a mismatch falls on, treat it as scope and ask — the fail-safe direction is
 stop-and-ask, never silent expansion.
 
-## The invariant (NC-2)
+## The invariant
 
 **build never *authors* plan content on its own judgment.** Every amendment goes through the plan
 method (step 2) and the inline gate (step 4), so the materialized `## Plan` stays a real, gated,
