@@ -48,8 +48,11 @@ do not treat it as shipped. Any human override to proceed past a failed check mu
 the PR body**, not merely stated — see the PR body section below. Runtime absent → write an
 **announced degraded fallback** line — never a silent skip.
 
-`sdlc-check` is the plugin's bundled launcher (agent-sdlc adds its `bin/` to PATH on install) — call it by name, never a cwd-relative `node checker/sdlc-check.mjs …` path, which does not
-exist in a user's own repo and would fail-closed the whole pipeline.
+`sdlc-check` is the plugin's bundled launcher. Resolve it per getting-started's
+checker-resolution rule (bare name → `"${CLAUDE_PLUGIN_ROOT}/bin/sdlc-check"` →
+`node <plugin-install-dir>/checker/sdlc-check.mjs`) — never a cwd-relative
+`node checker/sdlc-check.mjs …`, which does not exist in a user's own repo. Command-not-found
+with `node` present means try the next form, not degrade.
 
 **No-ledger path** (a branch built outside the pipeline — the HARD-GATE's alternate precondition):
 there is no `build-report.md`, so **drop `--require ledger`** (`sdlc-check … --require

@@ -185,7 +185,7 @@ are in [reference/finishing.md](reference/finishing.md)):
 - Reads `build-report.md` and the spec; references `AC-N` and the feature branch. When no ledger
   exists (a branch built outside the pipeline), verifies the branch directly instead.
 - Invokes `sdlc-check docs/specs/<feature>/<feature>.md --require ledger --require
-  verification-report` (bare `node`, no install) pre-PR, mirroring gate's and build's checker
+  verification-report` (resolve per getting-started's checker-resolution rule; degrade only when no form resolves) pre-PR, mirroring gate's and build's checker
   contract: present and clean → corroborated, proceed; present and failing (or crashing) →
   stop-and-ask, override recorded in the PR body; absent → an announced degraded fallback, never a
   silent skip.

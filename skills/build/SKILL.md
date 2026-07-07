@@ -330,8 +330,7 @@ mis-fires:
 - Runs after a clean gate verdict; re-run is safe and resumes from the ledger. The plan may be
   materialized from an external source (Linear/doc) — build runs the gate inline when no verdict
   exists for it (see [reference/ingesting-plans.md](reference/ingesting-plans.md)).
-- Invokes `sdlc-check docs/specs/<feature>/<feature>.md --require ledger` (bare
-  `node`, no install) at resume and at build-complete, mirroring gate's and ship's checker contract:
+- Invokes `sdlc-check docs/specs/<feature>/<feature>.md --require ledger` (resolve per getting-started's checker-resolution rule; degrade only when no form resolves) at resume and at build-complete, mirroring gate's and ship's checker contract:
   present and clean → corroborated; present and failing (or crashing) → stop-and-ask, override
   recorded in `build-report.md`; absent → an announced degraded fallback, never a silent skip. Never
   `--require verification-report` at build — that artifact is ship's.
