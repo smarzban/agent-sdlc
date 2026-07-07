@@ -93,7 +93,7 @@ branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
       per-test names — its suite summary (`# pass N`, still the conductor's own run) is then the
       correct bounded form; the ONLY case where a summary alone suffices.
    e. Commit: one atomic commit for the task, reflecting the reviewed code — step 4d just proved
-      the staged snapshot green.
+      the staged snapshot green (already done if 4d used the commit-first form; don't commit twice).
    f. Update `build-report.md`: `T-N` done, the commit SHA, the `AC-N` it advanced, and the
       captured green-bar evidence as a fenced block beside the task — **the conductor's own
       step-4d run, never a restatement of what the subagent said** — from the first task onward,

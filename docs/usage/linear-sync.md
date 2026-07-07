@@ -11,7 +11,8 @@ initiative (product) -> project (feature) -> milestone (build phase) -> issue (t
 ```
 
 `plan` creates the milestones and the `T-N` issues; `build` and `ship` only transition them
-(Backlog → In Progress → In Review → Done) and attach the PR. Sync is idempotent — re-running a
+(issue states Backlog → In Progress → In Review → Done — the project itself stays In Progress) and
+attach the PR. Sync is idempotent — re-running a
 stage updates rather than duplicates.
 
 ## Enabling it

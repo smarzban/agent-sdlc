@@ -65,8 +65,8 @@ it stops and asks before changing anything — a PR is an outward artifact.
    checker-failure override recorded there, and a link to the spec. (Mechanics + template in
    [reference/finishing.md](reference/finishing.md).)
 6. **Linear** if sync is enabled in `.agent-sdlc/config.json`, attach the PR url to the feature's
-   issues, post a project status update, and move the project to In Review — via the `linear-sync`
-   skill.
+   issues and post a project status update — via the `linear-sync` skill. The project stays In
+   Progress (Linear projects have no In-Review state — mapping.md, ship row).
 7. **Review** invoke the Empanel gate — `/empanel:gate` — on the open PR, passing it the spec
    explicitly — the `## Acceptance Criteria` and the design — because its reviewers explore the
    committed worktree, where a gitignored or uncommitted spec is invisible and the conformance lens
