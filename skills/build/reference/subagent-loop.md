@@ -1,7 +1,7 @@
 # Subagent loop — dispatch mechanics for the build conductor
 
 How the conductor runs the per-task loop: workspace isolation, the three subagent roles and their
-file briefs, the bounded fix cycle, model selection, and ledger recovery. The conductor reads this;
+file hand-offs, the bounded fix cycle, model selection, and ledger recovery. The conductor reads this;
 the disciplines the subagents follow are in the sibling reference files.
 
 ## Workspace isolation (step 2 of the loop)
@@ -26,7 +26,9 @@ prompt is one or two lines ("Implement task T-N. Read your brief at <path>. Foll
 it names."). Never paste the plan, the session history, or other tasks into the prompt. The same
 rule governs what comes BACK: reports and findings land in files beside the brief; a subagent's
 final message is a short status, never the artifact itself. And the conductor produces the
-reviewer's diff file **blind** — `git diff > .agent-sdlc/briefs/T-N-review.diff` — never by
+reviewer's diff file **blind** — `git add -N . ':(exclude).agent-sdlc' && git diff >
+.agent-sdlc/briefs/T-N-review.diff` (intent-to-add first, so NEW files — a TDD task's first
+artifact — appear in the diff; nothing gets staged) — never by
 reading the diff into its own context first: the reviewer is the diff's reader, the conductor is
 its courier. Context bloat in the conductor is the failure subagent-driven development exists to
 avoid.
@@ -73,7 +75,7 @@ it does not loop.
 ### Fixer (only when the reviewer finds Critical/Important)
 
 **Brief contains:** the findings file and the diff file. The fixer follows `tdd.md` (a fix gets a guarding
-test) and `debugging.md` (stop-the-line: root cause, not symptom). Re-review after each fix. **Bound
+test) and `debugging.md` (stop-the-line: root cause, not symptom). Regenerate the diff file (same blind command), then re-review after each fix. **Bound
 the cycle to ~2–3 rounds**; if it still fails, the task is blocked — record it and raise it, do not
 grind.
 
