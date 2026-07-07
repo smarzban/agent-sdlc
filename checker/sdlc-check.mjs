@@ -148,7 +148,7 @@ export async function run(argv) {
           // Fail-closed (## Design trust/failure boundaries): a systemic reader failure — git absent,
           // `process.cwd()` not a repo, or a per-command timeout — while the ledger's rules would run
           // is itself a failed check, NEVER silently treated as "no facts" and skipped. Distinct from
-          // a per-SHA not-found/unreachable (real AC-4 findings the rule renders below).
+          // a per-SHA not-found/unreachable (real ledger-vs-git findings the rule renders below).
           readerFailure = res.error;
           break;
         }
@@ -224,13 +224,13 @@ export async function run(argv) {
 //                raw, line }. `refs` are the cited IDs — a *Component:* field citing a component by
 //                NAME is resolved against `components` to its C-N id. T-4's rules consume this to
 //                find dangling/unreached links; this task only produces the model.
-//   provenance — (T-3) a materialized section's leading HTML-comment marker (see
+//   provenance — a materialized section's leading HTML-comment marker (see
 //                getting-started/reference/input-resolution.md): { section, line, raw, source,
 //                date, malformed }. `source`/`date` are `null` when absent; `malformed` is true
 //                when either is missing OR `date` is not an absolute `YYYY-MM-DD` date — this is a
 //                MODEL fact (AC-6's rule flags it), never a parse failure. A hand-authored section
 //                (no leading HTML comment) contributes no entry.
-//   untraced   — (T-3) an explicit `AC: untraced (reason)` marker on a task, scoped to the same
+//   untraced   — an explicit `AC: untraced (reason)` marker on a task, scoped to the same
 //                top-level-bullet ownership as a trace field: { from, reason, raw, section, line }.
 //                `reason` is `''` when no parenthetical is given (still recorded, never dropped) —
 //                T-4's rule renders this as a coverage note rather than a dangling-reference failure.
@@ -907,7 +907,7 @@ export function parseVerificationReport(text, file = '<unknown verification repo
 //
 // Pure predicates over a parseSpec() SUCCESS model (the `{ ok: true, ... }` payload itself) — no
 // file reads, no git, no process.exit. Each rule returns an array of items sharing one shape so a
-// later reporter (T-8) can tell findings from notes by one field alone, and later rule tasks
+// later reporter can tell findings from notes by one field alone, and later rule tasks
 // (T-5/T-6/T-7) reuse the same shape:
 //   { type: 'finding' | 'note', rule, message, ids }
 //   type    — 'finding' fails the gate; 'note' is informational (an explicit `untraced` marker is
@@ -1146,14 +1146,14 @@ function classifyGitError(err, repoPath) {
 //   reachable ancestor: { ok: true, subject }         — the commit's subject line (`%s`, no body).
 //   exists, unreachable:{ ok: false, unreachable: true }— the object resolves but is NOT an ancestor
 //                                                       of HEAD (a stale/orphaned pre-amend/pre-rebase
-//                                                       SHA); a per-task AC-4 finding, NOT a pass.
+//                                                       SHA); a per-task ledger-vs-git finding, NOT a pass.
 //   unknown object:     { ok: false, notFound: true } — git ran but the SHA is not in this repo; a
-//                                                       per-task AC-4 finding, NOT a crash.
+//                                                       per-task ledger-vs-git finding, NOT a crash.
 //   systemic failure:   { ok: false, unavailable: true, error: { path, problem } } — git absent
 //                                                       (ENOENT), `repoPath` not a repo, or a
 //                                                       per-command timeout; the CLI treats this as
 //                                                       fail-closed (a lost check), never a pass.
-// FIX 1 (reachability, AC-4/AC-8): "exists in the repository" now means "exists AND is reachable
+// FIX 1 (reachability): "exists in the repository" now means "exists AND is reachable
 // from HEAD". `git show` alone resolves ANY object in the store — including a dangling pre-amend
 // commit that is not in the shipped history — so a ledger recording a stale SHA used to false-pass
 // (a fail-open regression from the old reachable-only `git log` walk). `git merge-base
@@ -1224,11 +1224,11 @@ const COMMIT_HEADER_RE = /^\s*\w+(?:\(([^)]*)\))?!?:/;
 // Distinct T-N tokens appearing in a commit's SUBJECT LINE's SCOPE POSITION only — the `type(scope):`
 // parens — not the whole subject (the `%s` readCommitSubject captures via `git show -s --format=%s`;
 // the commit body is never read either way). This is a corrective narrowing of the original
-// subject-wide match (T-6): the repo's commit convention puts the authoritative task in the scope
+// subject-wide match: the repo's commit convention puts the authoritative task in the scope
 // (`feat(T-N): …`), while docs/chore/area commits use an area scope (`docs(enforcement-spine): …`)
 // and only ever mention a task in PROSE after the colon — e.g. "...(T-1 checkpoint)..." or
 // "...evidence capture from T-1" — which whole-subject matching wrongly counted as a reference,
-// false-positiving AC-4 (a healthy task with exactly one `feat(T-N):` commit read as having
+// false-positiving ledger-vs-git (a healthy task with exactly one `feat(T-N):` commit read as having
 // multiple). A commit with no parens at all (`docs: …`) has an undefined scope and therefore
 // references no task. `\bT-\d+\b`'s `\d+` is greedy so it always consumes the FULL run of digits
 // before the trailing `\b` is checked — "T-1" can never match as a prefix inside "T-12" (the same
@@ -1320,7 +1320,7 @@ export function checkLedgerVsGit(ledger, subjectsBySha, opts = {}) {
     }
     // FIX 1 (reachability): the object resolves but is NOT reachable from HEAD — a stale/orphaned
     // commit (e.g. a pre-amend/pre-rebase SHA) that is not in the shipped history. Distinct from
-    // not-found above (`git show` would still resolve it) and its own AC-4 finding.
+    // not-found above (`git show` would still resolve it) and its own ledger-vs-git finding.
     if (!entry.reachable) {
       findings.push({
         type: 'finding',
@@ -1447,7 +1447,7 @@ export function checkProofEvidenceLinkage(verificationReport, ledger) {
 //
 // formatReport() is pure: `results` in (the flat concatenation of every rule's output — findings
 // and notes, in whatever order the caller supplied), `{ text, exitCode }` out. No I/O, no
-// `process.exit`, no writes, no git — the CLI (T-9) is the only thing that prints `text` and sets
+// `process.exit`, no writes, no git — the CLI is the only thing that prints `text` and sets
 // `process.exitCode = exitCode`. No error path: `results` is always an already-produced array of
 // well-shaped items (every rule task before this one guarantees the shape), so there is nothing
 // here to fail on.

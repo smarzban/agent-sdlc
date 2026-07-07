@@ -53,7 +53,7 @@ exist in a user's own repo and would fail-closed the whole pipeline.
 
 **No-ledger path** (a branch built outside the pipeline — the HARD-GATE's alternate precondition):
 there is no `build-report.md`, so **drop `--require ledger`** (`sdlc-check … --require
-verification-report` only). Without captured green-bar evidence the name-appearance linkage
+verification-report` only). Without captured green-bar evidence the name-appearance linkage (`proof-evidence-linkage`)
 cannot corroborate the proof map's test-backed rows — state that explicitly in the verification report
 and PR body, and rely on the direct suite verification plus the gate panel (the HARD-GATE's
 sole-gate contract for this path).
