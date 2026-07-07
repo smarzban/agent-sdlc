@@ -1,0 +1,26 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # ledger-vs-git verifies recorded SHAs against full history
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Syntax check
+        run: node --check checker/sdlc-check.mjs
+      - name: Test suite
+        run: node --test checker/*.test.mjs
+      - name: Checker self-gate (the repo's own exemplar spec)
+        run: >
+          node checker/sdlc-check.mjs
+          docs/specs/enforcement-spine/enforcement-spine.md
+          --require ledger --require verification-report
