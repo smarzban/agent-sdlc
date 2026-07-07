@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   checker:
     runs-on: ubuntu-latest
@@ -12,6 +15,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0   # ledger-vs-git verifies recorded SHAs against full history
+          persist-credentials: false   # the job runs repo test code; it never needs the token
       - uses: actions/setup-node@v4
         with:
           node-version: 22
