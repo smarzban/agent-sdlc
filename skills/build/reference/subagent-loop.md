@@ -27,8 +27,11 @@ it names."). Never paste the plan, the session history, or other tasks into the 
 rule governs what comes BACK: reports and findings land in files beside the brief; a subagent's
 final message is a short status, never the artifact itself. And the conductor produces the
 reviewer's diff file **blind** — `git add -N . ':(exclude).agent-sdlc' && git diff >
-.agent-sdlc/briefs/T-N-review.diff` (intent-to-add first, so NEW files — a TDD task's first
-artifact — appear in the diff; nothing gets staged) — never by
+.agent-sdlc/briefs/T-N-review.diff && git reset -q` (intent-to-add first, so NEW files — a TDD
+task's first artifact — appear in the diff; the trailing reset clears the `-N` entries, which is
+safe because nothing is legitimately staged at diff time and REQUIRED because a lingering
+intent-to-add entry not really staged at commit time makes step 4d's stash fail — `Entry not
+uptodate. Cannot merge.`) — never by
 reading the diff into its own context first: the reviewer is the diff's reader, the conductor is
 its courier. Context bloat in the conductor is the failure subagent-driven development exists to
 avoid.

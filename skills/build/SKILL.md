@@ -99,7 +99,10 @@ branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
       step-4d run, never a restatement of what the subagent said** — from the first task onward,
       never deferred. This is the write side the checker's `green-bar-evidence` and
       `proof-evidence-linkage` rules read (a test-backed proof-map row's cited test identifier
-      must literally appear in this text — ADR-0001). **Note the verification form** beside the
+      must literally appear in this text — ADR-0001; the rule searches the **union** of the
+      ledger's evidence text, so where a full per-task listing is impractical, a build-complete
+      comprehensive block carrying the full per-test listing satisfies it). **Note the
+      verification form** beside the
       evidence — the exact command, its directly-read exit code, and the machine-reporter counts
       (per *Reading the green bar*).
    g. If Linear sync is enabled in `.agent-sdlc/config.json`, transition `T-N`'s issue via the
