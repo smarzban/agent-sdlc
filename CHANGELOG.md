@@ -4,6 +4,11 @@ The authoritative release notes live on
 [GitHub Releases](https://github.com/smarzban/agent-sdlc/releases) — one release per version,
 cut with a plugin-scoped tag (`agent-sdlc-vX.Y.Z`). This file is the one-line index.
 
+- **[0.14.0](https://github.com/smarzban/agent-sdlc/releases/tag/agent-sdlc-v0.14.0)** (2026-07-07) —
+  loop economics + field fixes: build runs the bar once per task against the staged snapshot,
+  reviewers read instead of re-running, subagent I/O moves through files both ways, model tiering
+  by default; a rules-ratchet convention; linear-sync's ship mapping drops the nonexistent Linear
+  project state; plan sizes compile blast radius at plan time.
 - **[0.13.0](https://github.com/smarzban/agent-sdlc/releases/tag/agent-sdlc-v0.13.0)** (2026-07-07) —
   review-hardening: checker fixes (git anchored to the spec's repo, whole-word proof types,
   shallow-clone hints), CI, one checker-resolution rule for non-Claude-Code harnesses,
