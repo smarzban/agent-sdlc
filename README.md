@@ -108,36 +108,16 @@ How they chain and when to pick which: [docs/usage/documentation-skills.md](docs
 
 ## Install
 
-The repo is both a Claude Code marketplace (`.claude-plugin/marketplace.json`) and a Cursor
-marketplace (`.cursor-plugin/marketplace.json`), each listing this one plugin at the repo root.
-
-### Claude Code
-
 ```text
 /plugin marketplace add smarzban/agent-sdlc
 /plugin install agent-sdlc
 ```
 
-(The explicit form `agent-sdlc@agent-sdlc` — `plugin@marketplace` — is only needed if another
-installed marketplace also offers a plugin named `agent-sdlc`.)
-
 Skills then trigger on their `description`, or invoke explicitly with the plugin namespace, e.g.
-`/agent-sdlc:idea` or `/agent-sdlc:writing-readmes`. Updates reach installed copies only via
-releases — the pull commands are in [docs/install.md](docs/install.md).
-
-### Cursor
-
-Settings → Plugins → **Import** under Team Marketplaces, paste the repo URL
-(`https://github.com/smarzban/agent-sdlc`), review the parsed plugin, and enable it. Cursor tracks
-the default branch automatically. Skills auto-activate by context, or invoke them by name via `@` /
-slash.
-
-### Any other agent
-
-The skills are plain Markdown to the open `SKILL.md` standard, so they work with any agent that
-reads instruction files (e.g. Codex reads `SKILL.md` from `.codex/skills/`). Copy or symlink the
-individual `skills/<name>` directories into wherever your harness discovers skills; the
-`.claude-plugin/` and `.cursor-plugin/` wrappers are simply ignored elsewhere.
+`/agent-sdlc:idea` or `/agent-sdlc:writing-readmes`. **Cursor** imports the repo URL as a team
+marketplace, and the skills are plain Markdown to the open `SKILL.md` standard, portable to **any
+other agent** that reads instruction files — the Cursor walkthrough, other-agent setup, updating,
+and requirements are all in [docs/install.md](docs/install.md).
 
 ## Layout
 
