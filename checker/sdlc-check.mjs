@@ -161,7 +161,9 @@ export async function run(argv) {
           ids: ['ledger'],
         });
       } else {
-        results.push(...checkLedgerVsGit(ledger, subjectsBySha));
+        const anyNotFound = [...subjectsBySha.values()].some((e) => !e.found);
+        const shallowRepo = anyNotFound ? await isShallowRepo(specDir) : false;
+        results.push(...checkLedgerVsGit(ledger, subjectsBySha, { shallowRepo }));
       }
     }
   }
@@ -1197,6 +1199,20 @@ export async function readCommitSubject(repoPath, sha) {
   }
 }
 
+// Shallow clones (CI's default checkout) make ancestry lookups fail as "not found" for commits
+// behind the fetch boundary — name that case instead of letting it read as a corrupt ledger.
+export async function isShallowRepo(repoPath) {
+  try {
+    const { stdout } = await execFileAsync(
+      'git', ['-C', repoPath, 'rev-parse', '--is-shallow-repository'],
+      { timeout: GIT_TIMEOUT_MS },
+    );
+    return stdout.trim() === 'true';
+  } catch {
+    return false;
+  }
+}
+
 const TASK_TOKEN_RE = /\bT-\d+\b/g;
 
 // Conventional-commit header: `type(scope): …` (optionally `type(scope)!: …`). Captures group 1 =
@@ -1276,7 +1292,7 @@ export function checkLedgerCommitCap(ledger) {
 // A commit scoping two tasks (`feat(T-3, T-4): ...`) recorded for both therefore fails BOTH (each
 // sees its recorded commit's token set as `{T-3, T-4}`, not `{itself}`).
 // Exhaustive: every offending done task is reported, never just the first.
-export function checkLedgerVsGit(ledger, subjectsBySha) {
+export function checkLedgerVsGit(ledger, subjectsBySha, opts = {}) {
   const findings = [];
   for (const t of ledger.tasks) {
     if (!/^done$/i.test(t.status)) continue;
@@ -1291,10 +1307,13 @@ export function checkLedgerVsGit(ledger, subjectsBySha) {
     }
     const entry = subjectsBySha.get(t.commit);
     if (!entry || !entry.found) {
+      const shallowHint = opts.shallowRepo
+        ? ' (note: this clone is shallow — the commit may exist beyond the fetch depth; run `git fetch --unshallow`, or set fetch-depth: 0 in CI)'
+        : '';
       findings.push({
         type: 'finding',
         rule: 'ledger-vs-git',
-        message: `${t.task} is marked done but the ledger-recorded commit ${t.commit} for it was not found in the repo`,
+        message: `${t.task} is marked done but the ledger-recorded commit ${t.commit} for it was not found in the repo${shallowHint}`,
         ids: [t.task],
       });
       continue;

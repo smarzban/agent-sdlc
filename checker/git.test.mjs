@@ -21,6 +21,7 @@ import {
   checkLedgerVsGit,
   checkLedgerCommitCap,
   MAX_LEDGER_COMMITS,
+  isShallowRepo,
 } from './sdlc-check.mjs';
 
 function makeRepo() {
@@ -364,4 +365,33 @@ test('FIX 2: distinct SHAs are counted (not rows): many done tasks sharing one c
   }
   const ledger = makeLedger(rows);
   assert.equal(checkLedgerCommitCap(ledger), null);
+});
+
+// --- Shallow clone detection and shallow-repo hint in not-found findings ---
+
+test('isShallowRepo: true for a depth-1 clone, false for a full repo', async (t) => {
+  const origin = makeRepo();
+  try {
+    const sha1 = commit(origin, 'a.txt', 'feat(T-1): one');
+    const sha2 = commit(origin, 'b.txt', 'feat(T-2): two');
+    const cloneDir = mkdtempSync(path.join(tmpdir(), 'sdlc-shallow-'));
+    execFileSync('git', ['clone', '--depth', '1', `file://${origin}`, cloneDir], { stdio: 'ignore' });
+    try {
+      assert.equal(await isShallowRepo(cloneDir), true);
+      assert.equal(await isShallowRepo(origin), false);
+    } finally {
+      rmSync(cloneDir, { recursive: true, force: true });
+    }
+  } finally {
+    rmSync(origin, { recursive: true, force: true });
+  }
+});
+
+test('checkLedgerVsGit appends a shallow-clone hint to not-found findings when shallowRepo is set', () => {
+  const ledger = { tasks: [{ task: 'T-1', status: 'done', commit: 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef' }], evidence: new Map() };
+  const subjects = new Map([['deadbeefdeadbeefdeadbeefdeadbeefdeadbeef', { found: false, reachable: false, subject: null }]]);
+  const withHint = checkLedgerVsGit(ledger, subjects, { shallowRepo: true });
+  assert.match(withHint[0].message, /shallow/i);
+  const withoutHint = checkLedgerVsGit(ledger, subjects);
+  assert.doesNotMatch(withoutHint[0].message, /shallow/i);
 });
