@@ -145,6 +145,19 @@ $ node --test checker/*.test.mjs         # exit 0
   **exit 0** (all checks passed, 0 findings, 0 notes; sdlc-check 0.13.0). Corroborated —
   branch handed to `/agent-sdlc:ship`.
 
+## Ship review (Empanel gate, PR #14)
+
+- **R1 (head `75dec73`): BLOCK.** Full pinned roster — 4 holistic seats (deepseek, glm-5.2,
+  gpt-5.5, opus-4-8) + lens-spec ×2 (gpt, deepseek) + deterministic scan; zero non-votes.
+  Blocker: llms.txt skill-inventory omission (medium, 2 models, code-confirmed). Advisory lows:
+  docs landing caption; SKILL.md description pointer wording. Two single-model mediums (CLAUDE.md
+  template vs AC-3's letter) dismissed with code-checked justifications — root = AC-3 wording
+  erratum, logged for the maintainer; dismissal log at `.empanel/pr14-round1-dismissals.json`.
+  Fixes: `7dd5aac`.
+- **R2 (head `7dd5aac`): PASS.** Single-model verification (gpt-5.5) + fresh scan: blocker
+  resolved, advisories fixed, no regressions. Verdict comments posted per round; merge parked
+  for the maintainer.
+
 ## Deviations
 
 - **T-6 step-6 false-fail → corrective `fix(T-3)` `a48a25b` (2026-07-08).** Divergence: the
