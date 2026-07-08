@@ -52,6 +52,9 @@ for them, and how to start* within the first screen. Build that — not a docs d
 
 ## Phase 1 — Assess
 
+- **Target scope.** Operate on the current working directory's repo unless given an explicit target
+  path; confirm the target with the owner before acting on a self/special repo (the one hosting this
+  skill, or one whose docs are deliberately non-standard) rather than assuming.
 - **Project type & one-liner.** What is it in <120 chars, no jargon? (library / CLI
   / service / app / framework / monorepo — drives the section set.)
 - **Audience.** Who reads this README — API consumers, operators, end users?

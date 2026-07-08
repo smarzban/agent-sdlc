@@ -30,6 +30,7 @@ Maintainer-grade documentation: how it **works**, **why** it is built that way, 
 
 Read the code first; write the ledger before any doc page. Capture (format in `reference/depth-and-coverage.md`):
 
+- **Target scope** — operate on the current working directory's repo unless given an explicit target path; confirm the target with the owner before acting on a self/special repo (the one hosting this skill, or one whose docs are deliberately non-standard) rather than assuming.
 - **Module map** — every module/package with its responsibility, from the filesystem and the build config, not from an old doc.
 - **Exported/public symbols per module** — from the export statements / `__all__` / manifest, not from memory.
 - **Data models** — every schema, table, persisted or wire-format shape (schema files, migrations, model classes).

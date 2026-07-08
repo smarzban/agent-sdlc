@@ -17,26 +17,30 @@ The second principle: **separate by audience.** People who *use* the thing, peop
 
 The third: **essentials, not internals.** This skill stops at what an outsider needs to use, run, and contribute. One light `architecture.md` overview is the ceiling — design rationale, data models, and per-subsystem internals belong to `writing-technical-docs`; link there, don't duplicate.
 
+**Two modes — write, and audit-first.** On a green-field or gappy repo you write. On a **mature, already-documented repo, run audit-first (report-only) first**: inventory the doc surface, diff it against the bar (audiences × the feature set), and **report coverage and drift before offering any change** — the `repo-setup` audit-first gate, applied to docs. Don't blind-write over docs that may already be right; surface what's missing, stale, or contradicted, then offer edits. The coverage ledger (below) is what makes this mode a check rather than an impression.
+
 ## Checklist (turn each into a tracked task)
 
 1. **Understand the repo** — what it is, its surface, its existing docs and conventions.
 2. **Decide audiences + structure** — adapt the skeleton to the repo type.
 3. **Write the docs tree** — small files, cross-linked, grounded in source.
 4. **Write the repo-root community files** — CONTRIBUTING + the health set that applies.
-5. **Verify** — link-check + fact-check + run-the-commands pass; fix every inaccuracy.
+5. **Verify** — link-check + coverage-check + fact-check + run-the-commands pass; fix every inaccuracy.
 6. **Index + report** — landing page, and tell the user what you built and any caveats.
 
 ## Phase 1 — Understand the repo (before writing anything)
 
 Read enough to answer: *what is this, who uses it, and how does work actually get done here?*
 
+- **Target scope** — operate on the current working directory's repo unless given an explicit target path; confirm the target with the owner before acting on a self/special repo (the one hosting this skill, or one whose docs are deliberately non-standard) rather than assuming.
 - **Project type** — library/SDK, CLI tool, web service/API, full application, framework, or monorepo. This drives everything (see `reference/structure-by-repo-type.md`).
 - **Entry points & public surface** — the README, the package manifest, the CLI command definitions, the exported API, the HTTP routes, the config/settings.
 - **Existing docs** — README, `docs/`, `CLAUDE.md`/`AGENTS.md`, specs, ADRs. Reuse canonical content, but **treat existing docs as suspect**: they drift. Note contradictions and stale claims rather than copying them forward.
 - **The contributor path as it actually is** — how the repo is really built and tested (the CI workflow is the ground truth), the commit convention in `git log`, the branch/PR flow, existing CONTRIBUTING/SECURITY/CHANGELOG/templates, whether there is a release process at all. No tests or CI? Document what actually exists and flag the gap — never invent test instructions.
 - **Audiences** — end users? operators/deployers? API consumers? contributors? Decide which audience docs are warranted; don't write an "operator" section for a pure library.
+- **The coverage ledger** — enumerate the **user-facing feature set** (CLI commands, public API/exports, HTTP routes, the plugin/skill set — whatever the repo exposes) and the **existing usage pages**. This inventory is the ledger Phase 5 diffs against; it is what turns "usage/ covers every feature" from an assertion into a check. Treat `docs/specs/` and other pipeline/build artifacts as **out-of-audience** — not features, not usage pages (see Phase 5).
 
-Capture a short internal map (project type, audiences, module list, canonical sources, contributor conventions) before structuring.
+Capture a short internal map (project type, audiences, module list, canonical sources, contributor conventions, and the coverage ledger) before structuring.
 
 ## Phase 2 — Decide audiences + structure (adapt, don't impose)
 
@@ -98,6 +102,8 @@ These are conventions with sharp edges — some must never be invented:
 Read `reference/fact-check-and-verify.md` for the full checklist. At minimum:
 
 - **Link check — mechanize it.** Every internal relative link resolves to a real file and every referenced path exists: run a short script that walks the written files and resolves each link/path (never eyeball this); zero broken is the bar.
+- **Coverage check — mechanize it.** Diff the Phase 1 feature ledger against the `usage/` pages: every user-facing feature has a page, or is listed excluded with a reason. A script comparing the enumerated feature set to the usage filenames beats eyeballing — this is what surfaces a missing page instead of asserting completeness (`writing-technical-docs` closes its ledger the same way).
+- **Out-of-audience artifacts.** Pipeline/spec trees (`docs/specs/` and the like) are build artifacts — verification reports, ADRs, probes — not audience docs. Exclude them from the coverage ledger and never count them as usage pages; the link check still verifies a link that *points at* one, but a spec is never itself the thing being covered.
 - **Fact-check pass** — re-read the docs against the source with fresh eyes; if a subagent is available, dispatch an adversarial fact-check ("find any statement contradicted by the code"). Fix every confirmed error.
 - **Command check** — the quickstart, install, and `development.md` command sequences are traced against CI/scripts. Execute only sandbox-safe dev/test commands to confirm them; deploy/ops sequences are trace-only.
 - **Placeholder scan** — no TBD/TODO/empty sections. A stub carrying the `repo-setup:seed` token is an intentional fill-target seeded by `repo-setup`: fill it (and remove the token) or report it as awaiting fill — never a placeholder violation.
@@ -105,6 +111,7 @@ Read `reference/fact-check-and-verify.md` for the full checklist. At minimum:
 ## Phase 6 — Index + report
 
 - Ensure the landing `README.md` indexes everything and tells each audience where to start.
+- **Report the coverage ledger** — which user-facing features have usage pages, which are gaps (offer to fill), which are excluded and why. In audit-first mode this ledger *is* the deliverable, alongside the drift list.
 - **Make the docs agent-discoverable (GEO).** Use the real category/stack terms in the landing description; when the docs are/will be published, add an [`llms.txt`](https://llmstxt.org/) at the root — a curated Markdown map linking the key pages. Repo metadata (the GitHub description/topics) is a **remote setting: propose the exact values to the owner** — don't mutate it yourself unless they've said go.
 - Tell the user: where the docs live, the file tree, which community files were created vs **flagged as owner decisions** (security channel, code of conduct, license, templates), and any caveats — especially contradictions between existing docs and the code (surface them; offer to fix the code separately).
 - **State whether technical docs exist.** When the repo warrants internals documentation, recommend `writing-technical-docs` as the follow-on — the essentials tree deliberately stops short of it.
@@ -127,12 +134,14 @@ Read `reference/fact-check-and-verify.md` for the full checklist. At minimum:
 - Internals creeping in: design rationale or data-model detail in `usage/`, or `architecture.md` growing past one page — move it to the technical docs and link.
 - One giant file that mixes user how-to and contributor setup.
 - Imposing the full skeleton on a repo that doesn't need half of it.
-- Declaring done without the link check, fact-check, and command check.
+- Declaring done without the link check, coverage check, fact-check, and command check.
+- Blind-writing over a mature repo's existing docs without an audit-first coverage/drift report first.
+- Asserting `usage/` coverage instead of diffing the feature ledger against the pages; or counting `docs/specs/` and other pipeline artifacts as audience docs.
 - Any "TBD"/placeholder shipped in the output — a `repo-setup:seed`-marked stub reported as awaiting fill is not this (see Phase 5).
 
 ## Done when
 
 - The docs tree exists per the chosen structure, every file source-verified, 0 broken links, 0 placeholders (`repo-setup:seed`-marked stubs reported as awaiting fill excepted — see Phase 5).
-- `usage/` covers every user-facing feature; `development.md` gets a newcomer from clone to green tests (or, where no suite exists, to a running instance — with the gap flagged).
+- The usage coverage ledger is closed: every user-facing feature has a `usage/` page or is listed excluded with a reason (`docs/specs/` and other pipeline artifacts are out-of-audience, not counted); `development.md` gets a newcomer from clone to green tests (or, where no suite exists, to a running instance — with the gap flagged).
 - CONTRIBUTING.md reflects the repo's real conventions; the other community files are created or explicitly flagged as owner decisions.
 - The landing index routes every audience, and the report lists what was built, what was flagged, and any code/doc drift found.
