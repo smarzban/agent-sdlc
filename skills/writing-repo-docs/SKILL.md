@@ -21,7 +21,7 @@ The third: **essentials, not internals.** This skill stops at what an outsider n
 
 ## Checklist (turn each into a tracked task)
 
-1. **Understand the repo** — what it is, its surface, its existing docs and conventions.
+1. **Understand the repo** — what it is, its surface, its existing docs and conventions; on a mature, already-documented repo, run this as an audit-first pass (see **Two modes** above) and build the coverage ledger before writing.
 2. **Decide audiences + structure** — adapt the skeleton to the repo type.
 3. **Write the docs tree** — small files, cross-linked, grounded in source.
 4. **Write the repo-root community files** — CONTRIBUTING + the health set that applies.

@@ -22,8 +22,7 @@ from scratch (that stays the `writing-*` skills' job).
    into the seeded section headings is fine). Adding, deleting, or rewording content is out of
    scope — that is a `writing-*` task, offered separately.
 4. **Establish the pointer chain.** `CLAUDE.md` becomes the frozen one-line pointer; `AGENTS.md`
-   imports `AGENTS.local.md`. Confirm the chain loads (the `reference/verification.md` probes prove
-   it).
+   imports `AGENTS.local.md`. Confirm the chain loads (the `verification.md` probes prove it).
 5. **De-leak the now-public half before it is committed** (see the checklist below) — this is the
    highest-risk step and gates the migration.
 

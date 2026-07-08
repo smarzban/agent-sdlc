@@ -25,7 +25,7 @@ They split by depth:
 They chain naturally: front door → essentials → internals, each linking down rather than
 duplicating. All three share hard guardrails: never invent owner decisions (a license, a security
 policy, a code of conduct), and never ship an unverified claim — the verification pass (link check,
-fact check, command check) is part of the method, not optional.
+coverage check, fact check, command check) is part of the method, not optional.
 
 Invoke explicitly with `/agent-sdlc:writing-readmes`, `/agent-sdlc:writing-repo-docs`, or
 `/agent-sdlc:writing-technical-docs` — or just ask ("write the docs for this repo") and the right
