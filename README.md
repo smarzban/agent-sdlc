@@ -19,8 +19,9 @@ Test and deploy are the next stages downstream, extending the same chain.
   fail-closed.
 - **Start anywhere** — enter at any stage, from any source (a prompt, a doc, a Linear issue set),
   without weakening a single gate; a **light tier** compresses authoring for small fixes.
-- **Three standalone documentation skills** — `writing-readmes`, `writing-repo-docs`,
-  `writing-technical-docs` — for documenting what you build, usable on any repo.
+- **Four standalone skills** — three documentation skills (`writing-readmes`, `writing-repo-docs`,
+  `writing-technical-docs`) for documenting what you build, plus `repo-setup` for scaffolding it —
+  usable on any repo.
 
 Packaged as a plugin for [Claude Code](https://claude.com/claude-code) and
 [Cursor](https://cursor.com) — **this repo is its own single-plugin marketplace** (`agent-sdlc`),
@@ -33,7 +34,7 @@ reads instruction files.
 > marketplace plus the [`@empanel/cli`](https://www.npmjs.com/package/@empanel/cli) npm package.
 
 **Contents:** [Quickstart](#quickstart) · [The idea](#the-idea) · [Stages](#stages) ·
-[Documentation skills](#documentation-skills) · [Install](#install) · [Layout](#layout) ·
+[Standalone skills](#standalone-skills) · [Install](#install) · [Layout](#layout) ·
 [Documentation](#documentation) · [Contributing](#contributing) · [License](#license)
 
 ## Quickstart
@@ -92,17 +93,22 @@ pass — same gate, build, and checker: [docs/usage/light-tier.md](docs/usage/li
 > can't be dropped. Want shorter explicit names (e.g. `/agent-sdlc:criteria`)? Add a
 > `commands/<name>.md` file to the plugin; it's still namespaced as `/agent-sdlc:<name>`.
 
-## Documentation skills
+## Standalone skills
 
-Three skills outside the pipeline, for documenting a codebase. They are source-grounded (every
+Four skills outside the pipeline: three for documenting a codebase, plus `repo-setup` for the
+operational machinery. The three documentation skills are source-grounded (every
 concrete claim is checked against the actual code) and adapt their structure to the repo's type.
-They split by depth: the front door, the essentials, the internals.
+They split by depth: the front door, the essentials, the internals. A fourth standalone skill,
+`repo-setup`, sits alongside them — not a documentation skill but its machinery counterpart: it
+stubs a repo's operational baseline (the agent-instruction split, CI/templates/CODEOWNERS
+scaffolding) for these three to later fill with prose.
 
 | Skill | What it does |
 | --- | --- |
 | `writing-readmes` | Write/overhaul a project's front-door `README.md` — leads with what/why, keeps a lean quickstart distinct from full install, links out to deeper docs instead of inlining them. |
 | `writing-repo-docs` | The essentials a repo needs to be usable and contributable — landing index + quickstart + install + comprehensive per-feature usage + running-it-locally + contributing/community-health files, plus at most a light architecture overview. |
 | `writing-technical-docs` | Full maintainer-grade internals — architecture with design rationale, data models, per-subsystem pages with invariants, the security model, and a complete module/API reference under a coverage-ledger contract (every exported symbol documented or explicitly excluded). |
+| `repo-setup` | Take a repo — empty or existing — to an operational baseline: the public/private agent-instruction split, gitignore/CI/templates/CODEOWNERS scaffolding, and opt-in pipeline setup. Machinery and marked skeletons, not prose. |
 
 How they chain and when to pick which: [docs/usage/documentation-skills.md](docs/usage/documentation-skills.md).
 
@@ -140,7 +146,8 @@ agent-sdlc/                          ← repo root = the plugin AND its marketpl
 │   ├── linear-sync/                 ← SKILL.md + reference/mapping.md (optional engine)
 │   ├── writing-readmes/             ← documentation skill (front door) + reference/
 │   ├── writing-repo-docs/           ← documentation skill (repo essentials) + reference/
-│   └── writing-technical-docs/      ← documentation skill (full internals) + reference/
+│   ├── writing-technical-docs/      ← documentation skill (full internals) + reference/
+│   └── repo-setup/                  ← standalone: repo scaffolding + machinery, not prose + reference/
 └── docs/                            ← user + contributor documentation (see below)
     └── specs/                       ← this repo's own dogfood spec tree
 ```
@@ -173,7 +180,7 @@ the Linear MCP isn't connected. Setup + mapping: [docs/usage/linear-sync.md](doc
 
 - **Use it** → [docs/quickstart.md](docs/quickstart.md), the [five-minute example run](docs/example-run.md), then [docs/usage/](docs/README.md#usage)
   — one page per capability (the pipeline, start-anywhere, the light tier, `sdlc-check`,
-  Linear sync, the documentation skills).
+  Linear sync, the documentation skills — plus `repo-setup`, documented in its own SKILL.md).
 - **Install / update it** → [docs/install.md](docs/install.md) — Claude Code, Cursor, any other
   agent.
 - **Contribute to it** → [docs/development.md](docs/development.md) +
