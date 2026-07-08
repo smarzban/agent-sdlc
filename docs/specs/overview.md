@@ -24,11 +24,11 @@ shipped chains (`checker-correctness`, `checker-semantics`, `build-gate-robustne
 `harness-captured-evidence`, `diagnosability-pool`) were pruned from the working tree in 0.13.0
 — their full spec chains live in git history (`git log --diff-filter=D -- docs/specs/`).
 
-`repo-setup` (shipped 2026-07-08, PR #14) — a standalone skill (fourth sibling of the
+In flight: `repo-setup` (shaped 2026-07-08) — a standalone skill (fourth sibling of the
 `writing-*` set) taking an empty or existing repo to an operational baseline of machinery and
-marked skeletons — ran the full pipeline; its spec chain was pruned from the working tree at ship
-per the exemplar-runs convention (full chain, gate/build/verification reports, and probe
-artifacts in git history: `git log --diff-filter=D -- docs/specs/repo-setup/`).
+marked skeletons: the public/private agent-instruction split (`AGENTS.md` + gitignored
+`AGENTS.local.md`), gitignore/CI/templates/verify-command scaffolding, audit mode on existing
+repos, and opt-in agent-sdlc pipeline adoption.
 
 ## Architecture
 

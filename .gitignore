@@ -16,9 +16,3 @@ CLAUDE.md
 # round records stay tracked — gitignore does not affect tracked files.
 .review-gate/
 .empanel/
-
-# Dogfood spec chains are local process records, not published artifacts (maintainer's call,
-# 2026-07-08): new files under docs/specs/ stay uncommitted by default; adding one (a new
-# exemplar chain, an ADR) is opt-in via `git add -f`. The already-tracked exemplars and
-# overview.md are unaffected — gitignore does not touch tracked files.
-/docs/specs/
