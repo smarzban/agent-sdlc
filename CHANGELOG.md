@@ -7,7 +7,8 @@ cut with a plugin-scoped tag (`agent-sdlc-vX.Y.Z`). This file is the one-line in
 - **[0.14.0](https://github.com/smarzban/agent-sdlc/releases/tag/agent-sdlc-v0.14.0)** (2026-07-08) —
   `repo-setup`, the fourth standalone skill: take an empty or existing repo to an operational
   baseline — audit-first (never blind-overwrite), the public/private agent-instruction split
-  (committed `AGENTS.md` + frozen two-line `CLAUDE.md` pointer + gitignored `AGENTS.local.md`,
+  (committed `AGENTS.md` + frozen `CLAUDE.md` pointer — self-label comment + `@AGENTS.md` import —
+  + gitignored `AGENTS.local.md`,
   loading chain probe-verified per harness), eleven seed templates under the `repo-setup:seed`
   marker, opt-in agent-sdlc pipeline adoption; the `writing-*` skills recognize seed markers as
   fill targets; CI now runs the checker suite + self-gate on macOS as well as Linux.

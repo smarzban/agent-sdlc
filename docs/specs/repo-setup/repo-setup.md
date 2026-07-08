@@ -144,8 +144,8 @@ existing-file path through the skill read-then-update-with-offer, with no overwr
 Justification: same — instruction-document behavior, no runtime.)*
 
 **AC-3** — Agent-instruction file set: materializing the skill's seeded agent-instruction files
-into a fresh git repo yields exactly AGENTS.md, CLAUDE.md whose entire content is the one-line
-AGENTS.md import, AGENTS.local.md, and a `.gitignore` under which `git check-ignore
+into a fresh git repo yields exactly AGENTS.md, CLAUDE.md whose only content line is the
+`@AGENTS.md` import (preceded by a self-label comment), AGENTS.local.md, and a `.gitignore` under which `git check-ignore
 AGENTS.local.md` exits 0 — and no other agent-instruction file.
 *(Verification type: **test-backed** — manual (e2e fixture): materialize into a temp git repo,
 assert the file set and the check-ignore exit code.)*
@@ -285,8 +285,8 @@ keeps the enforcement spine untouched). Autonomous run; recommended shape adopte
    auto-load them; the fenced-block shape makes seeding an explicit extraction). Single source of
    truth: the skill body never duplicates template content. Each block declares whether the
    materialized file carries the seed token (awaiting-fill) or is complete-at-seed. *Contract out:*
-   the AGENTS.md template carries the five AC-4 elements; the CLAUDE.md template is exactly the
-   one-line import; the AGENTS.local.md template is the what-belongs-here header.
+   the AGENTS.md template carries the five AC-4 elements; the CLAUDE.md template is a self-label
+   comment plus the one-line `@AGENTS.md` import; the AGENTS.local.md template is the what-belongs-here header.
 3. **harness-loading reference** — reference document recording the verified loading facts the
    templates rely on: the Claude Code import chain and its graceful absence (with the 2026-07-08
    empirical method and the shim fallback if the undocumented skip ever regresses), Cursor's
