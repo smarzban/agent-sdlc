@@ -150,8 +150,9 @@ truth — never from an old doc or from memory:
   modules; each `users/` topic maps to one).
 - **Framework** → the public API surface + the guide-worthy capability set
   (routing, data, auth, testing, extension…).
-- **Plugin / extension** (a skills or commands bundle) → the plugin manifest —
-  the `skills/` + `commands/` set it registers.
+- **Plugin / extension** (a skills or commands bundle; no separate skeleton
+  above — follow the closest type) → the plugin manifest, i.e. the `skills/` +
+  `commands/` set it registers.
 - **Monorepo** → per package, each by its own type above.
 
 Grep the enumerated set against the `usage/` filenames + headings; a feature
