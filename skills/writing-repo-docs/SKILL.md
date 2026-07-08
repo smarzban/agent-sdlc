@@ -60,7 +60,8 @@ README.md          the project front door — produce/refresh it BY the writing-
 CONTRIBUTING.md    the contributor front door (see Phase 4)
 SECURITY.md        how to report a vulnerability (if the repo is public)
 CHANGELOG.md       only if a release process exists
-.github/           issue/PR templates — offer them; owner decision
+.github/           issue/PR templates — refine existing (may be repo-setup seeds);
+                   offer creation only if repo-setup never ran; still an owner decision
 ```
 
 Adapt:
@@ -79,7 +80,7 @@ For each file:
 - **`development.md` commands must actually work.** Derive the build/test/run commands from the CI workflow and the package scripts, not from an old README — and run them where the environment allows.
 - **`usage/` is the comprehensive half** — one file per feature or task, with real, runnable examples: this is where "all the bells and whistles" get covered, task by task.
 - **`architecture.md` (if warranted) stays light** — a system map, the main components, the main flows. No design rationale, no data-model detail; end it with a link to the technical docs (or note they don't exist yet).
-- **Match the repo's terminology**, cross-link with relative paths, no filler, no placeholders.
+- **Match the repo's terminology**, cross-link with relative paths, no filler, no placeholders (a `repo-setup:seed`-marked stub is a fill-target, not a placeholder — see Phase 5).
 
 ## Phase 4 — Write the repo-root community files
 
@@ -88,7 +89,7 @@ These are conventions with sharp edges — some must never be invented:
 - **CONTRIBUTING.md** — dev-setup pointer (→ `docs/development.md`), how to run the tests, the commit convention **as observed in `git log`**, the branch/PR flow, what reviews expect. Mirror the repo's *actual* conventions; don't import a generic template.
 - **SECURITY.md** — the vulnerability-reporting channel. **Confirm the channel with the owner** (email? GitHub private reporting?) — never invent a policy or an SLA. Can't confirm it? Don't create the file — flag it as an owner decision (deriving a channel from git-log metadata counts as inventing).
 - **CHANGELOG.md** — only when a release process exists. Backfill only from tags/releases you can verify; never reconstruct history from guesswork.
-- **Issue/PR templates** — offer them shaped to the repo's real triage needs; owner decision.
+- **Issue/PR templates** — refine existing templates (they may be `repo-setup` seeds); offer creation only when `repo-setup` never ran (no seeded templates present), shaped to the repo's real triage needs. Still an owner decision.
 - **CODE_OF_CONDUCT** — owner decision, always. Flag its absence for a public repo; never pick one unilaterally.
 - **LICENSE** — if absent, FLAG it; do not invent a license (same rule as `writing-readmes`).
 
@@ -99,7 +100,7 @@ Read `reference/fact-check-and-verify.md` for the full checklist. At minimum:
 - **Link check — mechanize it.** Every internal relative link resolves to a real file and every referenced path exists: run a short script that walks the written files and resolves each link/path (never eyeball this); zero broken is the bar.
 - **Fact-check pass** — re-read the docs against the source with fresh eyes; if a subagent is available, dispatch an adversarial fact-check ("find any statement contradicted by the code"). Fix every confirmed error.
 - **Command check** — the quickstart, install, and `development.md` command sequences are traced against CI/scripts. Execute only sandbox-safe dev/test commands to confirm them; deploy/ops sequences are trace-only.
-- **Placeholder scan** — no TBD/TODO/empty sections.
+- **Placeholder scan** — no TBD/TODO/empty sections. A stub carrying the `repo-setup:seed` token is an intentional fill-target seeded by `repo-setup`: fill it (and remove the token) or report it as awaiting fill — never a placeholder violation.
 
 ## Phase 6 — Index + report
 
@@ -127,11 +128,11 @@ Read `reference/fact-check-and-verify.md` for the full checklist. At minimum:
 - One giant file that mixes user how-to and contributor setup.
 - Imposing the full skeleton on a repo that doesn't need half of it.
 - Declaring done without the link check, fact-check, and command check.
-- Any "TBD"/placeholder shipped in the output.
+- Any "TBD"/placeholder shipped in the output — a `repo-setup:seed`-marked stub reported as awaiting fill is not this (see Phase 5).
 
 ## Done when
 
-- The docs tree exists per the chosen structure, every file source-verified, 0 broken links, 0 placeholders.
+- The docs tree exists per the chosen structure, every file source-verified, 0 broken links, 0 placeholders (`repo-setup:seed`-marked stubs reported as awaiting fill excepted — see Phase 5).
 - `usage/` covers every user-facing feature; `development.md` gets a newcomer from clone to green tests (or, where no suite exists, to a running instance — with the gap flagged).
 - CONTRIBUTING.md reflects the repo's real conventions; the other community files are created or explicitly flagged as owner decisions.
 - The landing index routes every audience, and the report lists what was built, what was flagged, and any code/doc drift found.

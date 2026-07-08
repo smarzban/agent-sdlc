@@ -73,6 +73,11 @@ system-modifying) are trace-only — never executed during a docs task.
 Grep the output for red flags and eliminate them: `TBD`, `TODO`, `FIXME`,
 `XXX`, "coming soon", "add details", empty sections, lorem-ipsum.
 
+A stub carrying the `repo-setup:seed` token is not one of these — it is an
+intentional fill-target seeded by `repo-setup`. Fill it (and remove the
+token), or report it as awaiting fill; never flag it as a placeholder
+violation.
+
 ## 5. Handle drift you discover — don't paper over it
 
 The verification pass often reveals that the **code and the existing docs/comments
@@ -92,6 +97,6 @@ that was removed). When that happens:
 - 0 broken internal links.
 - Fact-check pass run (ideally a second-agent adversarial pass); all confirmed
   errors fixed.
-- 0 placeholders.
+- 0 placeholders (`repo-setup:seed`-marked stubs reported as awaiting fill excepted).
 - Any code/doc drift discovered is reported to the user (and offered as a
   separate fix if behavioral).

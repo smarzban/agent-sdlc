@@ -63,6 +63,8 @@ for them, and how to start* within the first screen. Build that — not a docs d
   asset exists)?
 - **Existing README.** Read it. Salvage accurate content; relocate reference-heavy
   prose into docs links; note stale/contradicted claims to drop (verify against code).
+  A README carrying the `repo-setup:seed` token is an intentional stub left by
+  `repo-setup` — a fill-target for this skill, never a placeholder violation.
 
 ## Phase 2 — Choose the section set
 
