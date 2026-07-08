@@ -4,6 +4,13 @@ The authoritative release notes live on
 [GitHub Releases](https://github.com/smarzban/agent-sdlc/releases) — one release per version,
 cut with a plugin-scoped tag (`agent-sdlc-vX.Y.Z`). This file is the one-line index.
 
+- **[0.14.0](https://github.com/smarzban/agent-sdlc/releases/tag/agent-sdlc-v0.14.0)** (2026-07-08) —
+  `repo-setup`, the fourth standalone skill: take an empty or existing repo to an operational
+  baseline — audit-first (never blind-overwrite), the public/private agent-instruction split
+  (committed `AGENTS.md` + frozen two-line `CLAUDE.md` pointer + gitignored `AGENTS.local.md`,
+  loading chain probe-verified per harness), eleven seed templates under the `repo-setup:seed`
+  marker, opt-in agent-sdlc pipeline adoption; the `writing-*` skills recognize seed markers as
+  fill targets; CI now runs the checker suite + self-gate on macOS as well as Linux.
 - **[0.13.0](https://github.com/smarzban/agent-sdlc/releases/tag/agent-sdlc-v0.13.0)** (2026-07-07) —
   review-hardening + loop economics: checker fixes (git anchored to the spec's repo, whole-word
   proof types, shallow-clone hints), CI, one checker-resolution rule for non-Claude-Code
