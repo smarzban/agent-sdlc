@@ -46,8 +46,8 @@ The load-bearing pattern `repo-setup` establishes:
   awaiting-fill body sections (project overview, build/test/verify, conventions).
 - **`AGENTS.local.md`** — gitignored, private per-working-copy overlay. Created lazily; the
   committed `.gitignore` entry self-propagates the pattern to every clone.
-- **`CLAUDE.md`** — a frozen two-line pointer (`@AGENTS.md`) so Claude Code loads the whole chain;
-  edits go to the other two, never here.
+- **`CLAUDE.md`** — a frozen one-line pointer (`@AGENTS.md`, plus a self-label comment) so Claude
+  Code loads the whole chain; edits go to the other two, never here.
 
 The **stranger litmus test** routes content: would this instruction make sense to a stranger who
 cloned the repo? If no, it belongs in `AGENTS.local.md`. Other harnesses read `AGENTS.md` natively

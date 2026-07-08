@@ -6,5 +6,6 @@ end_of_line = lf
 insert_final_newline = true
 trim_trailing_whitespace = true
 
-# repo-setup:seed — skeleton awaiting real content; fill, then remove this line
-# <stack-derived per-language overrides: indent_style, indent_size>
+[*.{mjs,js,json,yml,yaml}]
+indent_style = space
+indent_size = 2
