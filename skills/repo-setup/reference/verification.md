@@ -1,20 +1,29 @@
 # Fixture verification procedure
 
-Manual e2e proof for the four behavioral ACs the design assigns to this component: AC-3 (agent-
-instruction file set + gitignore), AC-5 (overlay loads through the chain), AC-6 (graceful absence),
-AC-7 (seed-marker grep vs. the declared awaiting-fill list). Every other AC is reviewer-checked
-prose and is out of scope here (see `docs/specs/repo-setup/repo-setup.md` `## Verification map`).
+Manual e2e proof of the four behavioral guarantees this skill's seed templates make — a
+maintainer/regression procedure, not a per-invocation step:
+
+1. **File set** — materializing yields exactly the agent-instruction set (AGENTS.md, the one-line
+   CLAUDE.md pointer, AGENTS.local.md) with AGENTS.local.md gitignored.
+2. **Overlay loads** — a Claude Code session surfaces content from both AGENTS.md and
+   AGENTS.local.md through the pointer chain.
+3. **Graceful absence** — with AGENTS.local.md removed, the session runs with no instruction-file
+   error and still loads AGENTS.md.
+4. **Token discipline** — a grep for the seed token lists exactly the declared awaiting-fill
+   files.
+
+Everything else the templates promise is prose a reviewer checks; out of scope here.
 
 Content materialized below is copied verbatim from
 [templates.md](templates.md) — this procedure never invents seed content, only fixture-local
-placeholder substitutions where noted. The two headless probes reuse the tools-disabled method of
-[docs/specs/repo-setup/probes/import-chain-2026-07-08.md](../../../docs/specs/repo-setup/probes/import-chain-2026-07-08.md)
-verbatim, including its exact `--disallowedTools` list and prompt; a plain `claude -p` probe is
-invalid (tool-read confound, documented there) and must not be substituted.
+placeholder substitutions where noted. The two headless probes MUST run tools-disabled (the exact
+`--disallowedTools` list + no-tools prompt below): a plain `claude -p` probe is invalid — an
+agentic session can Read fixture files as a tool action, which proves nothing about auto-loading
+(a reproduced confound; see [harness-loading.md](harness-loading.md)).
 
-Any assertion mismatch below means the AC(s) it backs are **unproven** — fail closed, do not
+Any assertion mismatch below means the guarantee it backs is **unproven** — fail closed, do not
 self-assert a pass. Probe steps additionally require a working `claude` CLI with API access; if
-that is unavailable the AC-5/AC-6 evidence is simply absent, not assumed green.
+that is unavailable the guarantee-2/3 evidence is simply absent, not assumed green.
 
 ## Step 1 — Create the fixture
 
@@ -26,7 +35,7 @@ cd "$FIXTURE"
 git init -q
 ```
 
-**Expected observation:** exits 0; a `.git` directory exists under `$FIXTURE`. No AC (setup only).
+**Expected observation:** exits 0; a `.git` directory exists under `$FIXTURE`. No guarantee decided (setup only).
 
 ## Step 2 — Materialize the seeded files
 
@@ -38,9 +47,8 @@ Placeholder-substitution note (per templates.md's "adapt only clearly-marked `<p
 rule): every assertion below is insensitive to placeholder content **except** the two token-recall
 probes (Steps 7–8), which need a distinctive value to prove recall. So exactly two placeholders are
 substituted — the `<placeholder: one paragraph...>` line under AGENTS.md's `## Project overview`,
-and the `<placeholder: personal directives...>` line in AGENTS.local.md — with the same tokens the
-referenced probe already uses (`ZEBRA42` public, `FALCON77` private), for direct comparability with
-its recorded runs. Every other placeholder (`<project name>`, `<stack-derived ...>`, toolchain
+and the `<placeholder: personal directives...>` line in AGENTS.local.md — with distinctive tokens
+(`ZEBRA42` public, `FALCON77` private). Every other placeholder (`<project name>`, `<stack-derived ...>`, toolchain
 placeholders, etc.) is left untouched; untouched placeholders do not affect any assertion here.
 
 ```bash
@@ -184,11 +192,11 @@ EOF
 ```
 
 **Expected observation:** all 11 files created, `find "$FIXTURE" -not -path '*/.git/*' -type f | wc -l`
-reports 11. No AC (setup only).
+reports 11. No guarantee decided (setup only).
 
 ## Step 3 — Assert the agent-instruction file set
 
-**Purpose:** AC-3's file-set clause — exactly `AGENTS.md`, `CLAUDE.md`, `AGENTS.local.md`, and
+**Purpose:** the file-set guarantee (1) — exactly `AGENTS.md`, `CLAUDE.md`, `AGENTS.local.md`, and
 `.gitignore` count as agent-instruction files here (the .gitignore because it is what makes
 `AGENTS.local.md` privacy mechanical); no other agent-instruction-named file may exist.
 
@@ -202,11 +210,11 @@ ls -a | grep -E '^(AGENTS|CLAUDE)' | sort
 
 **Expected observation:** all four `present:` lines print (no `MISSING:` line); the trailing `ls`
 lists exactly `AGENTS.local.md`, `AGENTS.md`, `CLAUDE.md` — no `AGENTS.override.md`, no
-`CLAUDE.local.md`, no other `AGENTS*`/`CLAUDE*` name. **Decides AC-3.**
+`CLAUDE.local.md`, no other `AGENTS*`/`CLAUDE*` name. **Decides guarantee 1.**
 
 ## Step 4 — Assert CLAUDE.md's exact content
 
-**Purpose:** AC-3's clause that CLAUDE.md's entire content is the one-line AGENTS.md import (plus
+**Purpose:** guarantee 1's clause that CLAUDE.md's entire content is the one-line AGENTS.md import (plus
 its frozen-pointer comment) — nothing else.
 
 ```bash
@@ -217,11 +225,11 @@ diff <(printf '%s\n' \
 echo "diff-exit:$?"
 ```
 
-**Expected observation:** no diff output; `diff-exit:0`. **Decides AC-3.**
+**Expected observation:** no diff output; `diff-exit:0`. **Decides guarantee 1.**
 
 ## Step 5 — Assert AGENTS.local.md is gitignored
 
-**Purpose:** AC-3's `.gitignore` clause, asserted with the exact command the AC names.
+**Purpose:** guarantee 1's `.gitignore` clause, asserted with the exact command it names.
 
 ```bash
 cd "$FIXTURE"
@@ -229,11 +237,11 @@ git check-ignore AGENTS.local.md
 echo "exit:$?"
 ```
 
-**Expected observation:** prints `AGENTS.local.md`; `exit:0`. **Decides AC-3.**
+**Expected observation:** prints `AGENTS.local.md`; `exit:0`. **Decides guarantee 1.**
 
 ## Step 6 — Seed-token grep vs. the declared awaiting-fill list
 
-**Purpose:** AC-7 — a grep for the canonical token must list exactly the files templates.md
+**Purpose:** guarantee 4 — a grep for the canonical token must list exactly the files templates.md
 declares awaiting-fill (every block except CLAUDE.md, the one complete-at-seed template), no more
 and no fewer.
 
@@ -269,7 +277,7 @@ echo "diff-exit:$?"
 ```
 
 **Expected observation:** no diff output; `diff-exit:0`. `CLAUDE.md` must NOT appear in either
-list (it is complete-at-seed, per templates.md — no token). **Decides AC-7.**
+list (it is complete-at-seed, per templates.md — no token). **Decides guarantee 4.**
 
 ## Step 7 — Token-recall probe, AGENTS.local.md present
 
@@ -290,7 +298,7 @@ echo "exit:$CODE" >> "$PROBE_PRESENT"
 cat "$PROBE_PRESENT"
 ```
 
-**Expected observation:** output mentions both `ZEBRA42` and `FALCON77`; `exit:0`. **Decides AC-5.**
+**Expected observation:** output mentions both `ZEBRA42` and `FALCON77`; `exit:0`. **Decides guarantee 2.**
 
 ## Step 8 — Token-recall probe, AGENTS.local.md absent
 
@@ -312,7 +320,7 @@ cat "$PROBE_ABSENT"
 ```
 
 **Expected observation:** output mentions `ZEBRA42` only (no `FALCON77`); no text describing a
-missing-file error, import failure, or warning; `exit:0`. **Decides AC-6.**
+missing-file error, import failure, or warning; `exit:0`. **Decides guarantee 3.**
 
 ## Step 9 — Teardown
 
@@ -326,10 +334,10 @@ rm -rf "$FIXTURE" "$PROBE_PRESENT" "$PROBE_ABSENT" "$ACTUAL" "$EXPECTED"
 
 ## Reading the results
 
-Steps 3–8 are the only load-bearing assertions; each names the single AC it decides. Any mismatch —
-a missing/extra file in Step 3, a content diff in Step 4, a non-zero or wrong-output check-ignore in
-Step 5, a list diff in Step 6, a missing token or non-zero exit in Step 7, or a present private
-token / visible error in Step 8 — means the AC(s) that step backs are **unproven**: fail closed, do
-not mark the task or the build ledger green on a partial pass. If `claude` is unavailable or
-unauthenticated, Steps 7–8 cannot run at all; record that absence explicitly rather than skipping
-silently (the design's fail-closed failure boundary for a missing harness at fixture time).
+Steps 3–8 are the only load-bearing assertions; each names the single guarantee it decides. Any
+mismatch — a missing/extra file in Step 3, a content diff in Step 4, a non-zero or wrong-output
+check-ignore in Step 5, a list diff in Step 6, a missing token or non-zero exit in Step 7, or a
+present private token / visible error in Step 8 — means the guarantee that step backs is
+**unproven**: fail closed, do not record a green result on a partial pass. If `claude` is
+unavailable or unauthenticated, Steps 7–8 cannot run at all; record that absence explicitly rather
+than skipping silently.
