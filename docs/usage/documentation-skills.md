@@ -33,3 +33,10 @@ one triggers.
 
 This `docs/` tree and the root `README.md` were produced by these skills — the repo dogfoods its
 documentation the way it dogfoods its pipeline.
+
+## See also: `repo-setup`
+
+A fourth standalone skill, [`repo-setup`](repo-setup.md), is the **machinery** counterpart of these
+three. It scaffolds a repo's operational baseline — the public/private agent-instruction split,
+gitignore/CI/templates/CODEOWNERS — and leaves marked skeletons for these skills to fill:
+`repo-setup` stubs, the `writing-*` skills fill.
