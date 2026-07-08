@@ -23,6 +23,14 @@ item is reported:
 No existing file is ever overwritten wholesale: it is read, diffed against the seed template, and
 the exact change is surfaced in the offer.
 
+**Migration, not stubbing, for a repo that already has rich instructions.** When a drifted file
+holds real content — a populated `CLAUDE.md`, or an instruction file richer than the seed —
+`repo-setup` **migrates** it into the split (public lines → `AGENTS.md`, private →
+`AGENTS.local.md`) rather than seeding an empty skeleton over it. If the existing file was a
+*gitignored* `CLAUDE.md`, adopting the standard flips it ignored→tracked (its content becomes
+public); that flip is called out explicitly and the public half is de-leaked (local paths, private
+names, internal issue IDs, external-mirror URLs) before it is committed.
+
 ## The eleven seeded files
 
 `AGENTS.md`, `CLAUDE.md`, `AGENTS.local.md`, `.gitignore`, `.gitattributes`, `.editorconfig`, a CI
@@ -35,8 +43,10 @@ reworded.
 The canonical marker is `repo-setup:seed`, wrapped in each file's native comment syntax
 (`repo-setup:seed — skeleton awaiting real content; fill, then remove this line`). It marks a stub
 as a fill-target — the hand-off point the `writing-*` skills recognize, not a placeholder
-violation. It appears in 10 of the 11 files; `CLAUDE.md` never carries it, because it is exactly one
-line, complete at seed, forever.
+violation. It appears in 8 of the 11 files. Three are **complete-at-seed** and never carry it:
+`CLAUDE.md` (exactly one line, forever) and `.gitattributes`/`.editorconfig` (their baselines are
+self-sufficient — no `writing-*` skill fills machinery; stack-specific rules are an optional owner
+extension, not an awaiting-fill obligation).
 
 ## The agent-instruction split
 

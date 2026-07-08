@@ -118,8 +118,8 @@ EOF
 cat > "$FIXTURE/.gitattributes" <<'EOF'
 * text=auto eol=lf
 
-# repo-setup:seed — skeleton awaiting real content; fill, then remove this line
-# <stack-derived rules: binary paths, linguist-vendored/generated, diff drivers>
+# The eol=lf baseline above suffices as-is. Add binary paths and
+# linguist-vendored/generated/diff-driver rules here only if your stack needs them.
 EOF
 
 cat > "$FIXTURE/.editorconfig" <<'EOF'
@@ -131,8 +131,8 @@ end_of_line = lf
 insert_final_newline = true
 trim_trailing_whitespace = true
 
-# repo-setup:seed — skeleton awaiting real content; fill, then remove this line
-# <stack-derived per-language overrides: indent_style, indent_size>
+# The baseline above suffices as-is. Add per-language overrides here only if your
+# stack needs them, e.g. [*.py] indent_size = 4.
 EOF
 
 cat > "$FIXTURE/.github/workflows/ci.yml" <<'EOF'
@@ -242,8 +242,8 @@ echo "exit:$?"
 ## Step 6 — Seed-token grep vs. the declared awaiting-fill list
 
 **Purpose:** guarantee 4 — a grep for the canonical token must list exactly the files templates.md
-declares awaiting-fill (every block except CLAUDE.md, the one complete-at-seed template), no more
-and no fewer.
+declares awaiting-fill (every block except the three complete-at-seed templates — CLAUDE.md,
+`.gitattributes`, and `.editorconfig`, which carry no token), no more and no fewer.
 
 Some agent harnesses shim `grep` to a gitignore-honoring implementation (Claude Code's Bash tool
 shims it to `ugrep --ignore-files`), which silently omits the gitignored `AGENTS.local.md` — the
@@ -259,8 +259,6 @@ EXPECTED="$(mktemp)"
 command grep -rl 'repo-setup:seed' --exclude-dir=.git . | sed 's|^\./||' | sort > "$ACTUAL"
 
 cat > "$EXPECTED" <<'EOF'
-.editorconfig
-.gitattributes
 .github/CODEOWNERS
 .github/ISSUE_TEMPLATE/bug_report.md
 .github/PULL_REQUEST_TEMPLATE.md
@@ -276,8 +274,9 @@ diff "$EXPECTED" "$ACTUAL"
 echo "diff-exit:$?"
 ```
 
-**Expected observation:** no diff output; `diff-exit:0`. `CLAUDE.md` must NOT appear in either
-list (it is complete-at-seed, per templates.md — no token). **Decides guarantee 4.**
+**Expected observation:** no diff output; `diff-exit:0`. The three complete-at-seed files —
+`CLAUDE.md`, `.gitattributes`, `.editorconfig` — must NOT appear in either list (no token, per
+templates.md). **Decides guarantee 4.**
 
 ## Step 7 — Token-recall probe, AGENTS.local.md present
 

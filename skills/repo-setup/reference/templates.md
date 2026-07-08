@@ -97,18 +97,22 @@ AGENTS.local.md
 
 ## .gitattributes
 
-Seed status: **awaiting-fill** (carries the token where the stack must decide).
+Seed status: **complete-at-seed** — the `eol=lf` baseline is self-sufficient for any repo; no
+`writing-*` skill fills machinery, so it carries no token. Stack-specific rules are an optional
+extension the owner adds only if needed, not an awaiting-fill obligation.
 
 ```gitattributes
 * text=auto eol=lf
 
-# repo-setup:seed — skeleton awaiting real content; fill, then remove this line
-# <stack-derived rules: binary paths, linguist-vendored/generated, diff drivers>
+# The eol=lf baseline above suffices as-is. Add binary paths and
+# linguist-vendored/generated/diff-driver rules here only if your stack needs them.
 ```
 
 ## .editorconfig
 
-Seed status: **awaiting-fill** (carries the token where the stack must decide).
+Seed status: **complete-at-seed** — the baseline below (utf-8, lf, final newline, trimmed
+whitespace) is self-sufficient; no `writing-*` skill fills machinery, so it carries no token.
+Per-language overrides are an optional extension the owner adds only if needed.
 
 ```editorconfig
 root = true
@@ -119,8 +123,8 @@ end_of_line = lf
 insert_final_newline = true
 trim_trailing_whitespace = true
 
-# repo-setup:seed — skeleton awaiting real content; fill, then remove this line
-# <stack-derived per-language overrides: indent_style, indent_size>
+# The baseline above suffices as-is. Add per-language overrides here only if your
+# stack needs them, e.g. [*.py] indent_size = 4.
 ```
 
 ## CI workflow skeleton

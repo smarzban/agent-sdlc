@@ -44,12 +44,21 @@ against the skeletons this skill leaves behind.
    step 5) are flagged or asked in the same offer, not auto-filled.
 4. **Offer each drifted item** — read the existing file, diff it against the template, and propose
    an in-place update that surfaces exactly what would change. Never propose (or perform) a
-   wholesale overwrite, even when the drift is large.
+   wholesale overwrite, even when the drift is large. **When the drifted file holds richer content
+   than the seed** — an existing instruction file (e.g. a populated `CLAUDE.md`), not an empty
+   stub — the update is a **migration**: re-home its content into the split (public → `AGENTS.md`,
+   private → `AGENTS.local.md`), never seed an empty skeleton over it. See
+   [`reference/migration.md`](reference/migration.md) for the procedure, the gitignored→tracked
+   `CLAUDE.md` flip call-out, the privacy de-leak checklist, and external-mirror coupling.
 5. **Hold the line on owner decisions** — LICENSE, security policy, code of conduct, issue/PR
    template content, `CODEOWNERS` assignments, and any remote-settings value (branch protection,
    repo metadata) are never fabricated. LICENSE absence is flagged, never invented (the
    `writing-readmes` rule — cite it). Remote settings are proposed as exact values for the owner to
-   apply; this skill never mutates them.
+   apply; this skill never mutates them. **`CODEOWNERS` exception for a single unambiguous owner:**
+   when the repo has exactly one owner (a sole committer / the repo owner), propose the obvious
+   `* @<owner>` line for confirmation — proposing the one obvious assignment for the owner to
+   confirm is not inventing. Assigning *other* people, or guessing among several candidates, still
+   is: flag it, don't fabricate.
 6. **Materialize only on confirmation** — create or modify strictly what the owner confirmed from
    the audit/offer above. Nothing else.
 7. **Ask once about the pipeline half** — "set this repo up for the agent-sdlc pipeline too?" Ask
@@ -60,10 +69,11 @@ against the skeletons this skill leaves behind.
      materialize what was confirmed.
 8. **Declare the seed token and the awaiting-fill list** in the report: the canonical token is
    `repo-setup:seed`. It appears in `AGENTS.md` (body sections only — the routing guideline itself
-   is complete-at-seed), `AGENTS.local.md`, `.gitignore`, `.gitattributes`, `.editorconfig`, the CI
-   workflow skeleton, the issue template, the PR template, `CODEOWNERS`, and the README stub — 10 of
-   the 11 seeded files. `CLAUDE.md` never carries it: it is exactly one line, complete at seed,
-   forever.
+   is complete-at-seed), `AGENTS.local.md`, `.gitignore`, the CI workflow skeleton, the issue
+   template, the PR template, `CODEOWNERS`, and the README stub — 8 of the 11 seeded files. Three
+   are complete-at-seed and never carry it: `CLAUDE.md` (exactly one line, forever) and
+   `.gitattributes`/`.editorconfig` (self-sufficient baselines — no `writing-*` skill fills
+   machinery; stack rules are an optional owner extension, not an awaiting-fill obligation).
 9. **Report** what was created, what was updated in place (with the surfaced diff), what remains
    flagged as an owner decision, and — if opted in — the pipeline artifacts created or flagged.
 
@@ -73,6 +83,10 @@ against the skeletons this skill leaves behind.
   the degenerate all-missing case. There is no fast path around it.
 - **No blind overwrite.** Existing files are read, diffed, and updated in place with the change
   surfaced — never replaced wholesale, regardless of how stale they are.
+- **Migrate, don't stub, over existing content.** A drifted instruction file richer than the seed
+  is re-homed into the split (content moved, never authored) — never overwritten with an empty
+  skeleton. Splitting a formerly-private file into a public `AGENTS.md` is privacy-sensitive: flag
+  the flip and de-leak the public half before it is committed (`reference/migration.md`).
 - **Owner decisions are never invented.** LICENSE, security policy, code of conduct, template
   content, CODEOWNERS assignments, and remote-settings values are the owner's call; this skill flags
   or asks, and stops there.
@@ -96,11 +110,17 @@ against the skeletons this skill leaves behind.
 | "Setting up the pipeline half too is obviously useful, I'll just do it." | Ask once, explicitly. No pipeline artifact exists before a yes. |
 | "I'll paste the AGENTS.md content into this file, it's handy to have it here." | Content lives in `reference/templates.md`, once. Restating it here is exactly the drift the single-source rule exists to prevent. |
 | "Codex support would be stronger with an `AGENTS.override.md` too." | Never seed or recommend it — it shadows the public file instead of layering on it. |
+| "The repo already has a rich CLAUDE.md, I'll seed the standard AGENTS.md alongside it." | If that file holds real orientation, an empty skeleton destroys it. Migrate the content into the split; don't stub over it (`reference/migration.md`). |
+| "The old instruction file was gitignored, I'll just track the new AGENTS.md and move on." | That flips a private file to public. Flag the flip and de-leak the public half before committing — silent is how a leak ships. |
 
 ## Red flags (stop and fix)
 
 - Any create/modify step reachable before the audit report is presented.
 - A file replaced wholesale instead of read → diffed → offered as an in-place update.
+- An existing rich instruction file stubbed over with an empty seed skeleton instead of migrated —
+  destroying orientation the repo already had (`reference/migration.md`).
+- A gitignored→tracked `CLAUDE.md` flip, or any formerly-private content becoming public, performed
+  without an explicit privacy call-out and de-leak scan in the audit.
 - LICENSE, security policy, code of conduct, template content, CODEOWNERS assignments, or a
   remote-settings value invented rather than flagged or asked.
 - The pipeline question asked more than once, or a pipeline artifact created without an explicit
@@ -144,6 +164,12 @@ against the skeletons this skill leaves behind.
 - The end-to-end regression procedure for the templates — a maintainer/build-time proof, not a
   per-invocation step of this skill — lives in
   [`reference/verification.md`](reference/verification.md).
+- Migrating a repo that already has rich agent-instruction content into the split — the procedure,
+  the gitignored→tracked flip call-out, the privacy de-leak checklist, and external-mirror
+  coupling — lives in [`reference/migration.md`](reference/migration.md).
+- **Target scope:** operates on the current working directory unless given an explicit target path.
+  Confirm the target with the owner before acting on a self/special repo (the one hosting this
+  skill, or one whose setup is deliberately non-standard) rather than assuming.
 - The seed token is exactly `repo-setup:seed`, spelled identically everywhere it appears.
 - A seed-marked stub is a fill-target for `writing-repo-docs` / `writing-readmes`, never a
   placeholder violation — that is the hand-off point between the two skill families, not overlap.
