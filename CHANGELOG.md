@@ -4,6 +4,15 @@ The authoritative release notes live on
 [GitHub Releases](https://github.com/smarzban/agent-sdlc/releases) — one release per version,
 cut with a plugin-scoped tag (`agent-sdlc-vX.Y.Z`). This file is the one-line index.
 
+- **[0.15.0](https://github.com/smarzban/agent-sdlc/releases/tag/agent-sdlc-v0.15.0)** (2026-07-08) —
+  standalone-skills hardening from the first `repo-setup` field runs: `repo-setup` gains a
+  **migration mode** (an existing rich instruction file is migrated into the public/private split,
+  never stubbed over — with a gitignored→tracked `CLAUDE.md` flip call-out and a privacy de-leak
+  checklist), `.gitattributes`/`.editorconfig` become complete-at-seed, and a
+  single-unambiguous-owner `CODEOWNERS` case. `writing-repo-docs` gains a first-class
+  **audit-first (report-only) mode** and a **mechanized usage coverage ledger** (with a
+  per-repo-type feature-enumeration source), treating spec/pipeline trees as out-of-audience
+  wherever rooted. All four standalone skills document a CWD/target-repo scope convention.
 - **[0.14.0](https://github.com/smarzban/agent-sdlc/releases/tag/agent-sdlc-v0.14.0)** (2026-07-08) —
   `repo-setup`, the fourth standalone skill: take an empty or existing repo to an operational
   baseline — audit-first (never blind-overwrite), the public/private agent-instruction split
