@@ -237,12 +237,18 @@ echo "exit:$?"
 declares awaiting-fill (every block except CLAUDE.md, the one complete-at-seed template), no more
 and no fewer.
 
+Some agent harnesses shim `grep` to a gitignore-honoring implementation (Claude Code's Bash tool
+shims it to `ugrep --ignore-files`), which silently omits the gitignored `AGENTS.local.md` — the
+exact file this assertion must include — and false-fails this step. `command grep` bypasses any
+shell-function shim to run the real binary; if the system `grep` binary itself honors ignore files,
+grep the expected files explicitly instead of relying on this recursive form.
+
 ```bash
 cd "$FIXTURE"
 ACTUAL="$(mktemp)"
 EXPECTED="$(mktemp)"
 
-grep -rl 'repo-setup:seed' --exclude-dir=.git . | sed 's|^\./||' | sort > "$ACTUAL"
+command grep -rl 'repo-setup:seed' --exclude-dir=.git . | sed 's|^\./||' | sort > "$ACTUAL"
 
 cat > "$EXPECTED" <<'EOF'
 .editorconfig
