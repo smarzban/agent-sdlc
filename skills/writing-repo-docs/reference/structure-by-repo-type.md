@@ -134,6 +134,29 @@ development.md     contribute to the framework itself
 - One CONTRIBUTING.md at the root; per-package `development.md` only when the
   dev flows genuinely differ.
 
+## Feature-enumeration source (for the usage coverage ledger)
+
+The Phase-1 coverage ledger enumerates the user-facing feature set, then Phase 5
+diffs it against the `usage/` pages. Enumerate from the repo type's source of
+truth — never from an old doc or from memory:
+
+- **Library / SDK** → the exported public API surface (the module/package
+  exports, `index` re-exports, `__all__`, the manifest's exported entries).
+- **CLI** → the command/flag registrations in the argument-parser declarations
+  (or `--help`), not the README's command list.
+- **Web service / HTTP API** → the route table (the actual route/handler
+  definitions).
+- **Full application** → the user-facing feature set (the navigation / feature
+  modules; each `users/` topic maps to one).
+- **Framework** → the public API surface + the guide-worthy capability set
+  (routing, data, auth, testing, extension…).
+- **Plugin / extension** (a skills or commands bundle) → the plugin manifest —
+  the `skills/` + `commands/` set it registers.
+- **Monorepo** → per package, each by its own type above.
+
+Grep the enumerated set against the `usage/` filenames + headings; a feature
+with no page is a gap (fill it) or an explicit exclusion (record the reason).
+
 ## Choosing the audience split
 
 - **Only maintainers** read it (internal tool, no external consumers) → a short
