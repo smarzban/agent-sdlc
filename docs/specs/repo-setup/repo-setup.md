@@ -461,13 +461,37 @@ feature; the fixture procedure is the executable proof).*
   *Advances:* AC-1, AC-2, AC-7, AC-8, AC-9, AC-12. *Component:* repo-setup skill. *Deps:* T-1, T-2,
   T-3.
 
-- **T-5** — Wire the writing-* contract: writing-repo-docs gains the seed-marker recognition
+<!-- source: mid-build amendment (T-5's named file set too narrow for AC-10's own contract — the
+seed-marker exception must also qualify writing-repo-docs's other unqualified no-placeholder
+statements and the reference file its placeholder scan delegates to; T-5 superseded by T-8) ·
+ingested 2026-07-08 -->
+
+- **T-5** *(superseded by T-8 — file set too narrow; kept for trace)* — Wire the writing-*
+  contract: writing-repo-docs gains the seed-marker recognition
   statement (a `repo-setup:seed`-marked stub is a fill-target — fill or report, never a placeholder
   violation) and the reworded templates bullet (refine existing; offer creation only when
   repo-setup never ran); writing-readmes gains the marker recognition statement. Files:
   `skills/writing-repo-docs/SKILL.md` (edit), `skills/writing-readmes/SKILL.md` (edit). Test-first:
   explicit verification — both skills cite the token exactly as declared in T-4; the templates
   bullet states the precedence; no other behavior of either skill changed.
+  *Advances:* none. *Component:* none. *Deps:* none. (Superseded — see T-8; original trace
+  carried forward there.)
+
+- **T-8** — Wire the writing-* contract, coherently: everything T-5 specified (writing-repo-docs:
+  seed-marker recognition at the placeholder scan + the reworded templates bullet;
+  writing-readmes: the marker recognition statement) PLUS the coherence closure AC-10 itself
+  demands — qualify writing-repo-docs's remaining unqualified no-placeholder statements (the
+  Phase 3 no-placeholders line, the Red flags placeholder bullet, the Done-when "0 placeholders"
+  line) with the seed-marker exception (compact clause or one canonical cross-reference each),
+  extend the same exception to `skills/writing-repo-docs/reference/fact-check-and-verify.md`
+  (its placeholder-scan section + done criteria), and refresh the Phase 2 skeleton's `.github/`
+  line to the new template-ownership precedence. Files: `skills/writing-repo-docs/SKILL.md`
+  (edit), `skills/writing-readmes/SKILL.md` (edit),
+  `skills/writing-repo-docs/reference/fact-check-and-verify.md` (edit). Test-first: explicit
+  verification — grep finds NO remaining unqualified no-placeholder statement in either edited
+  writing-repo-docs file (each now carries or references the seed-marker exception); token
+  spelled exactly `repo-setup:seed` everywhere; writing-readmes unchanged beyond the one
+  statement; no other behavior changed.
   *Advances:* AC-10, AC-11.
   *Component:* writing-repo-docs skill (changed), writing-readmes skill (changed). *Deps:* T-4.
 
@@ -507,8 +531,8 @@ feature; the fixture procedure is the executable proof).*
 | AC-7 | T-2, T-3, T-4, T-6 |
 | AC-8 | T-4 |
 | AC-9 | T-4 |
-| AC-10 | T-5 |
-| AC-11 | T-5 |
+| AC-10 | T-8 (supersedes T-5) |
+| AC-11 | T-8 (supersedes T-5) |
 | AC-12 | T-4 |
 | AC-13 | T-7 |
 | AC-14 | T-1 |

@@ -90,3 +90,13 @@ Corroborated.
 **READY TO BUILD.** No Critical or High findings open; checker clean; chain fully walked; green
 bar declared (feature fast-path); load-bearing claims all `verified-by-probe` with kept outputs,
 remaining `asserted` claims prose-only and justified.
+
+## Round 3 — 2026-07-08, inline gate on the mid-build amendment (T-5 → T-8)
+
+Delta: T-5 superseded by T-8 (provenance-marked in `## Plan`) — same WHAT (AC-10/AC-11), wider
+WHERE: the seed-marker exception must also qualify writing-repo-docs's other unqualified
+no-placeholder statements and `reference/fact-check-and-verify.md` (the file the placeholder
+scan delegates to), plus the stale Phase 2 `.github/` line. Walk of the delta: AC-10/AC-11 →
+writing-repo-docs skill (changed) + writing-readmes skill (changed) → fast-path → T-8; T-5
+annotated superseded, id retained; both directions still clean; no new products; no NC
+violation. `bin/sdlc-check` → **exit 0**. **Amended chain READY TO BUILD.**
