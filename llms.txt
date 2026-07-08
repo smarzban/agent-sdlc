@@ -18,6 +18,7 @@ pipeline it implements).
 - [sdlc-check](docs/usage/sdlc-check.md): the enforcement checker — invocation, rules, exit codes.
 - [Linear sync](docs/usage/linear-sync.md): the optional Linear mirror.
 - [Documentation skills](docs/usage/documentation-skills.md): writing-readmes / writing-repo-docs / writing-technical-docs.
+- [repo-setup](skills/repo-setup/SKILL.md): a repo's operational baseline — the AGENTS.md/AGENTS.local.md agent-instruction split, marked scaffolding skeletons, opt-in pipeline setup.
 - [Development](docs/development.md): clone, tests, skill authoring, releases.
 - [Architecture](docs/architecture.md): the repo's shape in one page.
 - [Contributing](CONTRIBUTING.md): branch/merge flow, commit convention, what review expects.

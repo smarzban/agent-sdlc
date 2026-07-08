@@ -25,7 +25,7 @@ authoritative method.
 | [The light tier](usage/light-tier.md) | The compressed authoring pass for small, self-contained changes — same gate, build, and checker. |
 | [sdlc-check](usage/sdlc-check.md) | The enforcement-spine checker as a standalone tool: invocation, rules, exit codes. |
 | [Linear sync](usage/linear-sync.md) | The optional engine that mirrors each stage into Linear. Off by default. |
-| [Documentation skills](usage/documentation-skills.md) | `writing-readmes`, `writing-repo-docs`, `writing-technical-docs` — three standalone skills outside the pipeline. |
+| [Documentation skills](usage/documentation-skills.md) | `writing-readmes`, `writing-repo-docs`, `writing-technical-docs` — the three standalone documentation skills outside the pipeline. |
 | [`repo-setup`](../skills/repo-setup/SKILL.md) | Take a repo — empty or existing — to an operational baseline: the agent-instruction split, gitignore/CI/templates/CODEOWNERS scaffolding, opt-in pipeline setup. Standalone like the three documentation skills above, but machinery, not prose. |
 
 ## Everything else
