@@ -15,3 +15,16 @@ Canonical vocabulary for this repo's spec chain. Glossary only — no implementa
 - **verification report** — the ship-written report file beside the spec
   (`docs/specs/<feature>/verification-report.md`) holding the AC → proof map; validated by
   `sdlc-check`, copied into the PR body.
+- **public agent file** — the committed `AGENTS.md` at a repo's root: harness-neutral agent
+  instructions whose content must be repo-relevant and stranger-readable; carries the routing
+  guideline and the pointer to the local overlay.
+- **local overlay** — the gitignored `AGENTS.local.md` beside the public agent file: private
+  per-working-copy instructions (personal, machine-specific, cross-project), loaded mechanically
+  by Claude Code via the import chain and by other harnesses via the prose pointer in the public
+  agent file.
+- **pointer file** — a frozen one-line shim that routes a harness to the public agent file or
+  local overlay (e.g. `CLAUDE.md` = `@AGENTS.md`); never accumulates content and says so in-file.
+- **seed marker** — the canonical greppable token (`repo-setup:seed`) repo-setup leaves in
+  skeleton files it creates, embedded in each file type's native comment syntax; distinguishes
+  "seeded, awaiting fill" from a forgotten TODO and is the contract by which the writing-* skills
+  find and fill setup's stubs.
