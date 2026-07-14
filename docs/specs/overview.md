@@ -24,11 +24,17 @@ shipped chains (`checker-correctness`, `checker-semantics`, `build-gate-robustne
 `harness-captured-evidence`, `diagnosability-pool`) were pruned from the working tree in 0.13.0
 — their full spec chains live in git history (`git log --diff-filter=D -- docs/specs/`).
 
-In flight: `repo-setup` (shaped 2026-07-08) — a standalone skill (fourth sibling of the
-`writing-*` set) taking an empty or existing repo to an operational baseline of machinery and
-marked skeletons: the public/private agent-instruction split (`AGENTS.md` + gitignored
-`AGENTS.local.md`), gitignore/CI/templates/verify-command scaffolding, audit mode on existing
-repos, and opt-in agent-sdlc pipeline adoption.
+`repo-setup` shipped in 0.14.0: a standalone skill (fourth sibling of the `writing-*` set) taking
+an empty or existing repo to an operational baseline of machinery and marked skeletons: the
+public/private agent-instruction split (`AGENTS.md` + gitignored `AGENTS.local.md`),
+gitignore/CI/templates/verify-command scaffolding, audit mode on existing repos, and opt-in
+agent-sdlc pipeline adoption.
+
+In flight: `visual-aids` (shaped 2026-07-14). The front-half thinking stages gain a sanctioned way
+to draw instead of talk when a question is better seen than read: one per-question heuristic (the
+visual test) plus two kinds of visual aid, a committed spec diagram and a throwaway scratch visual
+offered for consent. `architecture-design` primary, `idea` secondary; no interactive companion, no
+checker change.
 
 ## Architecture
 

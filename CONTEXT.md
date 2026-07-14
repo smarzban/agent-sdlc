@@ -28,3 +28,15 @@ Canonical vocabulary for this repo's spec chain. Glossary only — no implementa
   skeleton files it creates, embedded in each file type's native comment syntax; distinguishes
   "seeded, awaiting fill" from a forgotten TODO and is the contract by which the writing-* skills
   find and fill setup's stubs.
+- **visual aid** — a picture the front-half thinking stages produce instead of prose when a
+  question is better seen than read; either a spec diagram or a scratch visual. A tool, not a
+  mode: producing one never commits the stage to producing more.
+- **the visual test** — the per-question heuristic deciding whether to draw at all: *would the
+  user understand this better by seeing it than reading it?* A question merely *about* a visual
+  topic is not automatically a visual question.
+- **spec diagram** — the visual aid expressed in the spec's own text, inline in the spec:
+  committed, diffable, and evidence for free because it rots visibly beside the prose it
+  describes. The keep-it form ("if the picture is worth keeping, it is a spec diagram").
+- **scratch visual** — the visual aid rendered as a standalone page the user opens, for
+  comparisons a spec diagram cannot express: throwaway, never committed, and offered for consent
+  before first use because it spends tokens and sends the user out of the terminal.
