@@ -1,0 +1,21 @@
+{
+  "name": "agent-sdlc",
+  "interface": {
+    "displayName": "Agent SDLC"
+  },
+  "plugins": [
+    {
+      "name": "agent-sdlc",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL",
+        "products": ["CODEX"]
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

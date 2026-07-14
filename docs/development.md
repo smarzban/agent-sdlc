@@ -101,11 +101,14 @@ double as worked examples — start with
 Installed plugins update only when the manifest `version` changes — pushing commits alone does
 not reach installed copies. A release:
 
-1. Bumps `version` in **both** manifests, in lockstep: `.claude-plugin/plugin.json` and
-   `.cursor-plugin/plugin.json` (semver: MAJOR breaking · MINOR additive · PATCH fixes), refreshing
-   the descriptions if scope changed.
+1. Bumps `version` in **all four** manifests, in lockstep: `.claude-plugin/plugin.json`,
+   `.cursor-plugin/plugin.json`, `.codex-plugin/plugin.json`, and `package.json` (semver: MAJOR
+   breaking · MINOR additive · PATCH fixes), refreshing the descriptions if scope changed. The
+   marketplace manifests (`.claude-plugin`, `.cursor-plugin`, `.agents/plugins/marketplace.json`)
+   carry no version.
 2. Commits (`chore(release): agent-sdlc X.Y.Z — …`).
 3. Tags `agent-sdlc-vX.Y.Z` and cuts a GitHub release.
 
-Users then pull it with `/plugin marketplace update agent-sdlc` + `/plugin install agent-sdlc`
-(Cursor: re-import the marketplace).
+Users then pull it: **Claude Code** `/plugin marketplace update agent-sdlc` + `/plugin install
+agent-sdlc`; **Cursor** re-imports the marketplace; **Codex** `codex plugin marketplace upgrade` +
+`codex plugin add agent-sdlc@agent-sdlc`; **pi** `pi update`.

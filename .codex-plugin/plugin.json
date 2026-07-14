@@ -1,0 +1,25 @@
+{
+  "name": "agent-sdlc",
+  "description": "Agent SDLC takes an idea to a reviewed pull request. The front half settles intent, a checkable acceptance-criteria contract, an architecture, a grounded tech stack, and an atomic test-first plan; a read-only gate walks the criterion -> component -> product -> task chain before any code exists. Build executes the plan with one fresh subagent per task and one green atomic commit each; ship opens a PR carrying an AC -> proof map. A zero-dependency checker (sdlc-check, bare node) mechanically verifies coverage, trace integrity, ledger-vs-git consistency, and captured test evidence — fail-closed. Enter at any stage from any source (a prompt, a doc, a Linear issue set); a light tier compresses small fixes without weakening verification. Includes four standalone skills: three documentation skills (front-door READMEs, repo essentials, and full technical internals) and repo-setup (repo scaffolding and machinery).",
+  "version": "0.15.0",
+  "skills": "./skills/",
+  "author": {
+    "name": "Saeed Marzban",
+    "email": "git@smarzban.com"
+  },
+  "license": "Apache-2.0",
+  "repository": "https://github.com/smarzban/agent-sdlc",
+  "keywords": [
+    "sdlc",
+    "planning",
+    "spec",
+    "architecture",
+    "acceptance-criteria",
+    "tdd",
+    "build",
+    "pull-request",
+    "code-review",
+    "pipeline",
+    "documentation"
+  ]
+}

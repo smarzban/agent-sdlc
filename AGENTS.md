@@ -20,15 +20,17 @@ already covers it, so the pattern self-propagates to every clone.
 
 agent-sdlc is a full-SDLC pipeline for AI coding agents that takes an idea to a **reviewed PR**,
 authored to the open `SKILL.md` standard and served as a **single-plugin marketplace named
-`agent-sdlc`** for both Claude Code and Cursor. *You own the thinking; the agent owns the
-breakdown.*
+`agent-sdlc`** for Claude Code, Cursor, OpenAI Codex, and pi. *You own the thinking; the agent owns
+the breakdown.*
 
 The repo root is both the plugin and its marketplace:
 
 ```
 agent-sdlc/ (repo root = the plugin AND its marketplace)
-├── .claude-plugin/   ← marketplace.json (source "./") + plugin.json   } version in LOCKSTEP
-├── .cursor-plugin/   ← marketplace.json (source ".")  + plugin.json   }
+├── .claude-plugin/   ← marketplace.json (source "./") + plugin.json   }
+├── .cursor-plugin/   ← marketplace.json (source ".")  + plugin.json   } version in LOCKSTEP
+├── .codex-plugin/    ← plugin.json (Codex marketplace: .agents/plugins/)} across all four
+├── package.json      ← pi manifest: keywords + pi.skills -> ./skills   } plugin manifests
 ├── bin/sdlc-check    ← on-PATH launcher (resolves ../checker relative to itself — layout-proof)
 ├── checker/          ← sdlc-check.mjs (zero-dep Node ≥22 ESM enforcement spine) + its node:test suite
 ├── skills/           ← the pipeline + documentation + repo-setup skills, some with reference/
@@ -79,12 +81,16 @@ Zero runtime dependencies; Node ≥22, ESM.
   checker's recorded-commit rule needs every task SHA reachable; never squash/rebase-merge). Delete
   merged branches. Never `git add -A` (this repo carries intentionally-untracked trees); add paths
   explicitly.
-- Releases are gated on a version bump (Claude Code caches by `plugin.json` version): bump **both**
-  `.claude-plugin/plugin.json` and `.cursor-plugin/plugin.json` in lockstep, refresh the
-  description if scope changed, commit, push, then a plugin-scoped annotated tag
-  (`agent-sdlc-vX.Y.Z`) + GitHub release. License: **Apache-2.0** (both manifests carry it).
-- Users install/update: `/plugin marketplace add smarzban/agent-sdlc` +
-  `/plugin install agent-sdlc@agent-sdlc`; update via `/plugin marketplace update agent-sdlc`.
-  (Cursor: import the repo URL as a team marketplace; re-import to refresh.)
+- Releases are gated on a version bump (Claude Code caches by `plugin.json` version): bump **all
+  four** version fields in lockstep (`.claude-plugin/plugin.json`, `.cursor-plugin/plugin.json`,
+  `.codex-plugin/plugin.json`, and `package.json`), refresh the description if scope changed,
+  commit, push, then a plugin-scoped annotated tag (`agent-sdlc-vX.Y.Z`) + GitHub release. License:
+  **Apache-2.0** (all plugin.jsons + `package.json` carry it). The marketplace manifests
+  (`.claude-plugin`, `.cursor-plugin`, `.agents/plugins/marketplace.json`) carry no version.
+- Users install/update: **Claude Code** `/plugin marketplace add smarzban/agent-sdlc` +
+  `/plugin install agent-sdlc@agent-sdlc` (update via `/plugin marketplace update agent-sdlc`);
+  **Cursor** imports the repo URL as a team marketplace (re-import to refresh); **Codex** `codex
+  plugin marketplace add smarzban/agent-sdlc` + `codex plugin add agent-sdlc@agent-sdlc`; **pi**
+  `pi install git:github.com/smarzban/agent-sdlc`. Full walkthrough in `docs/install.md`.
 - Review rounds run through the Empanel gate; a portable multi-lens reviewer-subagent fallback runs
   when the gate is absent. Suite verdicts via a machine-readable reporter; exit codes read directly.

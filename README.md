@@ -23,8 +23,9 @@ Test and deploy are the next stages downstream, extending the same chain.
   `writing-technical-docs`) for documenting what you build, plus `repo-setup` for scaffolding it —
   usable on any repo.
 
-Packaged as a plugin for [Claude Code](https://claude.com/claude-code) and
-[Cursor](https://cursor.com) — **this repo is its own single-plugin marketplace** (`agent-sdlc`),
+Packaged as a plugin for [Claude Code](https://claude.com/claude-code),
+[Cursor](https://cursor.com), [OpenAI Codex](https://developers.openai.com/codex), and
+[pi](https://pi.dev) — **this repo is its own single-plugin marketplace** (`agent-sdlc`),
 and the skills are plain Markdown to the open `SKILL.md` standard, portable to any agent that
 reads instruction files.
 
@@ -120,10 +121,24 @@ How they chain and when to pick which: [docs/usage/documentation-skills.md](docs
 ```
 
 Skills then trigger on their `description`, or invoke explicitly with the plugin namespace, e.g.
-`/agent-sdlc:idea` or `/agent-sdlc:writing-readmes`. **Cursor** imports the repo URL as a team
-marketplace, and the skills are plain Markdown to the open `SKILL.md` standard, portable to **any
-other agent** that reads instruction files — the Cursor walkthrough, other-agent setup, updating,
-and requirements are all in [docs/install.md](docs/install.md).
+`/agent-sdlc:idea` or `/agent-sdlc:writing-readmes`.
+
+**OpenAI Codex:**
+
+```text
+codex plugin marketplace add smarzban/agent-sdlc
+codex plugin add agent-sdlc@agent-sdlc
+```
+
+**pi:**
+
+```text
+pi install git:github.com/smarzban/agent-sdlc
+```
+
+**Cursor** imports the repo URL as a team marketplace. The skills are plain Markdown to the open
+`SKILL.md` standard, portable to any agent that reads instruction files. The per-harness
+walkthroughs, updating, and requirements are all in [docs/install.md](docs/install.md).
 
 ## Layout
 
@@ -131,6 +146,9 @@ and requirements are all in [docs/install.md](docs/install.md).
 agent-sdlc/                          ← repo root = the plugin AND its marketplace
 ├── .claude-plugin/                  ← marketplace.json + plugin.json (Claude Code)
 ├── .cursor-plugin/                  ← marketplace.json + plugin.json (Cursor)
+├── .codex-plugin/plugin.json        ← plugin manifest (OpenAI Codex)
+├── .agents/plugins/marketplace.json ← Codex marketplace manifest
+├── package.json                     ← pi package manifest (pi.skills)
 ├── bin/sdlc-check                   ← on-PATH launcher for the checker
 ├── checker/sdlc-check.mjs           ← the enforcement-spine checker (zero-dep Node, + tests)
 ├── skills/

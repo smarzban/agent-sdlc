@@ -1,0 +1,23 @@
+{
+  "name": "agent-sdlc",
+  "version": "0.15.0",
+  "description": "Full-SDLC pipeline for AI coding agents: idea to a reviewed PR. Ships as skills to the open SKILL.md standard.",
+  "license": "Apache-2.0",
+  "author": "Saeed Marzban <git@smarzban.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/smarzban/agent-sdlc.git"
+  },
+  "keywords": [
+    "pi-package",
+    "sdlc",
+    "skills",
+    "pipeline",
+    "tdd",
+    "code-review",
+    "documentation"
+  ],
+  "pi": {
+    "skills": ["./skills"]
+  }
+}
