@@ -16,6 +16,11 @@ node_modules/
 # (CLAUDE.md is now a committed one-line pointer to AGENTS.md — no longer ignored.)
 AGENTS.local.md
 
+# HANDOFF.md is private, per-working-copy LIVE STATE ("where we left off"), never committed:
+# standing rules live in AGENTS.md / AGENTS.local.md, transient state lives in HANDOFF.md.
+# Same class as AGENTS.local.md above, so the ignore entry ships and self-propagates to clones.
+/HANDOFF.md
+
 # Gate-round scratch guard: new .review-gate/ / .empanel/ round artifacts are opt-in only
 # (`git add -f`) so a careless `git add -A` can't publish local review rounds. Already-committed
 # round records stay tracked — gitignore does not affect tracked files.
