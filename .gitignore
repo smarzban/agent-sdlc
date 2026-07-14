@@ -8,6 +8,10 @@
 .idea/
 .vscode/
 
+# Node: the root package.json is only the pi package manifest (no runtime deps); if a stray
+# npm install ever creates node_modules/, it must never be committed.
+node_modules/
+
 # AGENTS.local.md is the private, per-working-copy overlay — never committed.
 # (CLAUDE.md is now a committed one-line pointer to AGENTS.md — no longer ignored.)
 AGENTS.local.md

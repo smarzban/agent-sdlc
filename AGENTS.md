@@ -20,8 +20,8 @@ already covers it, so the pattern self-propagates to every clone.
 
 agent-sdlc is a full-SDLC pipeline for AI coding agents that takes an idea to a **reviewed PR**,
 authored to the open `SKILL.md` standard and served as a **single-plugin marketplace named
-`agent-sdlc`** for Claude Code, Cursor, OpenAI Codex, and pi. *You own the thinking; the agent owns
-the breakdown.*
+`agent-sdlc`** for Claude Code, Cursor, and OpenAI Codex, and as a directly-installable package for
+pi. *You own the thinking; the agent owns the breakdown.*
 
 The repo root is both the plugin and its marketplace:
 
@@ -29,8 +29,8 @@ The repo root is both the plugin and its marketplace:
 agent-sdlc/ (repo root = the plugin AND its marketplace)
 ├── .claude-plugin/   ← marketplace.json (source "./") + plugin.json   }
 ├── .cursor-plugin/   ← marketplace.json (source ".")  + plugin.json   } version in LOCKSTEP
-├── .codex-plugin/    ← plugin.json (Codex marketplace: .agents/plugins/)} across all four
-├── package.json      ← pi manifest: keywords + pi.skills -> ./skills   } plugin manifests
+├── .codex-plugin/    ← plugin.json (marketplace: .agents/plugins/)    } across all four
+├── package.json      ← pi manifest: keywords + pi.skills -> ./skills  } plugin manifests
 ├── bin/sdlc-check    ← on-PATH launcher (resolves ../checker relative to itself — layout-proof)
 ├── checker/          ← sdlc-check.mjs (zero-dep Node ≥22 ESM enforcement spine) + its node:test suite
 ├── skills/           ← the pipeline + documentation + repo-setup skills, some with reference/
@@ -66,8 +66,8 @@ Zero runtime dependencies; Node ≥22, ESM.
   `## The X bar`); `## Principles`; `## Rationalizations` (excuse→rebuttal table); `## Red flags`;
   `## Done when`; `## The artifact (output)`; `## Conventions`.
 - Voice: terse, high-signal, imperative. `->` arrows, em-dashes, no filler.
-- Reference files: long material goes in `reference/` subdirs the SKILL.md links on demand. Both
-  harnesses auto-discover any `skills/` subdir with a SKILL.md — no manifest edit per skill.
+- Reference files: long material goes in `reference/` subdirs the SKILL.md links on demand. Every
+  target harness auto-discovers any `skills/` subdir with a SKILL.md, so no manifest edit per skill.
 - Checker coupling: the checker grammar is documented in the stage SKILL bodies — change grammar
   only with tests (`node --test checker/*.test.mjs`, exit code read directly, never piped).
 - Skill text stays self-contained: it never cites dogfood spec AC ids or `docs/specs/…` paths

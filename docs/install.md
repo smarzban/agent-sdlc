@@ -43,8 +43,8 @@ slash. To update, re-import the marketplace.
 
 ## OpenAI Codex
 
-Needs Codex CLI ≥ 0.117 (the plugin/marketplace system). Add this repo as a marketplace, then
-install the plugin:
+Needs a recent Codex CLI with the plugin marketplace commands (verified on 0.144; older builds may
+not have `codex plugin marketplace`). Add this repo as a marketplace, then install the plugin:
 
 ```text
 codex plugin marketplace add smarzban/agent-sdlc
@@ -69,8 +69,9 @@ pi install git:github.com/smarzban/agent-sdlc
 
 `pi install` also accepts a pinned ref (`…/agent-sdlc@v0.15.0`), an `https://` URL, or a local
 path, and records the package in `~/.pi/agent/settings.json` (or `.pi/settings.json` with `-l`). pi
-reads the `pi.skills` entry in `package.json` and surfaces every skill to the model; `pi update`
-refreshes them and `pi remove` uninstalls. pi reads `AGENTS.md` natively too.
+reads the `pi.skills` entry in `package.json` and surfaces every skill to the model. `pi update`
+refreshes unpinned installs (a pinned `@ref` stays put until you reinstall) and `pi remove`
+uninstalls. pi reads `AGENTS.md` natively too.
 
 ## Any other agent
 

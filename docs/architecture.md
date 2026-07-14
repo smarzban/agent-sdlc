@@ -9,7 +9,9 @@ itself — is [`docs/specs/overview.md`](specs/overview.md); this page maps the 
 agent-sdlc/                          ← repo root = the plugin AND its marketplace
 ├── .claude-plugin/                  ← marketplace.json + plugin.json (Claude Code)
 ├── .cursor-plugin/                  ← marketplace.json + plugin.json (Cursor)
-├── skills/<name>/SKILL.md           ← the pipeline + doc skills (13), some with reference/ depth
+├── .codex-plugin/ + .agents/plugins/ ← plugin.json + marketplace.json (OpenAI Codex)
+├── package.json                     ← pi package manifest (pi.skills)
+├── skills/<name>/SKILL.md           ← the pipeline + doc skills (14), some with reference/ depth
 ├── checker/sdlc-check.mjs           ← the enforcement spine (zero-dep Node ESM) + its test suites
 ├── bin/sdlc-check                   ← on-PATH launcher resolving the checker from anywhere
 └── docs/specs/                      ← the repo's own dogfood spec chains + living overview.md
@@ -24,8 +26,8 @@ agent-sdlc/                          ← repo root = the plugin AND its marketpl
 - **The committed-artifact pattern.** Anything executable ships committed and runnable as-is —
   bare `node` on the committed source, no install-time build, no dependencies. That's what lets
   the plugin work the moment it's installed.
-- **One plugin, self-hosted marketplace.** Both harness manifests list the plugin at the repo
-  root; skills are auto-discovered from `skills/`, so the manifests almost never change.
+- **One plugin, self-hosted marketplace.** Each harness's manifest lists the same plugin at the
+  repo root; skills are auto-discovered from `skills/`, so the manifests almost never change.
 - **Invoke-if-present cross-plugin contracts.** `ship` invokes the Empanel gate (`/empanel:gate`)
   when present and announces a loud degraded fallback (a dispatched reviewer subagent) when not —
   never a silent skip. The checker follows the same rule when Node is absent.

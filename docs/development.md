@@ -49,7 +49,7 @@ merged fast-forward: the `ledger-vs-git` rule verifies each recorded task commit
 
 ## Author or change a skill
 
-Skills live in `skills/<name>/SKILL.md` — both Claude Code and Cursor auto-discover any `skills/`
+Skills live in `skills/<name>/SKILL.md`; every target harness auto-discovers any `skills/`
 subdirectory containing a `SKILL.md`, so a new skill needs **no manifest edit**.
 
 ```markdown

@@ -1,7 +1,8 @@
 # Agent SDLC — documentation
 
 Agent SDLC is a full-SDLC pipeline for AI coding agents — from an idea to a reviewed pull
-request — packaged as a plugin for Claude Code and Cursor. This tree is the user- and
+request — packaged as a plugin for Claude Code, Cursor, and OpenAI Codex, plus a directly-installable
+pi package. This tree is the user- and
 contributor-facing documentation; the skills themselves (in [`../skills/`](../skills/)) are the
 authoritative method.
 
@@ -9,8 +10,8 @@ authoritative method.
 
 - **You want to try it** → [Quickstart](quickstart.md) — install + first run in two commands.
 - **You want a worked example** → [A five-minute example run](example-run.md) — a curated fictional feature, idea → reviewed PR.
-- **You're installing or updating** → [Install](install.md) — Claude Code, Cursor, other agents,
-  and how updates actually reach you.
+- **You're installing or updating** → [Install](install.md) — Claude Code, Cursor, Codex, pi, and
+  any other agent, and how updates actually reach you.
 - **You're using the pipeline** → [Usage](#usage) below — one page per capability.
 - **You're contributing** → [Development](development.md) + the root
   [CONTRIBUTING.md](../CONTRIBUTING.md).

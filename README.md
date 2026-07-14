@@ -24,10 +24,10 @@ Test and deploy are the next stages downstream, extending the same chain.
   usable on any repo.
 
 Packaged as a plugin for [Claude Code](https://claude.com/claude-code),
-[Cursor](https://cursor.com), [OpenAI Codex](https://developers.openai.com/codex), and
-[pi](https://pi.dev) — **this repo is its own single-plugin marketplace** (`agent-sdlc`),
-and the skills are plain Markdown to the open `SKILL.md` standard, portable to any agent that
-reads instruction files.
+[Cursor](https://cursor.com), and [OpenAI Codex](https://developers.openai.com/codex) (**this repo
+is its own single-plugin marketplace**, `agent-sdlc`), and installable as a package on
+[pi](https://pi.dev). The skills are plain Markdown to the open `SKILL.md` standard, portable to any
+agent that reads instruction files.
 
 > **Pairs with [Empanel](https://github.com/smarzban/empanel)** — a multi-model code-review gate
 > + whole-repo audit. `ship` hands the open PR to its gate skill (`/empanel:gate`) when installed,
