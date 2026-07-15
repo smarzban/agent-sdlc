@@ -462,15 +462,32 @@ Plus AC-3's oracle, which is **an inline command run at ship, never a committed 
 committed link-checker would itself be an executable component and violate NC-5:
 
 ```sh
+n=$(grep -rnoE '\]\([^)]*visual-aids\.md\)' skills/ --include='*.md' | wc -l)
+[ "$n" -ge 3 ] || { echo "FAIL: expected >=3 pointers (anchor + 2 homes), found $n"; exit 1; }
 grep -rnoE '\]\([^)]*visual-aids\.md\)' skills/ --include='*.md' | while IFS= read -r hit; do
   f="${hit%%:*}"; link=$(printf '%s' "$hit" | sed -E 's/.*\]\(([^)]*)\).*/\1/')
   [ -f "$(dirname "$f")/$link" ] && echo "  OK   $f -> $link" || { echo "  DEAD $f -> $link"; exit 1; }
 done
 ```
 
+**The count assertion is load-bearing, not decoration** (gate finding M-1). Without it the command
+passes *vacuously*: with zero pointers the loop body never runs and it exits 0. The gate ran the
+unguarded form against the pre-build tree and it exited 0 with `pointers found: 0` — a proof that
+passes before any work is done, and that cannot tell "every pointer resolves" from "there are no
+pointers". That is exactly the **inertness** failure the design names as this feature's real failure
+mode, so the one mechanical oracle must be able to catch it. Three pointers are expected: the anchor
+plus one per home.
+
 Dry-run 2026-07-15 against the existing `input-resolution.md` pointer (the same shape, a doc that
 already exists): 13 pointers, all `OK` — the command shape works before the discipline document
 exists to check.
+
+**Where the guard goes green:** the three pointers only exist once all three pointer-adding tasks have
+landed, so this full guarded command is **red until the last of them and green after** — a genuine
+red -> green, and AC-3's ship proof. It is deliberately *not* each task's own check: asserting `>= 3`
+after the first pointer lands would fail a task that did its job correctly and break the
+green-between-tasks rule. Each pointer-adding task instead asserts **its own expected `OK` line** by
+name, which closes the same vacuity hole per task without demanding a count the task cannot yet reach.
 
 ### Component → product map
 
@@ -566,25 +583,32 @@ from opening a block.
   *Verification (explicit, untestable task):* the load-bearing check is **placement** — the anchor is
   outside the `## Shared operating rules (every stage obeys these)` list, since an entry there would
   assert the discipline applies to every stage, the opposite of NC-2; the anchor mandates rather than
-  links; it does not restate the rules; the pointer resolves via the tech stack's inline link-check
-  command (never a committed script, which would be an executable component); `wc -l` stays under the
-  ~300-line soft ceiling (187 before); plus the standing verification.
+  links; it does not restate the rules; the pointer check runs the tech stack's link-check resolution
+  loop (never a committed script, which would be an executable component) and must print the specific
+  line `OK   skills/getting-started/SKILL.md -> …` — assert **that expected line**, not merely exit 0,
+  since the loop exits 0 vacuously when it finds nothing; `wc -l` stays under the ~300-line soft
+  ceiling (187 before); plus the standing verification.
   *Advances:* AC-1, AC-3. *Component:* getting-started anchor. *Deps:* T-1.
 - **T-3 — Hook the discipline into the primary home.** Change
   `skills/architecture-design/SKILL.md`, placing the hook at the **component-decomposition proposal
   step**, named by name and never by number so renumbering cannot rot it.
   *Verification (explicit, untestable task):* the hook mandates applying the discipline at that step
   rather than merely linking it (a link an agent may legitimately never open ships a no-op); it does
-  not restate the rules; the pointer resolves via the T-2 link-check command, which covers every
-  pointer in the corpus; `wc -l` stays under the ~300-line soft ceiling (198 before, the tightest of
-  the three, so check it); plus the standing verification.
+  not restate the rules; the link-check resolution loop must print the specific line
+  `OK   skills/architecture-design/SKILL.md -> …` — assert that expected line, not merely exit 0;
+  `wc -l` stays under the ~300-line soft ceiling (198 before, the tightest of the three, so check it);
+  plus the standing verification.
   *Advances:* AC-2, AC-3. *Component:* architecture-design hook. *Deps:* T-1.
 - **T-4 — Hook the discipline into the secondary home.** Change `skills/idea/SKILL.md`, placing the
   hook at the **divergence step**, named by name and never by number.
   *Verification (explicit, untestable task):* the hook mandates applying the discipline at that step,
   in the same form as T-3 — secondary by emphasis, identical in force; it does not restate the rules;
-  the pointer resolves via the T-2 link-check command; `wc -l` stays under the ~300-line soft ceiling
-  (138 before); plus the standing verification.
+  the link-check resolution loop must print the specific line `OK   skills/idea/SKILL.md -> …` —
+  assert that expected line, not merely exit 0. **T-4 is also where AC-3's full ship oracle first
+  becomes provable:** this is the task that brings the corpus to the three expected pointers, so run
+  the complete guarded command (count `>= 3` **plus** resolution) here and confirm it passes — it is
+  red before this task and green after, which is the red -> green the earlier tasks cannot have.
+  `wc -l` stays under the ~300-line soft ceiling (138 before); plus the standing verification.
   *Advances:* AC-2, AC-3. *Component:* idea hook. *Deps:* T-1.
 
 ### Task-to-criterion coverage map
