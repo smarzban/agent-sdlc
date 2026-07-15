@@ -33,7 +33,9 @@ step.
    At project level this decomposition is a main output (the feature list). At feature level, if it
    is really several features, split and shape the first.
 4. **Diverge** propose 2-3 approaches with tradeoffs, leading with your recommendation and why.
-   Heavy for a vague idea, light for a specific feature.
+   Heavy for a vague idea, light for a specific feature. **If the candidate approaches would land
+   better drawn than described, read [visual-aids](../getting-started/reference/visual-aids.md)
+   now and apply it here**: it is the load-bearing visual-aid discipline.
 5. **Grill to converge** interview one question at a time, walking down the decision tree and
    resolving dependencies between decisions one by one. Give a recommended answer with every
    question. Prefer multiple-choice. If the codebase can answer it, explore the code instead of
