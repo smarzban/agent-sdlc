@@ -500,3 +500,132 @@ NC-5.
 ### Glossary terms touched
 
 None new.
+
+## Plan
+
+*Written 2026-07-15. Autonomous run on the settled criteria, design, and tech stack.*
+
+**Blast radius, measured at plan time:** one new file plus three existing skill bodies. The changed
+surface is instruction prose with **no consumers to break** — no code imports it, no test asserts on
+it, and the checker does not parse `skills/`. Compile fallout is therefore zero, and each task
+finishes green on its own. This is why the tasks map one-to-one onto components: the usual reason to
+split (non-local consequences) does not exist here.
+
+**Test-first, for a product with no runtime.** Every task below takes the task bar's stated exception
+— *"the explicit verification for the rare untestable task"*. There is no failing test to write
+first, because NC-5 ships nothing executable and NC-4 forbids adding a test to `checker/`. Each task
+therefore names its explicit verification, run and read before the task is called done. Two of those
+verifications are mechanical and are stated as exact commands.
+
+**Standing verification for every task** (run after each; NC-4 and NC-5 are checkable, not
+aspirational):
+
+```sh
+node --check checker/sdlc-check.mjs
+node --test checker/*.test.mjs          # 157/157, exit code read directly, never piped
+git diff --stat main -- checker/ bin/ package.json   # MUST be empty: NC-4 + NC-5
+```
+
+**Grammar note (learned the hard way, in this section).** Tasks below are **top-level bullets**, and
+no task body uses a column-0 `- **bold**` sub-bullet. This is not style. The checker opens a trace
+block at `/^-\s+\*\*/` and attributes every trace in that block to the first bold-lead id inside it,
+so a `- **bold**` bullet *inside* a task silently steals ownership of the trace fields that follow —
+and forward coverage still passes, because the coverage map carries the links independently. The
+first draft of this plan did exactly that: all four tasks' fields collapsed onto `T-2` while the
+checker reported all checks passed. Sub-bullets inside a task are indented, which is what keeps them
+from opening a block.
+
+### Tasks
+
+- **T-1 — Write the visual-aid discipline document.** Create
+  `skills/getting-started/reference/visual-aids.md`, stating the discipline's rules **once**: the
+  visual test as a per-question heuristic (with the topic-alone guard), tool-not-a-mode, each kind's
+  persistence, the kind-choice rule, consent for the scratch visual only, the just-in-time offer, the
+  durable decline, and the loud degrade. It must also carry the tech stack's load-bearing content:
+  the spec diagram is a fenced `mermaid` block inline in the spec; authors are confined to
+  long-stable core diagram types (flowchart, sequence), because the renderer belongs to whatever
+  reads the spec and cannot be pinned, so a newly-added type may render as an error for the very
+  reader it was drawn for; the scratch visual is one self-contained file (inline CSS, inline SVG, no
+  JavaScript, no external requests, no CDN — a browser-side diagram library would break
+  self-containment, NC-5, and offline use at once), written to the operating system's temporary
+  directory rather than inside the repo, which is what makes "never committed" structural rather than
+  remembered.
+  *Verification (explicit, untestable task):* the file exists at exactly that path; it is read against
+  each rule listed above; the self-containment scan
+  `grep -nE "docs/specs/|\bAC-[0-9]|\bNC-[0-9]|\bT-[0-9]|\bC-[0-9]" skills/getting-started/reference/visual-aids.md`
+  returns nothing (the generic pipeline grammar is the contract, this chain's ids are not); the
+  privacy leak scan over `skills/` returns nothing, run against the private overlay's term list
+  (the terms are deliberately not reproduced here — writing them into a public file is itself the
+  leak the scan exists to prevent); plus the standing verification.
+  *Advances:* AC-1, AC-4, AC-5, AC-6, AC-7, AC-8, AC-9, AC-10, AC-11. *Component:* visual-aid discipline. *Deps:* none.
+- **T-2 — Anchor the discipline in the entry skill, scoped to its two homes.** Change
+  `skills/getting-started/SKILL.md`: name the discipline, state that it applies to exactly the two
+  homes, and mandate reading the document rather than linking it. The
+  `## Routing: light tier vs full chain` section is the in-tree precedent for both the scoping and
+  the mandating form ("read … now").
+  *Verification (explicit, untestable task):* the load-bearing check is **placement** — the anchor is
+  outside the `## Shared operating rules (every stage obeys these)` list, since an entry there would
+  assert the discipline applies to every stage, the opposite of NC-2; the anchor mandates rather than
+  links; it does not restate the rules; the pointer resolves via the tech stack's inline link-check
+  command (never a committed script, which would be an executable component); `wc -l` stays under the
+  ~300-line soft ceiling (187 before); plus the standing verification.
+  *Advances:* AC-1, AC-3. *Component:* getting-started anchor. *Deps:* T-1.
+- **T-3 — Hook the discipline into the primary home.** Change
+  `skills/architecture-design/SKILL.md`, placing the hook at the **component-decomposition proposal
+  step**, named by name and never by number so renumbering cannot rot it.
+  *Verification (explicit, untestable task):* the hook mandates applying the discipline at that step
+  rather than merely linking it (a link an agent may legitimately never open ships a no-op); it does
+  not restate the rules; the pointer resolves via the T-2 link-check command, which covers every
+  pointer in the corpus; `wc -l` stays under the ~300-line soft ceiling (198 before, the tightest of
+  the three, so check it); plus the standing verification.
+  *Advances:* AC-2, AC-3. *Component:* architecture-design hook. *Deps:* T-1.
+- **T-4 — Hook the discipline into the secondary home.** Change `skills/idea/SKILL.md`, placing the
+  hook at the **divergence step**, named by name and never by number.
+  *Verification (explicit, untestable task):* the hook mandates applying the discipline at that step,
+  in the same form as T-3 — secondary by emphasis, identical in force; it does not restate the rules;
+  the pointer resolves via the T-2 link-check command; `wc -l` stays under the ~300-line soft ceiling
+  (138 before); plus the standing verification.
+  *Advances:* AC-2, AC-3. *Component:* idea hook. *Deps:* T-1.
+
+### Task-to-criterion coverage map
+
+| Criterion | Advanced by |
+| --- | --- |
+| AC-1 | T-1, T-2 |
+| AC-2 | T-3, T-4 |
+| AC-3 | T-2, T-3, T-4 |
+| AC-4 | T-1 |
+| AC-5 | T-1 |
+| AC-6 | T-1 |
+| AC-7 | T-1 |
+| AC-8 | T-1 |
+| AC-9 | T-1 |
+| AC-10 | T-1 |
+| AC-11 | T-1 |
+
+*AC-1 is carried by T-1 (which creates the single statement) and T-2 (which establishes the
+name-and-point form the other mentions follow). T-3 and T-4 cannot advance it further, but they can
+break it, so "does not restate the rules" is an explicit verification on each rather than a trace
+claim. (Written without the literal field token, which the checker would otherwise scrape from this
+prose into a spurious empty trace — the same lesson as the grammar note above.)*
+
+### Notes for the build agent
+
+- **Order:** T-1 first and alone — T-2, T-3, and T-4 each point at the document it creates, so their
+  pointer check cannot pass before it exists. After T-1, the three are independent of each other.
+- **Commit convention:** `feat(T-N): …`, scope position, one commit per task (the recorded-commit
+  rule matches on the scope position).
+- **The rules-ratchet justification must reach the PR body.** T-2, T-3, and T-4 all *append* rather
+  than displace or merge, which the ratchet rule makes the exception needing justification. The
+  justification: no existing line in any of the three bodies covers *when to draw*, so there is
+  nothing to displace or merge. Budget is held instead by stating the rules once in T-1 and giving
+  each host a hook rather than a copy.
+- **Deliberately not tasks** (each would trace to no criterion, which is the definition of
+  gold-plating here): no user-facing docs page for the capability, no `CHANGELOG` entry (a release
+  step, not a build task), no `CONTEXT.md` or `overview.md` edit (both landed at the idea stage). A
+  user-facing usage doc is a reasonable follow-up, but no criterion asks for one and this feature
+  will not smuggle it in.
+- **Known checker quirk, do not fix (NC-4):** the reviewer-checked carrying-task hint under-fires on
+  this spec because verification-type detection only reads bulleted criteria, and these are bold-lead
+  paragraphs. It sharpens a message and never changes a verdict; forward coverage is still enforced
+  for all eleven criteria. Filed as field feedback, out of scope here.
