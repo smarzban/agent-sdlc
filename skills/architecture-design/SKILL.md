@@ -64,7 +64,9 @@ doubt, state the kind and defer the product.
 3. **Propose the component decomposition** lead with a recommended set of components and their
    single responsibilities, plus the alternatives and tradeoffs, per the recommend-and-alternatives
    rule. At feature level, identify which existing components change and what new ones are needed,
-   reusing existing patterns.
+   reusing existing patterns. **If the shape or the tradeoff between candidates would land better
+   drawn than described, read the visual-aid discipline
+   ([visual-aids](../getting-started/reference/visual-aids.md)) now and apply it here.**
 4. **Define the contracts** for each boundary, state inputs, outputs, and error semantics.
    Validate untrusted input at the boundary, not deep inside.
 5. **Define data flow and key state** logically (the kind of store and the shape of the data), not
