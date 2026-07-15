@@ -367,3 +367,136 @@ editing them.
 ### Glossary terms touched
 
 None new. The four terms remain as pinned at the idea stage; this stage adds shape, not vocabulary.
+
+## Tech Stack
+
+*Written 2026-07-15. Feature level, against the repo's declared stack (Markdown skills, no runtime;
+zero-dependency bare-`node` ESM only where executable code exists — NC-5 means this feature adds
+none). Autonomous run; recommended choices adopted. All doc grounding checked 2026-07-15.*
+
+**The in-stack fast-path is deliberately declined.** This feature adds no dependency and touches no
+manifest or lockfile, which is exactly the fast-path's precondition — but the Brief withheld two
+product choices *specifically* for this stage to ratify, and collapsing to "No new products — reuses
+the declared stack" would silently drop the ratification it was told to make. The choices below are
+recorded per component instead. Zero new dependencies is a *finding* here, not a reason to skip.
+
+Only component 1 has product choices. Components 2, 3, and 4 are prose hooks in existing documents:
+no product, no stack, nothing to pin.
+
+### Choices
+
+**1. Spec diagram notation -> Mermaid** (current stable 11.16.0, checked 2026-07-15,
+<https://mermaid.js.org/intro/>; rendering support per <https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/creating-diagrams>).
+
+A text notation inside a fenced block. It adds **no dependency**: authoring a diagram means typing
+text into the spec, so the repo's zero-runtime posture is untouched.
+
+- *Claim: a `mermaid` fence in a committed markdown file renders as a diagram on GitHub* —
+  **`verified-by-probe`** -> [`probes/probe-run-2026-07-15.md`](probes/probe-run-2026-07-15.md)
+  (probes 1-2). Worth reading: the obvious probe **refutes** the naive claim. GitHub's Markdown REST
+  API returns only `<div class="highlight highlight-source-mermaid">` with **no SVG** — the markdown
+  pipeline does not render diagrams. A real served blob page then showed the actual mechanism: one
+  `data-type="mermaid"` render-enrichment container per fence (10 fences -> 10 containers), sourced
+  from `viewscreen.githubusercontent.com/markdown/mermaid`. Rendering is client-side enrichment.
+  Doc-reading alone would have gotten the *answer* right and the *mechanism* wrong.
+- *Why over the alternatives:* **ASCII/Unicode box art** renders literally everywhere including a
+  bare terminal, but has no standard, is painful to keep accurate under edits, and diffs badly — and
+  the terminal gap it would close is the gap the scratch visual already covers. **PlantUML** and
+  **Graphviz/DOT** both need a renderer installed (a jar, a server, or a binary) and neither is
+  rendered natively by GitHub, so each would trade a zero-dependency notation for a real one and
+  still fail to render where specs are reviewed.
+
+**Carried constraint — the renderer version is the host's, not ours.** We pin no Mermaid version and
+*cannot*: GitHub runs its own, and other readers (editors, forges) run theirs. GitHub's own docs
+decline to state a version and tell you to query it with the `info` command. The discipline document
+must therefore constrain authors to **long-stable core diagram types** (flowchart, sequence) and
+away from the newly-added ones the release notes advertise (Kanban, Radar, Architecture, and the
+other recent additions) — a diagram that needs a recent renderer is a diagram that may render as an
+error for the reader it was drawn for. This constraint is load-bearing for the discipline's content
+and is an input to the plan.
+
+**2. Scratch visual format -> a single self-contained HTML file** (HTML5 + inline CSS + inline SVG;
+no JavaScript, no external requests). No version to pin: this is the platform, not a library.
+
+- *Claim: two candidate shapes can be compared side by side in one self-contained page with no
+  dependency* — **`verified-by-probe`** ->
+  [`probes/probe-run-2026-07-15.md`](probes/probe-run-2026-07-15.md) (probe 3), with the probe page
+  kept beside it as [`probes/scratch-visual-shape-2026-07-15.html`](probes/scratch-visual-shape-2026-07-15.html).
+  1805 bytes, zero external references, parses well-formed. This claim is load-bearing precisely
+  because the lazy implementation — pulling a diagram library from a CDN to render Mermaid in the
+  browser — would break self-containment **and** NC-5 **and** offline use in one move. The probe
+  shows the library is unnecessary: inline SVG does the job.
+- *Why over the alternatives:* a **bare `.svg` file** renders but gives no place for the framing
+  prose a comparison needs; **markdown** cannot lay two shapes out side by side, which is the one
+  thing the scratch visual exists for; **PDF** needs a generator dependency. Mermaid is deliberately
+  **not** reused here — it would require its renderer in the browser, which is the CDN dependency
+  just rejected.
+
+**3. Scratch location -> the operating system's temporary directory** (`/tmp` on Unix-likes, `%TEMP%`
+on Windows). The design fixed the kind ("outside the committed tree"); this is the product.
+
+Chosen because it is outside every repo working tree, so AC-6's "never committed" holds **by
+construction** rather than by the agent remembering, and without needing a `.gitignore` entry this
+feature cannot add to someone else's repo. *No claim is made that it is always writable* — a
+sandboxed or restricted harness may refuse, which is not a gap but the designed path: AC-11 degrades
+loudly to a spec diagram or prose. Deliberately **not** tagged `verified-by-probe`: writability is a
+property of a user's environment, not of a product, so a probe here would prove only that *this*
+machine has a writable `/tmp`.
+
+### Harness portability
+
+The four target harnesses (Claude Code, Cursor, OpenAI Codex, pi) render **neither** choice, and
+neither choice asks them to — which is what makes both portable. A spec diagram is text an agent
+writes into a file; it is rendered later by whatever reads the spec (GitHub at review time, or an
+editor). A scratch visual is a file the user opens in a browser. Nothing is asked of the harness
+beyond writing a file, so there is no harness on which the default degrades.
+
+### Green bar (inherited, feature level)
+
+No new commands. The repo's declared bar, which must stay green and — per NC-4 — unchanged in count:
+
+- `node --check checker/sdlc-check.mjs`
+- `node --test checker/*.test.mjs`
+
+Plus AC-3's oracle, which is **an inline command run at ship, never a committed script** — a
+committed link-checker would itself be an executable component and violate NC-5:
+
+```sh
+grep -rnoE '\]\([^)]*visual-aids\.md\)' skills/ --include='*.md' | while IFS= read -r hit; do
+  f="${hit%%:*}"; link=$(printf '%s' "$hit" | sed -E 's/.*\]\(([^)]*)\).*/\1/')
+  [ -f "$(dirname "$f")/$link" ] && echo "  OK   $f -> $link" || { echo "  DEAD $f -> $link"; exit 1; }
+done
+```
+
+Dry-run 2026-07-15 against the existing `input-resolution.md` pointer (the same shape, a doc that
+already exists): 13 pointers, all `OK` — the command shape works before the discipline document
+exists to check.
+
+### Component → product map
+
+| Component | Product | Version | Date checked |
+| --- | --- | --- | --- |
+| visual-aid discipline | Mermaid (spec diagram notation) | 11.16.0 upstream; renderer version is the host's, unpinnable | 2026-07-15 |
+| visual-aid discipline | self-contained HTML file (scratch visual format) | HTML5 + inline SVG; no library | 2026-07-15 |
+| visual-aid discipline | OS temporary directory (scratch location) | platform | 2026-07-15 |
+| getting-started anchor | none — prose hook in an existing document | — | — |
+| architecture-design hook | none — prose hook in an existing document | — | — |
+| idea hook | none — prose hook in an existing document | — | — |
+
+**Dependencies added: zero.** No manifest, lockfile, or `package.json` is touched. Both choices are
+formats rather than installed software, which is why the feature can name products and still satisfy
+NC-5.
+
+### Unverified / flagged
+
+- **GitHub's Mermaid renderer version is unknown and unpinnable.** GitHub's docs decline to state it.
+  Mitigated, not resolved, by the long-stable-core-types constraint above. Flagged because a future
+  Mermaid feature used in a diagram could render as an error for a reader on an older host.
+- **Non-GitHub rendering surfaces are not probed.** Probes 1-2 confirm GitHub, the surface where this
+  repo's specs are actually reviewed. Editor and other-forge rendering is doc-grounded only (Mermaid
+  publishes an integrations list); it was not probed, because the criteria do not lean on it.
+- **Scratch-location writability is unprobed by design** (see choice 3): environment, not product.
+
+### Glossary terms touched
+
+None new.
