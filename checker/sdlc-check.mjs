@@ -285,11 +285,15 @@ const OUTSIDE_CHECKER_HEADING_RE = /outside the checker/i;
 const SECTION_HEADING_RE = /^##(?!#)\s+(.+?)\s*$/;
 const SUBHEADING_RE = /^###\s+(.+?)\s*$/;
 // A DEFINITION SITE: a line whose first non-whitespace content, after an optional list marker, is a
-// bold-lead id (`**AC-1**`, `- **T-1 — Title.**`, `  * **C-2** …`). Indentation and list markers are
-// presentation and never decide ownership — a marker-less `**AC-1** — …` line defines AC-1 exactly
-// as a bulleted one does. Anchored (`^`, non-global), unlike ID_DEFINITION_RE's scan-anywhere form:
-// an id cited mid-line defines nothing.
-const DEFINITION_SITE_RE = /^\s*(?:[-*+]\s+)?\*\*(AC|C|T)-(\d+)\b/;
+// bold-lead id (`**AC-1**`, `- **T-1 — Title.**`, `  * **C-2** …`, `1. **AC-3** …`). Indentation and
+// list markers are presentation and never decide ownership — a marker-less `**AC-1** — …` line
+// defines AC-1 exactly as a bulleted or numbered one does. The marker set covers both Markdown list
+// kinds: bullets (`-`, `*`, `+`) and ordered items in either the `1.` or `1)` form. Anchored (`^`,
+// non-global), unlike ID_DEFINITION_RE's scan-anywhere form: an id cited mid-line defines nothing.
+// The ordered form does NOT collide with COMPONENT_LIST_ITEM_RE's numbered `### Components` entries
+// (`1. **block splitter** — …`): a bold lead only opens a block when it is an `AC|C|T`-N id, and a
+// component's bold text is a NAME. Those entries stay components, never block owners.
+const DEFINITION_SITE_RE = /^\s*(?:[-*+]\s+|\d+[.)]\s+)?\*\*(AC|C|T)-(\d+)\b/;
 // Field capture stops at the first '.' after the marker. Not hit by any current spec field (no
 // field value contains an internal period — the slash-run and parenthetical forms observed in
 // practice never do), so left as-is: distinguishing a field-ending period from one inside

@@ -769,6 +769,71 @@ test('a criterion defined with an INDENTED list marker is still its own block (A
   assert.equal(result.acVerification.get('AC-2'), 'reviewer-checked');
 });
 
+test('a criterion defined at an ORDERED-list definition site is classified from its own block (AC-1)', () => {
+  // An ordered marker is a list marker like any other: presentation, never ownership. `1.` must
+  // behave exactly as `-` does.
+  const spec = [
+    '## Acceptance Criteria',
+    '',
+    '1. **AC-1** — First. Verification type: **test-backed**.',
+    '2. **AC-2** — Second. Verification type: **reviewer-checked**.',
+  ].join('\n');
+  const result = parseSpec(spec, 'x.md');
+  assert.equal(result.ok, true);
+  assert.equal(result.acVerification.get('AC-1'), 'test-backed');
+  assert.equal(result.acVerification.get('AC-2'), 'reviewer-checked');
+});
+
+test('the `1)` ordered-list form is a definition site too, indented or not (AC-1)', () => {
+  const spec = [
+    '## Acceptance Criteria',
+    '',
+    '1) **AC-1** — First. Verification type: **test-backed**.',
+    '  2) **AC-2** — Second. Verification type: **reviewer-checked**.',
+  ].join('\n');
+  const result = parseSpec(spec, 'x.md');
+  assert.equal(result.ok, true);
+  assert.equal(result.acVerification.get('AC-1'), 'test-backed');
+  assert.equal(result.acVerification.get('AC-2'), 'reviewer-checked');
+});
+
+test('a task defined at an ORDERED-list definition site owns its own trace fields, and no other id\'s (AC-1)', () => {
+  const spec = [
+    '## Plan',
+    '',
+    '1. **T-1 — First.** Detail. *Advances:* AC-1. *Component:* none. *Deps:* none.',
+    '2. **T-2 — Second.** Detail. *Advances:* AC-2. *Component:* none. *Deps:* T-1.',
+  ].join('\n');
+  const result = parseSpec(spec, 'x.md');
+  assert.equal(result.ok, true);
+  const advances = result.traces
+    .filter((t) => t.kind === 'advances')
+    .map((t) => `${t.from}->${t.refs.join(',')}`);
+  assert.deepEqual(advances, ['T-1->AC-1', 'T-2->AC-2']);
+  assert.deepEqual(result.traces.find((t) => t.kind === 'deps' && t.from === 'T-2').refs, ['T-1']);
+});
+
+test('the Design\'s numbered component list is NOT a definition site: entries stay C-N components (AC-1)', () => {
+  // COMPONENT_LIST_ITEM_RE's numbered entries are ordered-list items with a bold lead, but the bold
+  // text is a component NAME, not an `AC|C|T`-N id — broadening the marker set must not make them
+  // open blocks.
+  const spec = [
+    '## Design',
+    '### Components',
+    '1. **block splitter** — splits owned blocks.',
+    '2. **T-shirt sizer** — a name that merely starts with `T-`, still not an id.',
+    '',
+    '## Plan',
+    '- **T-1 — Build it.** Detail. *Advances:* AC-1. *Component:* block splitter. *Deps:* none.',
+  ].join('\n');
+  const result = parseSpec(spec, 'x.md');
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.components.map((c) => c.id), ['C-1', 'C-2']);
+  assert.deepEqual(result.components.map((c) => c.name), ['block splitter', 'T-shirt sizer']);
+  const componentTrace = result.traces.find((t) => t.from === 'T-1' && t.kind === 'component');
+  assert.ok(componentTrace.refs.includes('C-1'));
+});
+
 test('a bold-lead line that is NOT a definition site never owns a following id\'s fields (AC-2)', () => {
   // The field incident: a glossary bullet opened a block, the marker-less definition sites below it
   // were absorbed as continuation lines, and re-derivation handed EVERY field to the first id seen.
