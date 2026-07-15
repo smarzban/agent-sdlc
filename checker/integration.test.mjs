@@ -332,3 +332,176 @@ test('fail-closed: a ledger present but the run directory is not a git repo exit
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+// --- Real-chain regression: id-anchored block splitting over docs/specs/ (T-1, AC-3/AC-4) -----
+//
+// Pinned to values measured BEFORE the block-splitter change (the probe run kept at
+// docs/specs/explicit-ownership/probes/probe-output.txt, plus the pre-change parse of each chain).
+// A golden table regenerated from a post-change run would assert only that the code agrees with
+// itself, so these numbers are never refreshed from the new implementation.
+
+const SPEC_ROOT = fileURLToPath(new URL('../docs/specs/', import.meta.url));
+const CHAINS = [
+  'enforcement-spine',
+  'repo-setup',
+  'visual-aids',
+  'adoption-quickwins',
+  'spec-location-under-docs',
+  'explicit-ownership',
+];
+
+function chainPath(name) {
+  return path.join(SPEC_ROOT, name, `${name}.md`);
+}
+
+async function parseChain(name) {
+  const { parseSpec } = await import('./sdlc-check.mjs');
+  return parseSpec(readFileSync(chainPath(name), 'utf8'), chainPath(name));
+}
+
+// The pre-change resolved verification type per criterion, per chain (`null` = the block stated
+// neither type). AC-3's bar: nothing here may change except a correction the chain's own
+// verification-map row corroborates.
+const TYPES_BEFORE = {
+  'enforcement-spine': {
+    'AC-1': 'test-backed', 'AC-2': 'test-backed', 'AC-3': 'test-backed', 'AC-4': 'test-backed',
+    'AC-5': 'test-backed', 'AC-6': 'test-backed', 'AC-7': 'test-backed', 'AC-8': 'test-backed',
+    'AC-9': 'test-backed', 'AC-10': 'test-backed', 'AC-11': 'test-backed', 'AC-12': 'test-backed',
+    'AC-13': 'reviewer-checked', 'AC-14': 'reviewer-checked',
+    'AC-15': null, 'AC-16': null, 'AC-17': null, 'AC-18': null,
+  },
+  'repo-setup': {},
+  'visual-aids': { 'AC-1': 'reviewer-checked' },
+  'adoption-quickwins': {
+    'AC-1': 'reviewer-checked', 'AC-2': 'reviewer-checked', 'AC-3': 'reviewer-checked',
+    'AC-4': 'reviewer-checked', 'AC-5': 'reviewer-checked', 'AC-6': 'reviewer-checked',
+    'AC-7': 'reviewer-checked',
+  },
+  'spec-location-under-docs': {
+    'AC-1': 'reviewer-checked', 'AC-2': 'reviewer-checked', 'AC-3': 'test-backed',
+    'AC-4': 'reviewer-checked', 'AC-5': 'reviewer-checked', 'AC-6': 'reviewer-checked',
+  },
+};
+
+// The single expected correction (probe-output.txt): enforcement-spine AC-14's block absorbed the
+// following `### Skill wiring (reviewer-checked)` heading; its own text says `*test-backed: unit.*`.
+const EXPECTED_CORRECTIONS = { 'enforcement-spine': { 'AC-14': 'test-backed' } };
+
+// Pre-change trace-field counts per chain (*Advances:* / *Component:* / *Deps:*): none of these may
+// move — the change re-attributes ownership, it never changes what a field is.
+const FIELD_TRACES_BEFORE = {
+  'enforcement-spine': 32, 'repo-setup': 24, 'visual-aids': 12,
+  'adoption-quickwins': 15, 'spec-location-under-docs': 15,
+};
+
+// Pre-change task<->criterion forward-coverage links, element-wise (the union of an *Advances:*
+// field and a coverage-map row, exactly as checkForwardCoverage consumes it).
+const LINKS_BEFORE = {
+  'enforcement-spine': ['T-1->AC-10','T-1->AC-8','T-10->AC-15','T-10->AC-16','T-10->AC-17','T-11->AC-14','T-11->AC-15','T-11->AC-16','T-11->AC-17','T-11->AC-5','T-12->AC-13','T-12->AC-14','T-12->AC-16','T-12->AC-18','T-2->AC-1','T-2->AC-10','T-2->AC-2','T-2->AC-3','T-3->AC-13','T-3->AC-14','T-3->AC-3','T-3->AC-5','T-3->AC-6','T-4->AC-1','T-4->AC-2','T-4->AC-3','T-5->AC-5','T-5->AC-6','T-6->AC-4','T-7->AC-13','T-7->AC-14','T-8->AC-8','T-8->AC-9','T-9->AC-11','T-9->AC-12','T-9->AC-7'],
+  'repo-setup': ['T-1->AC-14','T-2->AC-3','T-2->AC-4','T-2->AC-7','T-3->AC-3','T-3->AC-5','T-3->AC-6','T-3->AC-7','T-4->AC-1','T-4->AC-12','T-4->AC-2','T-4->AC-7','T-4->AC-8','T-4->AC-9','T-5->AC-10','T-5->AC-11','T-6->AC-3','T-6->AC-5','T-6->AC-6','T-6->AC-7','T-7->AC-13','T-8->AC-10','T-8->AC-11'],
+  'visual-aids': ['T-1->AC-1','T-1->AC-10','T-1->AC-11','T-1->AC-4','T-1->AC-5','T-1->AC-6','T-1->AC-7','T-1->AC-8','T-1->AC-9','T-2->AC-1','T-2->AC-3','T-3->AC-2','T-3->AC-3','T-4->AC-2','T-4->AC-3'],
+  'adoption-quickwins': ['T-1->AC-1','T-1->AC-2','T-1->AC-7','T-2->AC-3','T-2->AC-6','T-2->AC-7','T-3->AC-4','T-3->AC-7','T-4->AC-5','T-4->AC-7','T-5->AC-7'],
+  'spec-location-under-docs': ['T-1->AC-3','T-1->AC-4','T-2->AC-1','T-3->AC-2','T-4->AC-2','T-4->AC-5','T-5->AC-6'],
+};
+
+// Mirrors buildTaskAcLinks (not exported): the union of a task's own *Advances:* field and a
+// Task-to-criterion coverage-map row, both sides restricted to defined ids.
+function taskAcLinks(model) {
+  const definedAc = new Set(model.ids.filter((i) => i.kind === 'AC').map((i) => i.id));
+  const definedTask = new Set(model.ids.filter((i) => i.kind === 'T').map((i) => i.id));
+  const links = new Set();
+  for (const trace of model.traces) {
+    if (trace.kind === 'advances' && definedTask.has(trace.from)) {
+      for (const ref of trace.refs) if (definedAc.has(ref)) links.add(`${trace.from}->${ref}`);
+    } else if (trace.kind === 'map-row' && definedAc.has(trace.from)) {
+      for (const ref of trace.refs) if (definedTask.has(ref)) links.add(`${ref}->${trace.from}`);
+    }
+  }
+  return [...links].sort();
+}
+
+test('AC-4: every criterion of repo-setup (14) and visual-aids (11) resolves a verification type', async () => {
+  for (const [name, expected] of [['repo-setup', 14], ['visual-aids', 11]]) {
+    const model = await parseChain(name);
+    assert.equal(model.ok, true);
+    const criteria = model.ids.filter((i) => i.kind === 'AC').map((i) => i.id);
+    assert.equal(criteria.length, expected, `${name} defines ${expected} criteria`);
+    const unresolved = criteria.filter((id) => !model.acVerification.get(id));
+    assert.deepEqual(unresolved, [], `${name}: every criterion must resolve a type`);
+  }
+});
+
+// Source-grounded oracle for AC-1's real bar ("attributed to that id and to NO OTHER id"): walk the
+// spec TEXT and pair each `**AC-N**` definition site with the FIRST `Verification type: **X**`
+// declaration that follows it, refusing to carry a declaration past the next definition site. The
+// expectation comes from the spec source, never from the checker's own parse — a splitter that
+// opened a block per definition site but mis-attributed every declaration is caught here, where an
+// assertion of mere non-null-ness (AC-4, above) passes it. Known and deliberate divergence: the
+// oracle pairs across a `###` subheading where the splitter drops the declaration, so on a chain
+// that ever separated a criterion from its declaration by one, the oracle would expect a type the
+// checker resolves as null — a loud red here, never a silent pass. No chain does today.
+function declaredTypesFromSource(name) {
+  const text = readFileSync(chainPath(name), 'utf8');
+  const token = /^\s*(?:[-*+]\s+)?\*\*AC-(\d+)\b|Verification type:\s*\*\*(reviewer-checked|test-backed)\*\*/gm;
+  const declared = new Map();
+  let pending = null;
+  let m;
+  while ((m = token.exec(text))) {
+    if (m[1]) pending = `AC-${m[1]}`;
+    else if (pending && !declared.has(pending)) {
+      declared.set(pending, m[2]);
+      pending = null;
+    }
+  }
+  return declared;
+}
+
+test('AC-1: every newly-typed criterion resolves to the type its OWN source declaration states', async () => {
+  for (const [name, expected] of [['repo-setup', 14], ['visual-aids', 11]]) {
+    const declared = declaredTypesFromSource(name);
+    assert.equal(declared.size, expected, `${name}: the source must declare ${expected} criterion types`);
+    const model = await parseChain(name);
+    assert.equal(model.ok, true);
+    for (const [id, type] of declared) {
+      assert.equal(model.acVerification.get(id), type, `${name} ${id}: resolved type must match its own declaration`);
+    }
+  }
+});
+
+test('AC-3: no chain\'s resolved verification type changes, except enforcement-spine AC-14', async () => {
+  for (const [name, before] of Object.entries(TYPES_BEFORE)) {
+    const model = await parseChain(name);
+    assert.equal(model.ok, true);
+    const corrections = EXPECTED_CORRECTIONS[name] || {};
+    for (const [id, wasType] of Object.entries(before)) {
+      const expected = id in corrections ? corrections[id] : wasType;
+      assert.equal(model.acVerification.get(id), expected, `${name} ${id}`);
+    }
+  }
+});
+
+test('AC-3: the enforcement-spine AC-14 correction agrees with that spec\'s own verification-map row', async () => {
+  const source = readFileSync(chainPath('enforcement-spine'), 'utf8');
+  const row = /^\|\s*AC-14\s*\|([^|]*)\|/m.exec(source);
+  assert.ok(row, 'enforcement-spine must carry an AC-14 verification-map row');
+  assert.match(row[1], /unit/i, 'the map row names a test oracle kind => test-backed');
+  const model = await parseChain('enforcement-spine');
+  assert.equal(model.acVerification.get('AC-14'), 'test-backed');
+});
+
+test('the real chains\' trace fields and forward-coverage links are preserved element-wise', async () => {
+  for (const [name, count] of Object.entries(FIELD_TRACES_BEFORE)) {
+    const model = await parseChain(name);
+    assert.equal(model.ok, true);
+    const fields = model.traces.filter((t) => ['advances', 'component', 'deps'].includes(t.kind));
+    assert.equal(fields.length, count, `${name} trace fields`);
+    assert.deepEqual(taskAcLinks(model), LINKS_BEFORE[name], `${name} forward-coverage links`);
+  }
+});
+
+test('every chain under docs/specs/ still exits 0 under the real CLI', () => {
+  for (const name of CHAINS) {
+    const result = spawnSync(process.execPath, [CLI, chainPath(name)], { encoding: 'utf8' });
+    assert.equal(result.status, 0, `${name}: ${result.stdout}${result.stderr}`);
+  }
+});

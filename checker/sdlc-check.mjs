@@ -284,7 +284,12 @@ const COMPONENT_LIST_ITEM_RE = /^\s*(\d+)\.\s+\*\*([^*]+)\*\*/;
 const OUTSIDE_CHECKER_HEADING_RE = /outside the checker/i;
 const SECTION_HEADING_RE = /^##(?!#)\s+(.+?)\s*$/;
 const SUBHEADING_RE = /^###\s+(.+?)\s*$/;
-const TOP_BULLET_RE = /^-\s+\*\*/;
+// A DEFINITION SITE: a line whose first non-whitespace content, after an optional list marker, is a
+// bold-lead id (`**AC-1**`, `- **T-1 — Title.**`, `  * **C-2** …`). Indentation and list markers are
+// presentation and never decide ownership — a marker-less `**AC-1** — …` line defines AC-1 exactly
+// as a bulleted one does. Anchored (`^`, non-global), unlike ID_DEFINITION_RE's scan-anywhere form:
+// an id cited mid-line defines nothing.
+const DEFINITION_SITE_RE = /^\s*(?:[-*+]\s+)?\*\*(AC|C|T)-(\d+)\b/;
 // Field capture stops at the first '.' after the marker. Not hit by any current spec field (no
 // field value contains an internal period — the slash-run and parenthetical forms observed in
 // practice never do), so left as-is: distinguishing a field-ending period from one inside
@@ -364,8 +369,8 @@ export function parseSpec(text, file = '<unknown spec file>') {
 }
 
 // SMA-465a — per-AC verification type: classify each defined AC by the verification-type of its OWN
-// top-level-bullet block, reusing splitTopBullets + ID_DEFINITION_RE so a type mention in a
-// neighbouring AC's block is never misattributed. Detection is DECLARATION-FIRST: the AC's
+// block, reusing splitOwnedBlocks (which names each block's owner) so a type mention in a
+// neighbouring AC's block, or in a following subsection, is never misattributed. Detection is DECLARATION-FIRST: the AC's
 // authoritative `Verification type: **X**` declaration wins, so a topic-word mention of the OTHER
 // type in the AC's own prose (e.g. a test-backed AC whose statement discusses "reviewer-checked")
 // never flips it; the loose `reviewer-checked` / `test-backed` keyword scan is only a FALLBACK, used
@@ -378,13 +383,11 @@ export function parseSpec(text, file = '<unknown spec file>') {
 export function extractAcVerification(sections) {
   const types = new Map();
   for (const section of sections) {
-    const blocks = splitTopBullets(section.body.split('\n'));
+    const blocks = splitOwnedBlocks(section.body.split('\n'));
     for (const block of blocks) {
       const blockText = block.lines.join('\n');
-      ID_DEFINITION_RE.lastIndex = 0;
-      const owner = ID_DEFINITION_RE.exec(blockText);
-      if (!owner || owner[1] !== 'AC') continue; // only AC-owning blocks; first site wins below
-      const id = `${owner[1]}-${owner[2]}`;
+      if (!block.owner.startsWith('AC-')) continue; // only AC-owning blocks; first site wins below
+      const id = block.owner;
       if (types.has(id)) continue;
       // Prefer the authoritative "Verification type: **X**" declaration (a topic-word mention of the
       // other type in the AC's prose must not flip it); fall back to a loose keyword scan only when the
@@ -522,16 +525,35 @@ function resolveComponentRefs(text, componentsByName) {
   return ids;
 }
 
-// Groups a section's lines into top-level bullet blocks (a line starting a bold-led bullet, plus
-// its wrapped continuation lines) so an *Advances:*/*Component:*/*Deps:* field is attributed to
-// the ID that OWNS that bullet, not a neighbouring one.
-function splitTopBullets(bodyLines) {
+// Groups a section's lines into OWNED blocks: a block opens at a definition site and closes at the
+// next definition site or the next `###` subheading, whichever comes first — so an
+// *Advances:*/*Component:*/*Deps:* field, a verification-type declaration, or an untraced marker is
+// attributed to the ID that OWNS the block it sits in, and to no other.
+//
+// The block carries its owner, taken from the opening line. Callers must NOT re-derive it by
+// scanning the block text for the first bold-lead id: that "first id in the blob wins" step is what
+// handed a whole section's fields to one id whenever the definition sites carried no list marker (a
+// non-id bold-lead line, e.g. a glossary bullet, opened the only block and swallowed the rest).
+//
+// The subheading boundary is load-bearing, not tidiness: without it the last id in a subsection
+// absorbs every trailing line until the next definition site and draws its classification from text
+// that belongs to the following subsection.
+//
+// Lines before the first definition site, and lines after a subheading that opens no new block,
+// belong to no block and are dropped. Never throws: untrusted hand-authored Markdown degrades to
+// FEWER blocks, never an exception and never a fabricated owner.
+// Returns Array<{ owner: 'AC-N'|'C-N'|'T-N', startIdx, lines }>.
+function splitOwnedBlocks(bodyLines) {
   const blocks = [];
   let current = null;
   bodyLines.forEach((line, i) => {
-    if (TOP_BULLET_RE.test(line)) {
+    const site = DEFINITION_SITE_RE.exec(line);
+    if (site) {
       if (current) blocks.push(current);
-      current = { startIdx: i, lines: [line] };
+      current = { owner: `${site[1]}-${site[2]}`, startIdx: i, lines: [line] };
+    } else if (SUBHEADING_RE.test(line)) {
+      if (current) blocks.push(current);
+      current = null;
     } else if (current) {
       current.lines.push(line);
     }
@@ -554,13 +576,10 @@ function isNonDanglingComponentValue(raw) {
 
 function extractFieldTraces(section, componentsByName) {
   const traces = [];
-  const blocks = splitTopBullets(section.body.split('\n'));
+  const blocks = splitOwnedBlocks(section.body.split('\n'));
   for (const block of blocks) {
     const blockText = block.lines.join('\n');
-    ID_DEFINITION_RE.lastIndex = 0;
-    const owner = ID_DEFINITION_RE.exec(blockText);
-    if (!owner) continue; // a bullet with no leading ID defines nothing to trace from
-    const fromId = `${owner[1]}-${owner[2]}`;
+    const fromId = block.owner;
 
     TRACE_FIELD_RE.lastIndex = 0;
     let m;
@@ -694,17 +713,28 @@ function extractProvenanceMarkers(sections) {
   return markers;
 }
 
-// An `untraced` marker is scoped to the same top-level-bullet ownership as a trace field (T-2's
-// splitTopBullets) — it marks a specific task/link, not the section at large.
+// An `untraced` marker is scoped to the same block ownership as a trace field (splitOwnedBlocks) —
+// it marks a specific task/link, not the section at large. A marker outside any owned block belongs
+// to no id and is dropped, exactly as a trace field there is.
+//
+// RATIFIED: a marker on a non-definition CONTINUATION line is attributed to the block's owner — the
+// preceding definition site — because ownership follows the block. A marker written inside T-1's
+// body means "T-1 is untraced", and it now works as authored. Under the old splitter that line
+// opened its own block and re-derived `from: null`, which was DEAD DATA: `checkBackwardCoverage`
+// looks markers up by task id (`u.from === taskId`, always a `T-N` string), so a null `from` could
+// never match and silenced nothing. Pinned by test, deliberately, not an accident of the splitter.
+//
+// RECORDED consequence of the load-bearing subheading boundary: a marker that follows a `###` opens
+// no block, so it belongs to no id and is dropped. This is fail-closed (the coverage note escalates
+// to a finding — louder, never quieter), so it stands as-is; pinned by test so it is recorded rather
+// than rediscovered.
 function extractUntracedMarkers(sections) {
   const markers = [];
   for (const section of sections) {
-    const blocks = splitTopBullets(section.body.split('\n'));
+    const blocks = splitOwnedBlocks(section.body.split('\n'));
     for (const block of blocks) {
       const blockText = block.lines.join('\n');
-      ID_DEFINITION_RE.lastIndex = 0;
-      const owner = ID_DEFINITION_RE.exec(blockText);
-      const fromId = owner ? `${owner[1]}-${owner[2]}` : null;
+      const fromId = block.owner;
       UNTRACED_RE.lastIndex = 0;
       let m;
       while ((m = UNTRACED_RE.exec(blockText))) {

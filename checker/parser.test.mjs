@@ -3,7 +3,7 @@
 // Fixtures are minimal inline spec strings (per plan Notes) — no committed fixture files.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseSpec, parseLedger, parseVerificationReport } from './sdlc-check.mjs';
+import { parseSpec, parseLedger, parseVerificationReport, checkBackwardCoverage } from './sdlc-check.mjs';
 
 // --- Typed parse failure: never a throw, never an empty-model pass ---
 
@@ -437,6 +437,53 @@ test('a task with a real AC reference carries no untraced marker', () => {
   assert.equal(result.untraced.length, 0);
 });
 
+// RATIFIED behaviour (pins the block-ownership rule for untraced markers): a marker on a
+// non-definition continuation line is attributed to the preceding definition site's OWNER, because
+// ownership follows the block. Pre-change that line opened its own block and re-derived
+// `from: null` — dead data, since checkBackwardCoverage looks markers up by task id and never by
+// null, so it silenced nothing. The marker now works as authored. This is a conscious ratification:
+// if it ever changes, it must be a decision, not a drift.
+test('an untraced marker on a non-definition continuation line is attributed to the block\'s owner', () => {
+  const spec = [
+    '## Plan',
+    '',
+    '- **T-1 — Do it.** Detail. *Component:* Widget. *Deps:* none.',
+    '- **Note** — AC: untraced (no upstream criterion applies).',
+  ].join('\n');
+  const result = parseSpec(spec, 'x.md');
+  assert.equal(result.ok, true);
+  assert.equal(result.untraced.length, 1);
+  assert.equal(result.untraced[0].from, 'T-1', 'the marker belongs to the block it sits in, not to nobody');
+  assert.equal(result.untraced[0].reason, 'no upstream criterion applies');
+});
+
+// RECORDED consequence of the load-bearing subheading boundary: a marker after a `###` opens no
+// block, so it is dropped and its task's coverage note escalates to a finding. Fail-closed (louder,
+// never quieter), so it needs no fix — but it is pinned here so it stays recorded rather than being
+// rediscovered as a surprise.
+//
+// The assertion runs THROUGH checkBackwardCoverage deliberately: pinning the drop alone would stay
+// green if that rule ever went lenient about a missing marker, which would turn this drop into real
+// silence — the exact failure class this feature exists to remove. The loudness is the reason the
+// drop is acceptable, so the loudness is what gets pinned.
+test('an untraced marker following a subheading is dropped, escalating its task to a FINDING (fail-closed)', () => {
+  const spec = [
+    '## Plan',
+    '',
+    '- **T-1 — Do it.** Detail. *Component:* Widget. *Deps:* none.',
+    '',
+    '### Notes',
+    '',
+    'AC: untraced (deliberate).',
+  ].join('\n');
+  const result = parseSpec(spec, 'x.md');
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.untraced, [], 'a marker outside any owned block silences nothing');
+  const items = checkBackwardCoverage(result).filter((i) => i.ids.includes('T-1'));
+  assert.equal(items.length, 1);
+  assert.equal(items[0].type, 'finding', 'the dropped marker must escalate T-1 to a finding, never silence it');
+});
+
 // --- Ledger parsing: task table + green-bar evidence blocks (T-3) ---
 
 test('missing ledger content fails cleanly, naming the file and the problem', () => {
@@ -667,4 +714,144 @@ test('a Type cell merely containing "test" as a substring is NOT normalized to t
   assert.equal(parsed.rows[0].type, 'attested');      // raw passthrough, not 'test-backed'
   assert.equal(parsed.rows[1].type, 'test-backed');
   assert.equal(parsed.rows[2].type, 'test-backed');   // whole word "test" still matches
+});
+
+// --- Block splitter: blocks anchor to a DEFINITION SITE, and each block names its owner (T-1) ---
+//
+// A definition site is a line whose first non-whitespace content, after an OPTIONAL list marker, is
+// a bold-lead id. Indentation and list markers are presentation and never decide ownership. A block
+// opens at a definition site and closes at the next definition site or the next `###` subheading,
+// whichever comes first. The owner comes from the opening line, never from "first bold-lead id in
+// the blob wins" — that re-derivation is what mis-attributed a whole section's fields to one id.
+
+test('a criterion defined with NO list marker is classified from its own block (AC-1)', () => {
+  const spec = [
+    '## Acceptance Criteria',
+    '',
+    '**AC-1** — First statement.',
+    '  Verification type: **test-backed**.',
+    '',
+    '**AC-2** — Second statement.',
+    '  Verification type: **reviewer-checked**.',
+  ].join('\n');
+  const result = parseSpec(spec, 'x.md');
+  assert.equal(result.ok, true);
+  assert.equal(result.acVerification.get('AC-1'), 'test-backed');
+  assert.equal(result.acVerification.get('AC-2'), 'reviewer-checked');
+});
+
+test('a task defined with NO list marker owns its own trace fields, and no other id\'s (AC-1)', () => {
+  const spec = [
+    '## Plan',
+    '',
+    '**T-1 — First.** Detail. *Advances:* AC-1. *Component:* none. *Deps:* none.',
+    '',
+    '**T-2 — Second.** Detail. *Advances:* AC-2. *Component:* none. *Deps:* T-1.',
+  ].join('\n');
+  const result = parseSpec(spec, 'x.md');
+  assert.equal(result.ok, true);
+  const advances = result.traces
+    .filter((t) => t.kind === 'advances')
+    .map((t) => `${t.from}->${t.refs.join(',')}`);
+  assert.deepEqual(advances, ['T-1->AC-1', 'T-2->AC-2']);
+  assert.deepEqual(result.traces.find((t) => t.kind === 'deps' && t.from === 'T-2').refs, ['T-1']);
+});
+
+test('a criterion defined with an INDENTED list marker is still its own block (AC-1)', () => {
+  const spec = [
+    '## Acceptance Criteria',
+    '  * **AC-1** — First. Verification type: **test-backed**.',
+    '  + **AC-2** — Second. Verification type: **reviewer-checked**.',
+  ].join('\n');
+  const result = parseSpec(spec, 'x.md');
+  assert.equal(result.ok, true);
+  assert.equal(result.acVerification.get('AC-1'), 'test-backed');
+  assert.equal(result.acVerification.get('AC-2'), 'reviewer-checked');
+});
+
+test('a bold-lead line that is NOT a definition site never owns a following id\'s fields (AC-2)', () => {
+  // The field incident: a glossary bullet opened a block, the marker-less definition sites below it
+  // were absorbed as continuation lines, and re-derivation handed EVERY field to the first id seen.
+  const spec = [
+    '## Plan',
+    '',
+    '**T-1 — First.** Detail. *Advances:* AC-1. *Component:* none. *Deps:* none.',
+    '',
+    '- **Blast radius** — a content bullet between definition sites; not a definition site.',
+    '',
+    '**T-2 — Second.** Detail. *Advances:* AC-2. *Component:* none. *Deps:* none.',
+  ].join('\n');
+  const result = parseSpec(spec, 'x.md');
+  assert.equal(result.ok, true);
+  const advances = result.traces
+    .filter((t) => t.kind === 'advances')
+    .map((t) => `${t.from}->${t.refs.join(',')}`);
+  assert.deepEqual(advances, ['T-1->AC-1', 'T-2->AC-2']);
+});
+
+test('a bold-lead non-definition line before the first definition site owns nothing (AC-2)', () => {
+  const spec = [
+    '## Plan',
+    '- **Ownership** — a glossary bullet carrying a stray *Advances:* AC-9. mention.',
+    '',
+    '**T-1 — First.** Detail. *Advances:* AC-1. *Component:* none. *Deps:* none.',
+  ].join('\n');
+  const result = parseSpec(spec, 'x.md');
+  assert.equal(result.ok, true);
+  const advances = result.traces
+    .filter((t) => t.kind === 'advances')
+    .map((t) => `${t.from}->${t.refs.join(',')}`);
+  assert.deepEqual(advances, ['T-1->AC-1'], 'the pre-definition-site glossary bullet is dropped');
+});
+
+test('a block closes at the next `###` subheading rather than absorbing it', () => {
+  // Mirrors the real enforcement-spine AC-14 shape: the criterion states its own type in the
+  // fallback (keyword) form, and the NEXT subheading's title names the other type.
+  const spec = [
+    '## Acceptance Criteria',
+    '',
+    '**AC-1** — A criterion whose own text says *test-backed: unit.*',
+    '',
+    '### Skill wiring (reviewer-checked)',
+    '',
+    'Trailing prose that belongs to the subheading, not to AC-1.',
+  ].join('\n');
+  const result = parseSpec(spec, 'x.md');
+  assert.equal(result.ok, true);
+  assert.equal(result.acVerification.get('AC-1'), 'test-backed');
+});
+
+test('lines after a subheading that opens no new block belong to no block', () => {
+  const spec = [
+    '## Plan',
+    '',
+    '**T-1 — First.** Detail. *Advances:* AC-1. *Component:* none. *Deps:* none.',
+    '',
+    '### Notes',
+    '',
+    'Prose mentioning *Advances:* AC-9. which belongs to no task.',
+  ].join('\n');
+  const result = parseSpec(spec, 'x.md');
+  assert.equal(result.ok, true);
+  const advances = result.traces
+    .filter((t) => t.kind === 'advances')
+    .map((t) => `${t.from}->${t.refs.join(',')}`);
+  assert.deepEqual(advances, ['T-1->AC-1']);
+});
+
+test('the block splitter degrades to FEWER blocks on ragged input, never throws or fabricates an owner', () => {
+  const spec = [
+    '## Plan',
+    '',
+    '### Only a subheading',
+    '',
+    '   ',
+    'Loose prose with a **bold** span and a stray *Deps:* T-4. field but no definition site.',
+  ].join('\n');
+  let result;
+  assert.doesNotThrow(() => {
+    result = parseSpec(spec, 'x.md');
+  });
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.traces.filter((t) => ['advances', 'component', 'deps'].includes(t.kind)), []);
 });
