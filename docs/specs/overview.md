@@ -3,10 +3,14 @@
 ## Overview
 
 This repo is **agent-sdlc's own repo**: a full-SDLC pipeline for AI coding agents, packaged as a
-single plugin and served from the repo root as its own dual-tool marketplace (`agent-sdlc`, Claude
-Code + Cursor). This `docs/specs/` tree applies agent-sdlc to itself: features of the pipeline are
-shaped, gated, and built through the pipeline they implement. Feature specs are immutable
-snapshots; this overview is the living project-tier document.
+single plugin and served from the repo root as its own marketplace, across **four targets**: Claude
+Code and Cursor (each a marketplace importing the plugin at the repo root), OpenAI Codex (a
+marketplace under `.agents/plugins/`), and pi (a direct package install, not a marketplace). This
+`docs/specs/` tree applies agent-sdlc to itself: features of the pipeline are shaped, gated, and
+built through the pipeline they implement. This overview is the living project-tier document; a
+feature's spec is the record of how it shipped, kept as authored and pruned when it stops earning
+its place, rather than frozen (the immutable-snapshot framing was walked back in 0.13.0, and a
+review gate may still correct a spec that turns out to be wrong).
 
 The repo previously hosted a second plugin, **review-gate**, as the two-plugin marketplace
 `smarzban-skills`; that gate is now the standalone **Empanel** product (`smarzban/empanel` — its
@@ -30,19 +34,24 @@ public/private agent-instruction split (`AGENTS.md` + gitignored `AGENTS.local.m
 gitignore/CI/templates/verify-command scaffolding, audit mode on existing repos, and opt-in
 agent-sdlc pipeline adoption.
 
-In flight: `visual-aids` (shaped 2026-07-14). The front-half thinking stages gain a sanctioned way
-to draw instead of talk when a question is better seen than read: one per-question heuristic (the
-visual test) plus two kinds of visual aid, a committed spec diagram and a throwaway scratch visual
-offered for consent. `architecture-design` primary, `idea` secondary; no interactive companion, no
-checker change.
+`visual-aids` shipped 2026-07-15: the front-half thinking stages gained a sanctioned way to draw
+instead of talk when a question is better seen than read. One per-question heuristic (the visual
+test) plus two kinds of visual aid, a committed spec diagram and a throwaway consent-gated scratch
+visual, stated once in a shared reference doc that `architecture-design` (primary) and `idea`
+(secondary) each hook. No interactive companion, no checker change, no runtime.
 
 ## Architecture
 
 The repo's shape, as it exists:
 
-- **One plugin, one repo, self-hosted marketplace.** The pipeline is expressed as instruction
-  documents (Markdown skills + reference files) at `skills/`; both harness manifests
-  (`.claude-plugin/`, `.cursor-plugin/`) list the plugin at the repo root.
+- **One plugin, one repo, four install targets.** The pipeline is expressed as instruction documents
+  (Markdown skills + reference files) at `skills/`, and every target reads that one tree. Three carry
+  a plugin manifest whose `version` moves in lockstep (`.claude-plugin/`, `.cursor-plugin/`,
+  `.codex-plugin/`) plus the root `package.json` (pi's manifest, `pi.skills` -> `./skills`) — **four
+  version fields, bumped together**, since a stale version is how a harness serves a cached plugin.
+  The marketplace manifests (`.claude-plugin/`, `.cursor-plugin/`, `.agents/plugins/`) carry no
+  version. Claude Code and Cursor import the repo as a marketplace; Codex reads
+  `.agents/plugins/marketplace.json`; pi installs the package directly and has no marketplace.
 - **The committed-artifact pattern.** Anything executable ships committed and runnable as-is —
   the `checker/sdlc-check.mjs` enforcement spine plus its `bin/sdlc-check` on-PATH launcher;
   nothing in the repo requires an install-time build step. New executable components follow this
