@@ -4,6 +4,21 @@ Canonical vocabulary for this repo's spec chain. Glossary only — no implementa
 
 - **enforcement spine** — the deterministic layer (`sdlc-check` + terminal AC verification) that
   verifies agent-sdlc's mechanical promises with trusted code instead of agent self-assertion.
+- **definition site** — a line whose first non-whitespace content, after an optional list marker, is
+  a bold-lead id; the place a spec declares that an id exists. Indentation and list markers are
+  presentation and never decide whether a line is one.
+- **block owner** — the single id (`AC-N`, `C-N`, `T-N`) a parsed block of spec text belongs to;
+  every trace field and verification-type declaration inside the block is attributed to it.
+- **id-anchored block** — a block whose boundary is set by the identity it declares: it opens at a
+  definition site and closes at the next definition site or the next subheading, whichever comes
+  first, so ownership never depends on how the text is presented (bulleted, paragraph, indented, or
+  otherwise). The subheading half is load-bearing: identity alone does not bound the last id in a
+  subsection, which then absorbs the text that follows it.
+- **corroboration rule** — *(proposed and withdrawn; retained because the term names the idea)* a
+  checker rule over two independent mechanisms describing the same fact, requiring them to agree
+  rather than letting either satisfy a check alone. Withdrawn on evidence: its only firings were
+  artifacts of a parser limitation, and it could not see the total-trace-loss it was proposed to
+  catch.
 - **sdlc-check** — the dependency-free checker script committed inside the agent-sdlc plugin;
   parses the consolidated spec and verifies trace, coverage, ledger-vs-git, green-bar evidence,
   and provenance markers. Reports; never edits.
