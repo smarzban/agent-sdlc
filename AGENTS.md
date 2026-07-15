@@ -35,7 +35,7 @@ agent-sdlc/ (repo root = the plugin AND its marketplace)
 ├── checker/          ← sdlc-check.mjs (zero-dep Node ≥22 ESM enforcement spine) + its node:test suite
 ├── skills/           ← the pipeline + documentation + repo-setup skills, some with reference/
 ├── docs/             ← user + contributor docs (landing index, quickstart, usage/, development)
-└── docs/specs/       ← the dogfood spec tree (immutable snapshots + a living overview.md)
+└── docs/specs/       ← the dogfood spec tree (exemplar chains + a living overview.md)
 ```
 
 The pipeline: `idea → acceptance-criteria → architecture-design → techstack → plan → gate → build
