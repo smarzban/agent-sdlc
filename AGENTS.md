@@ -7,12 +7,12 @@ no, it belongs in AGENTS.local.md.
 
 A gitignored AGENTS.local.md may exist beside this file; if present, read and follow it before starting work.
 
-Pointer files carry no content: edits go to AGENTS.md or AGENTS.local.md, never CLAUDE.md — it is a
+Pointer files carry no content: edits go to AGENTS.md or AGENTS.local.md, never CLAUDE.md. It is a
 frozen one-line pointer and says so in-file.
 
 Lazy creation: if an agent has private-routed content (per the litmus test above) and no
-AGENTS.local.md exists yet in this working copy, it creates one — the committed .gitignore entry
-already covers it, so the pattern self-propagates to every clone.
+AGENTS.local.md exists yet in this working copy, it creates one (the committed .gitignore entry
+already covers it), so the pattern self-propagates to every clone.
 
 @AGENTS.local.md
 
@@ -31,7 +31,7 @@ agent-sdlc/ (repo root = the plugin AND its marketplace)
 ├── .cursor-plugin/   ← marketplace.json (source ".")  + plugin.json   } version in LOCKSTEP
 ├── .codex-plugin/    ← plugin.json (marketplace: .agents/plugins/)    } across all four
 ├── package.json      ← pi manifest: keywords + pi.skills -> ./skills  } plugin manifests
-├── bin/sdlc-check    ← on-PATH launcher (resolves ../checker relative to itself — layout-proof)
+├── bin/sdlc-check    ← on-PATH launcher (resolves ../checker relative to itself: layout-proof)
 ├── checker/          ← sdlc-check.mjs (zero-dep Node ≥22 ESM enforcement spine) + its node:test suite
 ├── skills/           ← the pipeline + documentation + repo-setup skills, some with reference/
 ├── docs/             ← user + contributor docs (landing index, quickstart, usage/, development)
@@ -51,8 +51,8 @@ when the gate is absent). A light tier compresses small changes (same gate/build
 
 Zero runtime dependencies; Node ≥22, ESM.
 
-- **Test:** `node --test checker/*.test.mjs` — read the exit code directly, never piped.
-- **Canonical verify (self-gate):** `node checker/sdlc-check.mjs <spec>` — must exit 0 on every
+- **Test:** `node --test checker/*.test.mjs`: read the exit code directly, never piped.
+- **Canonical verify (self-gate):** `node checker/sdlc-check.mjs <spec>`: must exit 0 on every
   shipped spec.
 - **On-PATH launcher:** `bin/sdlc-check` resolves `../checker` relative to itself (layout-proof).
 - CI runs the checker suite + self-gate on push/PR (ubuntu + macos matrix, least-privilege token).
@@ -65,19 +65,21 @@ Zero runtime dependencies; Node ≥22, ESM.
 - Body sections, in order: one-paragraph intent; `<HARD-GATE>`; the method (`## Checklist` /
   `## The X bar`); `## Principles`; `## Rationalizations` (excuse→rebuttal table); `## Red flags`;
   `## Done when`; `## The artifact (output)`; `## Conventions`.
-- Voice: terse, high-signal, imperative. `->` arrows, em-dashes, no filler.
+- Voice: terse, high-signal, imperative. `->` arrows, no filler. **No em-dashes**: use a colon, a
+  comma, parentheses, or two sentences. New and edited text follows this; the existing corpus is not
+  retro-fitted, so expect both styles until a file is next touched.
 - Reference files: long material goes in `reference/` subdirs the SKILL.md links on demand. Every
   target harness auto-discovers any `skills/` subdir with a SKILL.md, so no manifest edit per skill.
-- Checker coupling: the checker grammar is documented in the stage SKILL bodies — change grammar
+- Checker coupling: the checker grammar is documented in the stage SKILL bodies. Change grammar
   only with tests (`node --test checker/*.test.mjs`, exit code read directly, never piped).
 - Skill text stays self-contained: it never cites dogfood spec AC ids or `docs/specs/…` paths
   (irrelevant to a user's agent). The pipeline skills' generic `AC-N` / `docs/specs/<feature>/`
   grammar is their contract and stays.
 
 **Git + release:**
-- Conventional Commits with an area scope — `feat(build): …`, `feat(T-N): …` (build tasks; the
+- Conventional Commits with an area scope: `feat(build): …`, `feat(T-N): …` (build tasks; the
   recorded-commit rule matches the scope position), `docs(agent-sdlc): …`, `chore(release): …`.
-- Never commit straight to `main`; branch → **merge fast-forward, SHA-preserving** (REQUIRED — the
+- Never commit straight to `main`; branch → **merge fast-forward, SHA-preserving** (REQUIRED: the
   checker's recorded-commit rule needs every task SHA reachable; never squash/rebase-merge). Delete
   merged branches. Never `git add -A` (this repo carries intentionally-untracked trees); add paths
   explicitly.

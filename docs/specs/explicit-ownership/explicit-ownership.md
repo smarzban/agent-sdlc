@@ -193,23 +193,23 @@ withdrawn corroboration rule and are recorded under "Deferred" rather than reuse
 
 ### Block ownership (test-backed)
 
-- **AC-1** — Given a section whose criteria are defined at definition sites carrying no list
+- **AC-1**: Given a section whose criteria are defined at definition sites carrying no list
   marker, each defined id's own trace fields and verification-type declaration are attributed to
-  that id and to no other id. *(Verification type: **test-backed** — unit.)*
-- **AC-2** — Given a bold-lead line that is not a definition site (a glossary term, a content
+  that id and to no other id. *(Verification type: **test-backed**, unit.)*
+- **AC-2**: Given a bold-lead line that is not a definition site (a glossary term, a content
   bullet) placed before or between definition sites, every id defined after it retains ownership of
-  its own trace fields and verification-type declaration. *(Verification type: **test-backed** —
+  its own trace fields and verification-type declaration. *(Verification type: **test-backed**,
   unit.)*
-- **AC-3** — Given the spec chains in `docs/specs/`, no criterion's resolved verification type
+- **AC-3**: Given the spec chains in `docs/specs/`, no criterion's resolved verification type
   changes except where the change corrects a demonstrable mis-attribution, and every such correction
   agrees with that spec's own verification-map row. Falsifiable: exactly one correction is expected
   (`enforcement-spine` AC-14, resolved `reviewer-checked` today because its block absorbs the
   following `### Skill wiring (reviewer-checked)` heading, while its own text and its
-  verification-map row both say test-backed). *(Verification type: **test-backed** — integration.)*
-- **AC-4** — Given `repo-setup` (14 criteria) and `visual-aids` (11 criteria), whose criteria are
+  verification-map row both say test-backed). *(Verification type: **test-backed**, integration.)*
+- **AC-4**: Given `repo-setup` (14 criteria) and `visual-aids` (11 criteria), whose criteria are
   defined at definition sites carrying no list marker, every criterion's verification type resolves
   to a non-null value. Measured before this change: 0 of 14 and 1 of 11. *(Verification type:
-  **test-backed** — integration.)*
+  **test-backed**, integration.)*
 
 ### Build brief path (reviewer-checked)
 
@@ -217,26 +217,26 @@ Justification: the deliverable is skill prose (Markdown instructions) that no ch
 execute; conformance is judged by reading the skill text against the criterion. Axis: **Spec
 Conformance**.
 
-- **AC-9** — Does the build skill's subagent-brief hand-off name a brief path that carries the
+- **AC-9**: Does the build skill's subagent-brief hand-off name a brief path that carries the
   feature identifier, so no two features resolve a given task id to the same file? Pass = the
   stated path is scoped by feature; fail = any brief path is feature-agnostic. *(Verification type:
-  **reviewer-checked** — axis: Spec Conformance.)*
+  **reviewer-checked**, axis: Spec Conformance.)*
 
 ### Negative criteria
 
-- **NC-1** — No rule cross-checking a task's trace field against its coverage-map row. Withdrawn at
+- **NC-1**: No rule cross-checking a task's trace field against its coverage-map row. Withdrawn at
   the gate; re-proposing it is a scope change requiring the "Withdrawn scope" section to be answered
   first.
-- **NC-2** — No spec under `docs/specs/` is edited by this feature. The only in-tree behaviour change
+- **NC-2**: No spec under `docs/specs/` is edited by this feature. The only in-tree behaviour change
   is AC-3's single classification correction, which changes no spec text.
-- **NC-3** — No rule detecting a block that contains more than one id definition. Id-anchoring makes
+- **NC-3**: No rule detecting a block that contains more than one id definition. Id-anchoring makes
   that state unreachable.
-- **NC-4** — No guard refusing a brief whose front matter names a different feature. The scoped path
+- **NC-4**: No guard refusing a brief whose front matter names a different feature. The scoped path
   carries the identity.
-- **NC-5** — No new requirement, in any skill body, that a bold-lead id also be bulleted.
-- **NC-6** — No change to how a trace field's value or a coverage-map cell is captured. Both scrape
+- **NC-5**: No new requirement, in any skill body, that a bold-lead id also be bulleted.
+- **NC-6**: No change to how a trace field's value or a coverage-map cell is captured. Both scrape
   prose into citations; both are recorded under "Known and unfixed" and neither is fixed here.
-- **NC-7** — No seeded-defect eval corpus. That is SMA-405's checker half and this work's follow-up.
+- **NC-7**: No seeded-defect eval corpus. That is SMA-405's checker half and this work's follow-up.
 
 ### Verification map
 
@@ -253,10 +253,10 @@ Conformance**.
 Ids below are written unbolded on purpose: a bold-lead id is a *definition*, and a deferred criterion
 must not re-enter the coverage set it was removed from.
 
-- Criteria five, six and seven (`AC-5`/`AC-6`/`AC-7`) — the corroboration rule's behaviour (fires on
+- Criteria five, six and seven (`AC-5`/`AC-6`/`AC-7`): the corroboration rule's behaviour (fires on
   disagreement, silent on agreement, silent on a single source). Deferred with the rule; see the
   Brief's "Withdrawn scope".
-- Criterion eight (`AC-8`) — "every spec chain exits 0 under the checker". Deferred, and it was
+- Criterion eight (`AC-8`): "every spec chain exits 0 under the checker". Deferred, and it was
   defective as written: every chain exits 0 **today**, so the criterion was satisfied before the work
   began and could not be advanced by any task. It only becomes falsifiable alongside a rule that can
   fail it.
@@ -278,13 +278,13 @@ flexibility.
 
 ### Components
 
-1. **block splitter** — Partitions a section's lines into blocks and names each block's owner. The
+1. **block splitter**: Partitions a section's lines into blocks and names each block's owner. The
    single definition of what a block is and who owns it. Kind: a pure text-partitioning function
    inside the enforcement spine.
 
 ### Outside the checker (changed components)
 
-1. **build skill text** — The subagent-brief hand-off that names where a task's brief lives.
+1. **build skill text**: The subagent-brief hand-off that names where a task's brief lives.
 
 ### Contracts
 
@@ -353,7 +353,7 @@ None beyond those already recorded.
 
 ## Tech Stack
 
-**No new products — reuses the declared stack** (green bar: `node --test checker/*.test.mjs`, exit
+**No new products: reuses the declared stack** (green bar: `node --test checker/*.test.mjs`, exit
 code read directly and never through a pipe; plus the canonical self-gate `node
 checker/sdlc-check.mjs <spec>`, which must exit 0 on every shipped spec). Every component this
 feature touches is an existing function inside the committed `checker/sdlc-check.mjs` (Node >= 22,
@@ -417,7 +417,7 @@ withdrawn corroboration rule and are recorded under "Deferred" rather than reuse
 
 ### Tasks
 
-- **T-1 — Block splitter: anchor blocks to identity and name the owner.** Change
+- **T-1: Block splitter, anchor blocks to identity and name the owner.** Change
   `checker/sdlc-check.mjs`: replace `TOP_BULLET_RE` with a definition-site match
   (`/^\s*(?:[-*+]\s+)?\*\*(AC|C|T)-(\d+)\b/`); rewrite `splitTopBullets` so a block opens at a
   definition site and closes at the next definition site or the next `###` subheading, whichever
@@ -436,7 +436,7 @@ withdrawn corroboration rule and are recorded under "Deferred" rather than reuse
   from `probes/probe-output.txt`, which was produced **before** the change: a golden table generated
   from the post-change run would assert only that the code agrees with itself.
   *Advances:* AC-1, AC-2, AC-3, AC-4. *Component:* block splitter. *Deps:* none.
-- **T-5 — Build brief path: carry the feature identifier.** Change
+- **T-5: Build brief path, carry the feature identifier.** Change
   `skills/build/reference/subagent-loop.md`: scope the subagent-brief hand-off path by feature
   (`.agent-sdlc/briefs/<feature>/T-N.md`) at all three places it names a brief path (the dispatch
   hand-off, the review-diff capture, and the findings hand-back), so no two features resolve a given

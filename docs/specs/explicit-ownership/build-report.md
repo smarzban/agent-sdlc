@@ -1,4 +1,4 @@
-# Build report — explicit-ownership
+# Build report: explicit-ownership
 
 Branch `feat/explicit-ownership`. Both tasks done, reviewed, and green.
 
@@ -72,7 +72,7 @@ Baseline was 157; T-1 adds 16 tests (13 from the implementer, 3 from the review 
 
 ### T-5 (@ `84e2e47`)
 
-T-5 is a prose task and adds no tests, so its suite summary is the correct bounded form — still the
+T-5 is a prose task and adds no tests, so its suite summary is the correct bounded form: still the
 conductor's own run against the staged snapshot, not a subagent's report:
 
 ```
@@ -90,7 +90,7 @@ AC-9 is reviewer-checked; its proof is the review verdict, recorded below.
 
 Every bar reading in this build: the exact command captured to a file first (`cmd > out.txt 2>&1;
 rc=$?`), the exit code read from the unpiped command's own status, and the verdict taken from the
-machine reporter's `# fail N` line — never a scraped human summary, never a pipeline's exit, never a
+machine reporter's `# fail N` line, never a scraped human summary, never a pipeline's exit, never a
 subagent's transcribed count.
 
 ## Review record
@@ -107,48 +107,48 @@ Both T-1 reviewers verified rather than accepted:
   `LINKS_BEFORE` match element-wise. The tables are real pre-change measurements, not a post-change
   regeneration.
 - The **I2 fix** was mutation-tested: a mutant keeping every criterion non-null while inverting every
-  declared value makes AC-4's test pass and the new source-grounded oracle test fail — which is
+  declared value makes AC-4's test pass and the new source-grounded oracle test fail, which is
   exactly the hole I2 named.
 - The **M1 sharpening** was mutation-tested: making `checkBackwardCoverage` lenient about a missing
   marker turns the test red, and only that test. It bites.
 
 ## Deviations
 
-- **D-1 — a behaviour ratified in review, not planned.** An `AC: untraced` marker on a
+- **D-1: a behaviour ratified in review, not planned.** An `AC: untraced` marker on a
   non-definition continuation line is now attributed to its block's owning task. Pre-change it parsed
   as `from: null`, which `checkBackwardCoverage` (its only consumer, looking markers up by task id)
   can never match, so it was dead data that silenced nothing. The new behaviour makes the marker do
   what its author asked. **Disposition:** ratified by the conductor and pinned by test rather than
-  amended into `## Plan` — it changes no plan text, adds no rule (NC-1/NC-3 forbid that), and no
+  amended into `## Plan`: it changes no plan text, adds no rule (NC-1/NC-3 forbid that), and no
   in-tree chain carries an `untraced` marker at all. It is the only change in the diff that makes the
   gate quieter, which is why it was ruled on explicitly rather than absorbed.
-- **D-2 — the review diff had to be scoped by hand.** The hand-off's documented blind-diff command
+- **D-2: the review diff had to be scoped by hand.** The hand-off's documented blind-diff command
   (`git add -N . ':(exclude).agent-sdlc'`) swept `tool-feedback-2026-07-15.md`, an intentionally
   untracked file, into T-1's review diff. Scoped to `git add -N checker/` instead. **Disposition:**
   no plan change; banked as field feedback. It is the same class as the `git add -A` ban this repo's
   AGENTS.md already carries, and it bites this repo precisely because it deliberately keeps untracked
   trees.
-- **D-3 — this feature's own defect was live during its own build.** `.agent-sdlc/briefs/` held
+- **D-3: this feature's own defect was live during its own build.** `.agent-sdlc/briefs/` held
   `repo-setup`'s flat `T-1.md`..`T-8.md` from 2026-07-08. Dispatching T-1 at the documented path would
   have handed the implementer another feature's brief. Briefs were written to
-  `.agent-sdlc/briefs/explicit-ownership/` — which is what T-5 then made the standing rule. The stale
+  `.agent-sdlc/briefs/explicit-ownership/`, which is what T-5 then made the standing rule. The stale
   `repo-setup` set was left untouched: deleting another feature's record is not a build's call.
   **Disposition:** none needed; this is T-5's fix applied to itself.
 
 ## Banked follow-ups (out of scope, recorded so they are not rediscovered)
 
 - **Fence-blindness (review M2).** A bold-lead id inside a fenced code block opens a block and can pin
-  the wrong type. Verified **pre-existing** — the pre-change build mis-classifies identically; the
+  the wrong type. Verified **pre-existing**: the pre-change build mis-classifies identically; the
   marker-less broadening only widens the trigger surface. No chain has a bold-lead id inside a fence.
   Fence-tracking would be a new rule AC-1..AC-4 never called for.
 - **The blind-diff command's `git add -N .` breadth** (D-2 above).
-- **A coverage-map cell's prose is scraped for ids** — `| AC-10 | T-8 (supersedes T-5) |` creates a
+- **A coverage-map cell's prose is scraped for ids**: `| AC-10 | T-8 (supersedes T-5) |` creates a
   link claiming the superseded T-5 advances AC-10. Verified benign today: no criterion on any chain is
   reached only by a scraped ref. Recorded in the spec under "Known and unfixed".
 
 ## Checker corroboration
 
-- **Resume:** not applicable — this was a fresh build with no prior ledger.
+- **Resume:** not applicable (this was a fresh build with no prior ledger).
 - **Build-complete:** **corroborated, exit 0.**
 
 ```

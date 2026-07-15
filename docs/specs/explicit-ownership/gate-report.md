@@ -1,4 +1,4 @@
-# Gate report — explicit-ownership
+# Gate report: explicit-ownership
 
 **Current verdict (round 2, after re-scope): READY TO BUILD.** No Critical or High findings.
 Round 1's verdict and findings are preserved below unedited: they are why the feature is now half
@@ -11,7 +11,7 @@ and silently re-pointing it would be the same class of edit round 1 rejected.
 
 ---
 
-# Round 1 — 2026-07-15
+# Round 1: 2026-07-15
 
 **Verdict: NOT READY TO BUILD.** Blocking: C1, C2, H1, H2, H3, H4.
 
@@ -39,7 +39,7 @@ criterion, every component is justified. The failures below are not gaps; they a
 
 ## Findings
 
-### C1 — Critical. The "three disagreeing tasks" claim is false; there are two.
+### C1: Critical. The "three disagreeing tasks" claim is false; there are two.
 
 *Location:* AC-8, Plan T-3, ADR-0002 Context. *Owner:* acceptance-criteria + plan + design (ADR).
 
@@ -54,7 +54,7 @@ correctly-marked superseded task.
 (violating NC-5) or rewrites `*Advances:* none.` into a claim that is simply false. ADR-0002's
 licence to open `repo-setup` at all rests on a case that does not exist.
 
-### C2 — Critical. The rule is largely blind to the failure the Brief defines it against.
+### C2: Critical. The rule is largely blind to the failure the Brief defines it against.
 
 *Location:* Brief ("the coverage map masks total loss of the per-task trace") vs AC-7. *Owner:* idea.
 
@@ -65,7 +65,7 @@ entirely, so each looks map-only and stays silent. Only T-2, whose field survive
 fires. The rule catches the incident by luck of where the bloat landed, and detects 1 of 4 corrupted
 tasks. The Brief's claim that this rule makes the masking loud is not delivered by this design.
 
-### H1 — High. The errata delete accurate information; ADR-0002's premise is false.
+### H1: High. The errata delete accurate information; ADR-0002's premise is false.
 
 *Location:* ADR-0002 Consequences, NC-6, Plan T-3. *Owner:* design (ADR) + idea.
 
@@ -84,7 +84,7 @@ and the rule correct: **extend the grammar to express the weaker relation**. And
 (c) as "the worst option" for tuning a relation until known failures fall outside it, while adopting
 the mirror image: tuning the corpus until the known failures disappear.
 
-### H2 — High. AC-8 is already satisfied; T-3 cannot advance it.
+### H2: High. AC-8 is already satisfied; T-3 cannot advance it.
 
 *Location:* AC-8, coverage map row `AC-8 | T-3`. *Owner:* acceptance-criteria.
 
@@ -93,14 +93,14 @@ today. A criterion true before the work begins cannot be advanced by a task, and
 substitutes a different test. AC-8 only becomes falsifiable once T-4 lands the rule, so it is a
 constraint on T-4 mis-traced to T-3.
 
-### H3 — High. AC-7 is traced to T-2 but implemented and tested by T-4.
+### H3: High. AC-7 is traced to T-2 but implemented and tested by T-4.
 
 *Location:* criterion-to-component map, coverage map, T-2, T-4. *Owner:* plan.
 
 AC-7 is rule behaviour. No rule exists at T-2, so T-2's test cannot assert it. T-4's own failing test
 covers exactly AC-7's two cases, yet T-4's trace field names only AC-5 and AC-6.
 
-### H4 — High. The Brief's headline evidence table is wrong for `enforcement-spine`.
+### H4: High. The Brief's headline evidence table is wrong for `enforcement-spine`.
 
 *Location:* Brief evidence table, AC-4. *Owner:* idea + acceptance-criteria.
 
@@ -111,19 +111,19 @@ But `enforcement-spine` carries **zero** `Verification type:` declarations in so
 own flagged section (AC-15..AC-18 are null) contradicts the Brief directly. AC-4 inherits the error:
 under AC-4's own metric, `enforcement-spine` is 0 of 0.
 
-### M1 — Medium. This spec's AC-3 declares `integration`; its verification map says `unit`.
+### M1: Medium. This spec's AC-3 declares `integration`; its verification map says `unit`.
 
 *Owner:* acceptance-criteria. The internal-inconsistency class ADR-0002 licenses errata for, in the
 spec authoring the licence, in the criterion that adjudicates corrections by map-row agreement.
 
-### M2 — Medium. Seam rot: the Brief still describes the pre-probe design.
+### M2: Medium. Seam rot: the Brief still describes the pre-probe design.
 
 *Owner:* idea. The subheading boundary appears only in Design, Tech Stack and Plan. The Brief's Scope
 still says "a block opens at a line-start id definition", its Chosen approach still says "one
-change", and its load-bearing claim is still worded "preserves 18-of-18" — which variant B does not
+change", and its load-bearing claim is still worded "preserves 18-of-18", which variant B does not
 do, and which is why AC-3 was reframed. A start-anywhere re-entry from the Brief rebuilds variant A.
 
-### M3 — Medium. The self-gate is never probed under the new splitter.
+### M3: Medium. The self-gate is never probed under the new splitter.
 
 *Owner:* techstack. The probe measures classification and owner counts only; it never runs
 `sdlc-check` under variant B. T-1 makes previously-invisible text visible (`repo-setup` 0→14 blocks,
@@ -132,12 +132,12 @@ findings. This gate verified that forward-coverage links are preserved exactly o
 which is necessary but not sufficient: trace-integrity findings were not checked. On a feature whose
 thesis is "the green bar is the real defect", not probing the green bar is the gap that matters.
 
-### M4 — Medium. T-2's second failing test is unwritable before the change and tautological after.
+### M4: Medium. T-2's second failing test is unwritable before the change and tautological after.
 
 *Owner:* plan. "The union equals the flat relation" cannot be written before the refactor and is
 trivially true after, since the flat relation is derived from the sources.
 
-### L1 — Low. The Brief and AC-4 say "three in-tree chains"; there are five (six with this one).
+### L1: Low. The Brief and AC-4 say "three in-tree chains"; there are five (six with this one).
 
 *Owner:* idea.
 
@@ -175,7 +175,7 @@ genuine, and it fixes a measured defect.
 
 ---
 
-# Round 2 — 2026-07-15, after re-scope
+# Round 2: 2026-07-15, after re-scope
 
 **Verdict: READY TO BUILD.** No Critical, no High.
 
@@ -184,7 +184,7 @@ link-source extractor, and ADR-0002 were withdrawn. What remains is id-anchored 
 (AC-1..AC-4, T-1) and the build brief path (AC-9, T-5). Withdrawn criterion and task ids are
 deferred, not reused.
 
-## Round 1 findings — disposition
+## Round 1 findings: disposition
 
 | Finding | Disposition |
 | --- | --- |
@@ -205,7 +205,7 @@ Round 2's reviewer did not accept the probe. It applied variant B to `splitTopBu
 copy of the checker and ran the real self-gate: **all six chains exit 0, 0 findings, 0 notes**, and
 the existing suite regresses **zero** tests. It also re-derived the trace-field counts (32/32, 24/24,
 12/12, 15/15, 15/15) and verified forward-coverage links **element-wise** rather than by count
-(36/36, 23/23, 15/15, 11/11, 7/7 — zero lost, zero gained). The sole classification change across
+(36/36, 23/23, 15/15, 11/11, 7/7: zero lost, zero gained). The sole classification change across
 every chain is `enforcement-spine` AC-14, corroborated by its own map row.
 
 Every remaining criterion was checked for the H2 defect (already-satisfied). All five are false today
@@ -215,21 +215,21 @@ and true after their task, AC-3 included.
 
 **Critical: none. High: none.**
 
-- **M1 — Medium (fixed in place).** `CONTEXT.md`'s `id-anchored block` entry still defined the
+- **M1: Medium (fixed in place).** `CONTEXT.md`'s `id-anchored block` entry still defined the
   falsified variant A ("runs to the next one", no subheading boundary) and said "line-start" where
   the design allows indentation. This mattered more than its severity suggests: `CONTEXT.md` outlives
   the spec (chains get pruned, per the 0.13.0 precedent), the criteria section explicitly delegates
   this term to it, and it is the one term not restated inline. The glossary would have permanently
   described the variant the probe rejected. Corrected, along with a withdrawn-marker on the
   `corroboration rule` entry (round 2 L1).
-- **L2 — Low (accepted, recorded above).** Negative-criterion ids were renumbered at re-scope while
+- **L2: Low (accepted, recorded above).** Negative-criterion ids were renumbered at re-scope while
   criterion and task ids were not, so round 1's `NC-5`/`NC-6` citations no longer resolve.
-- **L3 — Low (accepted).** The probe covers five chains; AC-3 quantifies over `docs/specs/`, now six.
+- **L3: Low (accepted).** The probe covers five chains; AC-3 quantifies over `docs/specs/`, now six.
   The reviewer verified the sixth independently (stable under variant B).
-- **L4 — Low (fixed in place).** T-1's regression assertion is a golden table that would be
+- **L4: Low (fixed in place).** T-1's regression assertion is a golden table that would be
   tautological if generated after the change; T-1 now pins its expected values to
   `probes/probe-output.txt`, produced before it.
-- **L5 — Low (accepted, pre-existing).** Id *definition* still matches anywhere in a line while
+- **L5: Low (accepted, pre-existing).** Id *definition* still matches anywhere in a line while
   block-opening is line-start-anchored, so an id defined mid-line would exist and own no block.
   Unreachable on all six chains today; noted because the feature's thesis is one definition of
   ownership.
