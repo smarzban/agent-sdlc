@@ -21,18 +21,19 @@ the disciplines the subagents follow are in the sibling reference files.
 ## File hand-offs — the rule
 
 Artifacts move as files in BOTH directions. A brief is written to a file (e.g.
-`.agent-sdlc/briefs/T-N.md` in the workspace) and the subagent is told to read it. The dispatch
-prompt is one or two lines ("Implement task T-N. Read your brief at <path>. Follow the disciplines
-it names."). Never paste the plan, the session history, or other tasks into the prompt. The same
-rule governs what comes BACK: reports and findings land in files beside the brief; a subagent's
-final message is a short status, never the artifact itself. And the conductor produces the
-reviewer's diff file **blind** — `git add -N . ':(exclude).agent-sdlc' && git diff >
-.agent-sdlc/briefs/T-N-review.diff && git reset -q` (intent-to-add first, so NEW files — a TDD
-task's first artifact — appear in the diff; the trailing reset clears the `-N` entries — a mixed
-reset, so the working tree is untouched, and the diff runs before step 4d stages anything (a
-resumed tree with a task already staged resolves that first — commit or unstage deliberately).
-The reset is REQUIRED: a lingering intent-to-add entry not really staged at commit time makes
-step 4d's stash fail — `Entry not uptodate. Cannot merge.`) — never by
+`.agent-sdlc/briefs/<feature>/T-N.md` in the workspace — so two features never resolve the same
+task id to the same file) and the subagent is told to read it. The dispatch prompt is one or two
+lines ("Implement task T-N. Read your brief at <path>. Follow the disciplines it names."). Never
+paste the plan, the session history, or other tasks into the prompt. The same rule governs what
+comes BACK: reports and findings land in files beside the brief; a subagent's final message is a
+short status, never the artifact itself. And the conductor produces the reviewer's diff file
+**blind** — `git add -N . ':(exclude).agent-sdlc' && git diff >
+.agent-sdlc/briefs/<feature>/T-N-review.diff && git reset -q` (intent-to-add first, so NEW
+files — a TDD task's first artifact — appear in the diff; the trailing reset clears the `-N`
+entries — a mixed reset, so the working tree is untouched, and the diff runs before step 4d
+stages anything (a resumed tree with a task already staged resolves that first — commit or
+unstage deliberately). The reset is REQUIRED: a lingering intent-to-add entry not really
+staged at commit time makes step 4d's stash fail — `Entry not uptodate. Cannot merge.`) — never by
 reading the diff into its own context first: the reviewer is the diff's reader, the conductor is
 its courier. Context bloat in the conductor is the failure subagent-driven development exists to
 avoid.
@@ -62,13 +63,13 @@ reflects reviewed code.
 The reviewer **reads, it does not re-run**: it reads the diff, the changed files, and their
 call-sites, and returns spec-met (does the diff satisfy `T-N`'s contract?) plus quality findings
 rated Critical / Important / Minor — the findings written to a file beside the brief
-(`.agent-sdlc/briefs/T-N-findings.md`), verdict and counts in the return message. The conductor's
-own green-bar run (SKILL step 4d) is the loop's authoritative execution — a reviewer re-running
-the suite duplicates it and buys nothing; it may run a *focused* check only for a specific doubt
-its reading raised, naming the doubt and what it ran in its findings. One axis is always in scope:
-**over-build** — an abstraction, indirection, layer, or dependency the `AC-N` did not call for,
-where a simpler form passes the same test. Flag it like any other finding; the cheapest code to
-review is the code that was never written.
+(`.agent-sdlc/briefs/<feature>/T-N-findings.md`), verdict and counts in the return message. The
+conductor's own green-bar run (SKILL step 4d) is the loop's authoritative execution — a reviewer
+re-running the suite duplicates it and buys nothing; it may run a *focused* check only for a
+specific doubt its reading raised, naming the doubt and what it ran in its findings. One axis is
+always in scope: **over-build** — an abstraction, indirection, layer, or dependency the `AC-N`
+did not call for, where a simpler form passes the same test. Flag it like any other finding; the
+cheapest code to review is the code that was never written.
 
 **Never tell the reviewer what not to flag.** "Treat X as minor", "don't worry about Y" — pre-judging
 disqualifies the review. State the contract and let it judge. Optionally add a **doubt lens**: a
