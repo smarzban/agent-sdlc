@@ -124,6 +124,13 @@ missing `## Design`/`## Tech Stack` **through the normal materialize path** — 
 [reference/input-resolution.md](reference/input-resolution.md) describes, landing in the one spec
 file, **no ephemeral mode**. The upgrade is always available; when unsure, upgrade.
 
+## Visual aids: idea and architecture-design only
+
+These two stages are the only ones that draw. **If idea or architecture-design, and a question
+would land better drawn than described, read
+[reference/visual-aids.md](reference/visual-aids.md) now**: it is the load-bearing visual-aid
+discipline (the visual test, the two kinds of visual aid, and the consent protocol).
+
 ## File layout
 
 ```
