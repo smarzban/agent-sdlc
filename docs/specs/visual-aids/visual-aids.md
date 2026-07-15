@@ -313,8 +313,14 @@ detail, deferred to the tech-stack stage.)
 
 ### Trust and failure boundaries
 
-- **Untrusted input:** none new. The feature reads no external input and executes nothing; its only
-  input is the user's answers, on the same footing as any stage question.
+- **Untrusted input: the scratch visual's labels.** *(Corrected at the review gate, which falsified
+  this section's original claim of "none new". Recorded rather than quietly rewritten: the original
+  analysis reasoned that the feature executes nothing and therefore reads nothing untrusted, and
+  missed that it **writes** something a browser executes.)* A scratch visual's panel labels come from
+  the conversation and the repo, and a repo can be authored by someone hostile. Text reaching a
+  generated page is untrusted data: it is escaped, never pasted through as raw markup, and what the
+  page contains stays inert. The "no JavaScript" rule binds the data path, not only the author's
+  intent -> an unescaped label is how a file with no scripts written into it acquires one.
 - **Viewing failure (the designed-for case):** the user may be unable to open a scratch visual —
   a remote or headless session, no viewer, or simply declining to leave the terminal. Announced
   fallback to a spec diagram or prose (AC-11), consistent with the repo's existing

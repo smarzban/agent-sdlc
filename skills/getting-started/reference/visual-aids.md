@@ -43,9 +43,10 @@ with the run. Nothing else decides.
 
 ## Choosing the kind
 
-**If the picture is worth keeping, it is a spec diagram.** That is the whole rule, and it leaves no
-per-run judgment: there is no open "should I save this one?" decision at run time. A scratch visual
-is what is left over, a throwaway comparison the spec has no reason to carry.
+**If the picture is worth keeping, it is a spec diagram.** That is the whole rule. Judging whether
+this picture is worth keeping is the one call you make, and making it *is* choosing the kind: there
+is no second, later "should I save this one?" decision, and never a draw-first-decide-afterwards.
+A scratch visual is what is left over, a throwaway comparison the spec has no reason to carry.
 
 ## Consent gates the scratch visual only
 
@@ -84,6 +85,15 @@ never told cannot ask for the fallback they would have wanted.
   sufficient to compare two shapes side by side.
 - **Shape:** a simple flex or grid row of panels, one panel per candidate, each with a short heading
   and an inline `<svg>`.
+- **Every label is untrusted data.** Component names, option titles, and any other text you place in
+  the page come from the conversation and the repo, and a repo can be authored by someone hostile.
+  Escape `&`, `<`, `>`, `"`, and `'` in text and attributes, never paste input through as raw
+  HTML or SVG, and keep what you generate inert: text and geometry, nothing that executes. "No
+  JavaScript" is a rule about the data too, not only about what you set out to write. A label
+  carrying `</text><script>` is how a file with no scripts in it acquires one.
 - **Written to the operating system's temporary directory**, never inside the repo. That is what
   makes "never committed" structural rather than something the agent has to remember, and it needs no
   gitignore entry in the user's repo.
+- **Delete it once the question it answered is settled**, so it dies with the run as promised rather
+  than leaving the shape of someone's system lying around in a shared temp directory. If you cannot
+  delete it, say where it is.
