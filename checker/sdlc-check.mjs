@@ -532,10 +532,13 @@ function stripParenSpans(raw) {
 
 // A segment's LEADING id token only (anchored at the segment start, not scan-anywhere like
 // ID_REF_RE): text after the id is prose and contributes nothing, by AC-1..AC-3's contract. The
-// trailing negative lookahead (M-1) mirrors ID_REF_RE's `\b` boundary semantics so this rule can
-// only ever DROP a link, never add one: without it `T-12abc` would match a leading `T-12` and
+// trailing negative lookahead (M-1) mirrors ID_REF_RE's `\b` boundary semantics so this rule never
+// adds a link from boundary-relaxation: without it `T-12abc` would match a leading `T-12` and
 // fabricate a link `ID_REF_RE` never made (a sub-task label like `T-3a`/`T-3b` is the realistic
 // trigger). `T-1/2/3`'s slash-abbreviated run still matches; `T-12abc` and `T-1_2` match nothing.
+// This guards only the boundary direction: paren-stripping runs before this match and can still
+// splice a token into existence across a stripped span (e.g. "T-(1)2" -> "T-2"), a separate,
+// practically unreachable case this rule makes no claim about.
 const LEADING_ID_RE = /^(AC|C|T)-\d+(?:\/\d+)*(?![A-Za-z0-9_])/;
 
 // A leading run of ordinary Markdown decoration (backtick, asterisk, opening bracket) is stripped

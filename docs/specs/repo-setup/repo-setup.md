@@ -476,8 +476,8 @@ ingested 2026-07-08 -->
   explicit verification — both skills cite the token exactly as declared in T-4; the templates
   bullet states the precedence; no other behavior of either skill changed.
   *Advances:* none. *Component:* none. *Deps:* none. (Superseded — see T-8; original trace
-  carried forward there.) AC: untraced (superseded by T-8, the contract T-5 named was completed
-  there, so T-5 advances nothing).
+  carried forward there.)
+  AC: untraced (superseded by T-8, the contract T-5 named was completed there, so T-5 advances nothing).
 
 - **T-8** — Wire the writing-* contract, coherently: everything T-5 specified (writing-repo-docs:
   seed-marker recognition at the placeholder scan + the reworded templates bullet;

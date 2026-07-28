@@ -42,6 +42,18 @@ id, never a finding, so the author sees it without the exit code moving.
   since its only links were the ones just removed. Contrast the errata that sank the withdrawn
   corroboration rule, which would have deleted accurate annotations; this one only removed a link
   that was never true.
+- **A dangling id inside a parenthetical is demoted, not just added:** before this change a
+  parenthetical's own dangling id (e.g. `T-8 (supersedes T-99)` with `T-99` undefined) fed the same
+  scrape that fabricated links, so it surfaced as a blocking `trace-integrity` finding and moved the
+  exit code. It now surfaces as a note instead, same as any other mentioned-not-linked id. Accepted
+  as part of the same trade this ADR already makes (a true annotation and a false one are
+  indistinguishable to the grammar), but recorded here as its own consequence: a chain that relied
+  on that finding to catch a stale reference will go quiet on it.
+- **Second removal, left unstated until now:** the coverage-map arm (`Advanced by`-headed cells)
+  no longer also calls `resolveComponentRefs`; before this change a coverage cell was scanned for
+  component names too, and a hit added a ref from a non-leading position. Safe (a name-resolved ref
+  is always a defined `C-N`, which no downstream reader flags or needs from this arm), but it is a
+  second narrowing this ADR's decision made beyond the parenthetical/comma grammar above.
 - **Rejected alternative, on scope not merit:** a keyword grammar inside the parenthetical
   (`grounds:`, `write side:`, `supersedes:`) that the checker links at a lower confidence tier. The
   better long-term answer, rejected here only for being a second grammar to design and pin, out of

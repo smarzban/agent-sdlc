@@ -11,8 +11,11 @@
 // The Design's contract for this component (checker-silence-eval) says a seed carries its fixture
 // text, its disposition, and a short description of the real incident, ONE entry per seed. SEEDS
 // below is that ledger: the fixture and the assertion live on the same object, so a seed can never
-// be listed with no test behind it and a test can never assert something its own disposition
-// disagrees with. A single loop drives the per-seed tests from this array.
+// be listed with no test behind it. The disposition fields (`detected` / `expectedMissReason`) and
+// the assertion body are not code-coupled to each other (M-2): AC-8 below checks only the
+// disposition fields, so keeping a seed's assertion honest against its stated disposition is a
+// convention each seed's own `assert` must uphold, not an invariant this file enforces. A single
+// loop drives the per-seed tests from this array.
 //
 // The completeness test is written first, against SEEDS = [] (watch it fail), then the corpus is
 // filled in.
@@ -71,6 +74,13 @@ const SEEDS = [
       const hit = findings.find((f) => f.rule === 'coverage-forward' && f.ids.includes('AC-2'));
       assert.ok(hit, 'expected a coverage-forward finding naming AC-2');
       assert.equal(hit.type, 'finding');
+      assert.equal(
+        findings.some((f) => f.ids.includes('AC-1')),
+        false,
+        'AC-1 is genuinely advanced by T-1 and must not also be reported unreached (M-4): pins the ' +
+          'other half of the discrimination, so a regression that drops trace fields wholesale ' +
+          '(every AC unreached) cannot leave this seed green',
+      );
     },
   },
   {

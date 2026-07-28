@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync, execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync, readFileSync, readdirSync, existsSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync, mkdirSync, readFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -347,16 +347,23 @@ function chainPath(name) {
   return path.join(SPEC_ROOT, name, `${name}.md`);
 }
 
-// Derived from the tree, not hardcoded: a directory under docs/specs/ counts as a chain when it
-// holds a same-named `<name>.md` (excludes `adr/`, which has no `adr.md`, and any bare file such
-// as `overview.md`). A chain added later is therefore swept into every test below that iterates
-// CHAINS with no edit here. A discovery bug that silently found nothing would make every consumer
-// below vacuously pass instead, so fail loudly here rather than let that happen.
-const CHAINS = readdirSync(SPEC_ROOT, { withFileTypes: true })
-  .filter((entry) => entry.isDirectory() && existsSync(chainPath(entry.name)))
-  .map((entry) => entry.name)
-  .sort();
-assert.ok(CHAINS.length > 0, 'chain discovery under docs/specs/ must never silently enumerate nothing');
+// The seven chains AC-9 names, literally (each a directory under docs/specs/ holding a same-named
+// `<name>.md`; excludes `adr/`, which has no `adr.md`, and any bare file such as `overview.md`).
+// A chain added later needs this list updated, on purpose: silent auto-discovery would let a new
+// chain that never exits 0 slip past every test below that iterates CHAINS with no edit here.
+const CHAINS = [
+  'adoption-quickwins',
+  'checker-silence-eval',
+  'enforcement-spine',
+  'explicit-ownership',
+  'repo-setup',
+  'spec-location-under-docs',
+  'visual-aids',
+].sort();
+assert.ok(
+  CHAINS.every((name) => existsSync(chainPath(name))),
+  'every named chain must have a same-named .md file under docs/specs/',
+);
 
 async function parseChain(name) {
   const { parseSpec } = await import('./sdlc-check.mjs');

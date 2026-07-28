@@ -406,7 +406,7 @@ test('a leading run of Markdown decoration (backtick, bold, link bracket) does n
   assert.deepEqual(row3.refs, ['T-4'], 'a Markdown-linked leading id must still link');
 });
 
-test('the leading-id rule never ADDS a link ID_REF_RE would not have made (M-1, boundary regex)', () => {
+test('the leading-id rule never adds a link from boundary-relaxation (M-1, boundary regex)', () => {
   const spec = [
     '## Plan',
     '### Task-to-criterion coverage map',

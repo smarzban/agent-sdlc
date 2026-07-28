@@ -132,10 +132,11 @@ links parse as zero (the retro that motivated this: a plan written to this skill
   ids; `*Component:*` cites a component name, or `none`.
 - **Task-to-criterion coverage map:** a table whose **2nd-column header matches
   `/advanced by|component/i`** (a literal `Task(s)` header parses as **zero** links). The 1st-column
-  cell must be a bare id (`AC-N`). The header wording picks the cell grammar, and the two shapes
-  differ: a **`Component`-headed** map cites components by name and is scanned whole-cell (any id or
-  component name anywhere in the cell counts). An **`Advanced by`-headed** map is the coverage map,
-  and only there does the leading-id rule below apply.
+  cell must be a bare id (`AC-N`, `C-N`, or `T-N`). The header wording picks the cell grammar, and the
+  two shapes differ: a **`Component`-headed** map cites components by name and is scanned whole-cell
+  (any id or component name anywhere in the cell counts). An **`Advanced by`-headed** map is the
+  coverage map, and only there does the leading-id rule below apply. A header matching both words
+  (e.g. `Advanced by component`) takes the **`Component`** grammar: that check runs first.
   A coverage-map cell links the ids it LISTS: comma-separated, each entry LEADING with the id. A
   leading run of backtick, asterisk, or `[` is tolerated (`` `T-1` ``, `**T-1**`, `[T-1](#t-1)` all
   link); other decoration is not, so underscore emphasis (`_T-1_`) drops the id with no link and no
