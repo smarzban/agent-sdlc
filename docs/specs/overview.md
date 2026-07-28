@@ -40,6 +40,22 @@ test) plus two kinds of visual aid, a committed spec diagram and a throwaway con
 visual, stated once in a shared reference doc that `architecture-design` (primary) and `idea`
 (secondary) each hook. No interactive companion, no checker change, no runtime.
 
+`explicit-ownership` shipped 2026-07-15: a parsed block is anchored to the identity it declares, not
+to the bullet it happens to sit on. A block opens at a definition site and closes at the next
+definition site or the next subheading, and it names its own owner, so no caller re-derives ownership
+by "first id in the blob wins": that step had handed a whole section's trace fields to one id. The
+corroboration rule ratified alongside it was withdrawn at the gate on its own evidence; read the
+chain's "Withdrawn scope" before proposing it again.
+
+`checker-silence-eval` shipped 2026-07-28: the checker is now scored on what it stays SILENT about,
+not only on what it reports. A seeded-defect corpus reproduces defects that actually occurred, each
+recorded as detected or as an expected miss with its reason, the latter asserted in both directions
+so a blind spot cannot rot in either. Its first subject: a coverage cell now links only the ids it
+lists, so a parenthetical annotates instead of fabricating a link, which forced one erratum on the
+`repo-setup` chain (a superseded task whose only links were fabricated ones). A grammar for stating
+weaker relations explicitly is the recorded follow-up, rejected for scope and not on merit
+(`adr/ADR-0002`).
+
 ## Architecture
 
 The repo's shape, as it exists:

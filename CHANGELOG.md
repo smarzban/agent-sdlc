@@ -4,6 +4,20 @@ The authoritative release notes live on
 [GitHub Releases](https://github.com/smarzban/agent-sdlc/releases) — one release per version,
 cut with a plugin-scoped tag (`agent-sdlc-vX.Y.Z`). This file is the one-line index.
 
+- **[0.16.0](https://github.com/smarzban/agent-sdlc/releases/tag/agent-sdlc-v0.16.0)** (2026-07-28) —
+  two new install targets and a checker that is now scored on its silence. **OpenAI Codex** (a
+  marketplace under `.agents/plugins/`) and **pi** (a direct package install, `pi.skills` in
+  `package.json`) join Claude Code and Cursor, so **four** version fields now move in lockstep.
+  `idea` and `architecture-design` gain a **visual-aid discipline**: one per-question test, a
+  committed inline spec diagram or a throwaway consent-gated scratch visual, never a drawing mode.
+  The checker's parsed blocks are **anchored to identity** rather than to bullets (a section's trace
+  fields could be handed wholesale to one id), and a **coverage cell now links only the ids it
+  lists**, so `T-8 (supersedes T-5)` annotates instead of fabricating a link (`adr/ADR-0002`; one
+  erratum on a shipped chain). New **seeded-defect eval**: defects that actually occurred are seeded
+  as fixtures and scored, with an expected-miss ledger asserted in both directions so a known blind
+  spot cannot rot unnoticed. `build` scopes the reviewer's diff to the task's own files (a repo-wide
+  intent-to-add was sweeping unrelated untracked files into reviews), and `ship` follows Empanel's
+  `gate` -> `merge-gate` rename and carries its third verdict, `inconclusive`.
 - **[0.15.0](https://github.com/smarzban/agent-sdlc/releases/tag/agent-sdlc-v0.15.0)** (2026-07-08) —
   standalone-skills hardening from the first `repo-setup` field runs: `repo-setup` gains a
   **migration mode** (an existing rich instruction file is migrated into the public/private split,
