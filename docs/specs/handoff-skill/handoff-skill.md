@@ -123,9 +123,12 @@ its `SKILL.md` plus any reference file it links.
   **reviewer-checked**, Spec Conformance.)*
 - **AC-3**: The prune trigger is **mechanical and evaluable at a glance**, not a judgement call: it
   fires on size, on structure (the current-state block is not the first thing after the header), or
-  on content (an entry naming a merged pull request or an already-shipped feature). A deliberate
-  overrun is permitted only when stated in the doc. *(Verification type: **reviewer-checked**, Spec
-  Conformance.)*
+  on content (an entry naming a merged pull request or an already-shipped feature outside the
+  current-state block itself, which the litmus exempts). A deliberate overrun is permitted only
+  when the doc states which leg it excuses, why, and the header stamp it was written under; it is
+  honored only while that stamp still matches the header, so its lifetime is itself mechanically
+  checkable from the file, with no renewal by restating it under a fresh stamp. *(Verification
+  type: **reviewer-checked**, Spec Conformance.)*
 - **AC-4**: A prune pass shows the trimmed result to the user before overwriting, and the skill says
   why: pruning is lossy. *(Verification type: **reviewer-checked**, Spec Conformance.)*
 - **AC-5**: Eviction is the stated default for content that is a standing rule: it moves to the
@@ -158,14 +161,17 @@ its `SKILL.md` plus any reference file it links.
   registration. *(Verification type: **reviewer-checked**, Spec Conformance.)*
 - **AC-11**: The build stage triggers an update at build entry, after a ready-to-build verdict and
   before the first task is dispatched. It acts only when the doc already exists, announces that it
-  did, and never creates it. *(Verification type: **reviewer-checked**, Spec Conformance.)*
+  did, and never creates it. It never blocks for confirmation: when the prune trigger fires it
+  writes the entry, defers the prune, and announces that one is owed rather than pruning inline or
+  asking. *(Verification type: **reviewer-checked**, Spec Conformance.)*
 - **AC-12**: The pipeline's entry-point skill tells an agent to read the handoff doc first when one is
   present, and says what it is for, so a resuming agent finds it without knowing it exists.
   *(Verification type: **reviewer-checked**, Spec Conformance.)*
 - **AC-13**: The ship stage triggers an update at its park step, under the same three conditions:
-  only when the doc exists, announced, never creating it. Stated separately from AC-11 because the
-  two hooks sit at different moments and either can be satisfied while the other is not.
-  *(Verification type: **reviewer-checked**, Spec Conformance.)*
+  only when the doc exists, announced, never creating it, and never blocking for confirmation (the
+  same fired-trigger deferral as AC-11). Stated separately from AC-11 because the two hooks sit at
+  different moments and either can be satisfied while the other is not. *(Verification type:
+  **reviewer-checked**, Spec Conformance.)*
 - **AC-14**: The repo's docs surface carries a usage page for the skill, covering all three modes and
   linked from the docs index, so the usage coverage ledger closes. *(Verification type:
   **reviewer-checked**, Spec Conformance.)*

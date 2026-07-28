@@ -19,8 +19,11 @@ on absence alone, unasked. Update is the default for writing today's entry, and 
 prune trigger check first: when the trigger has fired, update disposes of every entry per the
 litmus (evict standing rules, collapse or drop closed threads) and shows the trimmed result before
 overwriting, in the same pass, rather than deferring the prune or telling the user to run it
-separately. Prune stays separately invocable, for when the user asks for a prune pass on its own
-without writing a current entry. If the mode still cannot be determined this way, say so and ask
+separately. The one exception is a hook-driven update with no user present to confirm: it writes
+the current entry, never prunes inline, and instead records under the header that a prune is owed
+and which leg fired, then announces both (see Update, hook-driven case, below). Prune stays
+separately invocable, for when the user asks for a prune pass on its own without writing a current
+entry, or to clear an owed-prune marker a hook left behind. If the mode still cannot be determined this way, say so and ask
 rather than picking: scaffold and prune differ in whether anything is destroyed, and guessing
 wrong on that axis is the one mistake this skill cannot recover from. A prune pass, standalone or
 inline inside an update, never overwrites `HANDOFF.md` before showing the user the trimmed result.
@@ -70,23 +73,37 @@ If none of these clearly holds, say so explicitly and ask which is intended rath
 
 ### Update
 
-1. Check the prune trigger first (mechanical, below). If it has fired, dispose of every entry per
-   the litmus (evict standing rules, collapse or drop closed threads) and show the trimmed result
-   to the user before continuing, exactly as prune's show-before-overwrite step does.
+If the doc exists but does not match the template's contract (no header, no current-state
+section, or sections out of order), materialize it to the template first: show the rewritten
+result before overwriting, the same as any lossy rewrite, then continue with the steps below.
+
+1. Check the prune trigger first (mechanical, below). If it has fired and a user is present to
+   confirm, dispose of every entry per the litmus (evict standing rules, collapse or drop closed
+   threads) and show the trimmed result to the user before continuing, exactly as prune's
+   show-before-overwrite step does.
+
+   **Hook-driven case (no user present):** never prune inline. Write the current entry (steps
+   2-5 below) as usual, add one line under the header naming the leg that fired and that a prune
+   is owed, and say so in the announcement. Leave the disposal itself for a user-run prune pass.
 2. Rewrite the current-state section fresh: do not append below the old entry. State what just
    happened and the true current repo state (branch, head, clean/dirty, what shipped).
-3. Rewrite next-up to the true next action.
-4. Move any thread that closed this session out of open threads: collapse it to a one-line
+3. Check the ignore-file entry (`git check-ignore`) unless `HANDOFF.md` is already tracked by git
+   (the deliberate-commit case, per Conventions): if it is untracked and not ignored, add the
+   entry and say so, the same as scaffold step 3.
+4. Rewrite next-up to the true next action.
+5. Move any thread that closed this session out of open threads: collapse it to a one-line
    pointer, or drop it if nothing about it is worth keeping.
-5. Refresh the stamped header line.
-6. Write the file: the trimmed result from step 1 if the trigger fired, otherwise the edited file
-   as-is. Either way, this is still one mode: update.
+6. Refresh the stamped header line.
+7. Write the file: the trimmed result from step 1 if the trigger fired and a user confirmed it,
+   otherwise the edited file as-is (with the owed-prune line, in the hook-driven case). Either
+   way, this is still one mode: update.
 
 ### Prune
 
 Condition to enter this mode on its own: the user asks for a prune pass, separate from writing
 today's entry. (An update that hits a fired trigger runs the same disposition inline; see Update
-step 1, above.)
+step 1, above. An update that instead left an owed-prune line under the header, per Update step
+1's hook-driven case, is the other on-ramp: running prune here clears that line.)
 
 1. Dispose of each entry per the litmus: eviction rules below cover standing rules; a thread that
    is already merged, shipped, closed, or decided is collapsed to a one-line pointer or dropped.
@@ -106,15 +123,28 @@ step 1, above.)
 Fires the moment ANY of the following is true. It is not a judgement call:
 
 - **Size**: the doc is more than 100 lines long (about a screen: the reason for the number, not
-  the rule itself).
-- **Structure**: the current-state section is not the first thing after the header line.
+  the rule itself). This is the weakest leg: the incident that motivated this skill ran 83 lines,
+  comfortably under 100, and a size check alone would not have caught it. A freshly pruned doc for
+  a busy repo is roughly that length too, so a lower ceiling would fire on a healthy doc as often
+  as a stale one. Treat 100 as a backstop, not the primary catcher: that role belongs to the
+  content leg below, which is what actually catches an append-only log (the motivating doc was
+  pages of "merged", "shipped", "closed" entries, exactly what the content leg flags).
+- **Structure**: the current-state section is not the first thing after the header line, meaning
+  the stamped `_<date> · by: ...` line (the fifth line of the template), not the `# HANDOFF` title.
+  The current-state section is whatever section comes first after that line, whatever it is titled.
 - **Content**: any entry describes something already merged, shipped, closed, or decided,
-  regardless of the words used to describe it.
+  regardless of the words used to describe it. The current-state section step 2 of Update
+  mandates writing is exempt: it always states the true current state, including what just
+  shipped, and that is never staleness. The leg applies to the other sections (next up, open
+  threads, gotchas).
 
 A deliberate overrun is allowed only when the doc states, under the header, which leg it is
-excusing (size, structure, or content) and why. That exception is itself live state, not a
-permanent waiver: it does not survive two consecutive updates. The first update after it is
-written may honor it; the second update prunes regardless of what the note says.
+excusing (size, structure, or content), why, and the exact stamp value from the header line at
+the moment the note was written. The note is honored only while its stamp still matches the
+current header stamp: the update that wrote it. Any update after that one, once it refreshes the
+stamp per Update step 6, prunes regardless of what the note says. Never rewrite the same leg's
+note with a fresh stamp to keep it alive: a leg that needs excusing twice is the signal to prune
+it, not to renew the waiver.
 
 ## Principles
 
@@ -139,7 +169,8 @@ written may honor it; the second update prunes regardless of what the note says.
 | "I'll prune it next time." | The trigger already fired. "Next time" is how every append-only log got that way. |
 | "This merged PR is still useful context." | If it is a standing rule, evict it to the agent-instruction files where it survives. If it is not, the PR and the git log already have the full story; a pointer line is enough. |
 | "The user can just read the git log." | Git records what changed, never what was being attempted or deliberately left undone. That gap is the entire reason this doc exists. |
-| "It's only a few extra lines over the trigger." | The trigger fires at the line: more than 100 lines, no fuzz. A stated, deliberate overrun is the only sanctioned exception, and it expires after the first update that follows the one that stated it. |
+| "It's only a few extra lines over the trigger." | The trigger fires at the line: more than 100 lines, no fuzz. A stated, deliberate overrun is the only sanctioned exception, and it is honored only for the update whose stamp it carries: the next update prunes regardless. |
+| "I'll just restate the overrun note so it stays valid." | Rewriting the same leg's note with a fresh stamp is forbidden. A leg that needs excusing twice is the signal to prune it, not to renew the waiver. |
 | "I didn't have time to update it." | An update pass is short by design: rewrite current-state, next-up, and closed threads. Skipping it is what hands the next agent nothing. |
 | "I'll just delete the stale-looking stuff, it's faster." | Delete is for threads that are already merged, shipped, closed, or decided. Anything that reads like a standing rule gets evicted, not deleted, because this may be its only copy. |
 | "The doc already exists, I'll scaffold a fresh one to clean it up." | That is a prune, not a scaffold, and it skips the show-before-overwrite step scaffold doesn't have. Pick the mode the condition actually selects. |
@@ -151,12 +182,15 @@ written may honor it; the second update prunes regardless of what the note says.
 - A prune or an overwrite of `HANDOFF.md` with no trimmed-result confirmation shown first,
   whether the prune ran standalone or inline inside an update.
 - The current-state section is not the first thing after the header, and no prune has run.
-- An entry that is already merged, shipped, closed, or decided, left in place with no stated
-  overrun reason, or with a stated reason that has already outlived one update.
-- `HANDOFF.md` created without adding (or checking) the ignore-file entry, or created silently by
-  a mode other than scaffold.
+- An entry that is already merged, shipped, closed, or decided, outside the current-state block,
+  left in place with no stated overrun note, or with a note whose stamp does not match the
+  current header stamp.
+- An overrun note for the same leg rewritten with a fresh stamp instead of pruning that leg.
+- `HANDOFF.md` created or updated without adding (or checking) the ignore-file entry.
 - The mode was guessed rather than determined by the condition table, especially scaffold-vs-prune.
-- An update that left the prune trigger fired without disposing of entries inline.
+- An update that left the prune trigger fired without disposing of entries inline, and without a
+  user present to justify deferring it via the owed-prune line.
+- An owed-prune line left under the header with no later prune pass clearing it.
 - Placement reasoning restated inline instead of pointing back to the litmus.
 
 ## Done when
@@ -167,12 +201,16 @@ written may honor it; the second update prunes regardless of what the note says.
 - On scaffold: the file exists from the template, the current-state entry is real (not a
   placeholder), the ignore-file entry is added or confirmed, and the user was told both, including
   the one-line tradeoff.
-- On update: the prune trigger was checked first and, if fired, entries were disposed of per the
-  litmus and the trimmed result was shown before the write; current-state and next-up are
-  rewritten fresh, closed threads are collapsed or dropped, and the stamp is refreshed.
+- On update: the prune trigger was checked first. If it fired and a user was present, entries
+  were disposed of per the litmus and the trimmed result was shown before the write. If it fired
+  with no user present, the current entry was written, the disposal was deferred, and an
+  owed-prune line naming the fired leg was added and announced instead. Either way: current-state
+  and next-up are rewritten fresh, closed threads are collapsed or dropped, the ignore-file entry
+  was checked, and the stamp is refreshed.
 - On prune (standalone): every entry was checked against the litmus, standing rules were evicted
-  rather than deleted, the trimmed result was shown and confirmed before the overwrite, and any
-  deliberate overrun left in place states its reason and has not outlived one update.
+  rather than deleted, the trimmed result was shown and confirmed before the overwrite, any owed
+  prune-line was cleared, and any deliberate overrun left in place carries the current header
+  stamp.
 
 ## The artifact (output)
 
@@ -204,6 +242,13 @@ _<date> · by: <agent> · <branch> @ `<short-sha>` (<clean/dirty>)_
 
 On scaffold, also: an ignore-file entry for `HANDOFF.md`, and a stated line to the user that it
 was added plus the one-line ignored-versus-committed tradeoff.
+
+A deliberate overrun note or an owed-prune line, when either applies, is one line placed
+immediately after the stamp line and before `## Current state`, and an overrun note quotes the
+header's own stamp verbatim so it can be checked against it later, e.g. `_Overrun (size):
+keeping the full incident writeup one more update, stamp 2024-03-01 · by: fixer · main @
+`a1b2c3d` (clean)._` or, for the hook case, `_Prune owed: content leg fired, deferred by the
+ship hook._`
 
 On prune (standalone or inline inside an update), also: the trimmed result shown for confirmation
 before it overwrites the file, and, where anything was evicted, the addition to the repo's

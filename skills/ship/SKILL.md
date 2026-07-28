@@ -18,7 +18,10 @@ check the repo's actual spec tree before concluding "no ledger"), or, when no le
 the branch was built **outside the pipeline**, by verifying
 the branch directly: the suite is green. On that no-ledger path the Empanel gate is the *sole* quality gate
 (no upstream spec-gate or per-task review ran) and completeness cannot be asserted from a ledger —
-lean on the spec coverage and the review, and say so. If a task is in-progress or blocked, STOP and
+lean on the spec coverage and the review, and say so. A tree dirtied only by a team-committed,
+hook-updated `HANDOFF.md` left uncommitted from a prior park (step 9) is the one sanctioned
+exception to "clean working tree": it does not fail this precondition, since that doc's own commit
+is a separate, later step by design. If a task is in-progress or blocked, STOP and
 route back to `/agent-sdlc:build`. Input is the green
 feature branch plus the spec (for the PR body). Output is a pushed branch, a written
 `docs/specs/<feature>/verification-report.md`, an open PR (body carrying the published AC → proof map),
@@ -88,14 +91,20 @@ it stops and asks before changing anything — a PR is an outward artifact.
    post-open fix round ends by pushing and re-syncing the PR head, never left behind after the first
    push. (Mechanics in [reference/finishing.md](reference/finishing.md).)
 
-   **Handoff, if present.** Check for `HANDOFF.md` at the root of the working copy this run
-   belongs to, not the isolated workspace, before parking, and skip with a reason if that root
-   cannot be resolved. If it exists there, update it now (the `handoff` skill's update mode) with
-   the branch, the PR, and the parked state, say that the doc was updated, and leave the change
-   uncommitted (a team that commits the doc handles that commit separately, after the state above
-   is already fixed). This hook never asks: if the update mode can't be determined without a
-   question, skip and announce why instead of blocking. If it does not exist, do nothing here:
-   this step never creates it, presence is the only opt-in.
+   **Handoff, if present.** Runs on every ship completion, whether this step's park condition
+   applies or not. Check for `HANDOFF.md` at the root of the working copy this run belongs to, not
+   the isolated workspace (resolve it with `git rev-parse --git-common-dir` and take its parent
+   directory, the same linked-worktree mechanic build's isolation detection already relies on),
+   before finishing, and skip with a reason if that root cannot be resolved. If it exists there,
+   update it now (the `handoff` skill's update mode) with the branch, the PR, and the parked or
+   finished state, say that the doc was updated, and leave the change uncommitted (a team that
+   commits the doc handles that commit separately, after the state above is already fixed; the
+   sanctioned precondition exception above covers the resulting dirty tree on a later re-entry).
+   This hook never asks: if the update mode can't be determined without a question, skip and
+   announce why instead of blocking; if the prune trigger fires, the update follows the `handoff`
+   skill's hook-driven case (write the entry, defer the prune, announce it owed) rather than
+   blocking for confirmation. If it does not exist, do nothing here: this step never creates it,
+   presence is the only opt-in.
 10. **Leave the worktree** the PR is open; do not clean up the workspace on the PR path.
 
 ## Principles

@@ -127,6 +127,32 @@ strict YAML.
   T-4's reviewer caught it. **Disposition:** descriptions updated in lockstep, versions deliberately
   untouched, since 0.16.0 shipped without this skill.
 
+- **D-5: PR #26 review round, 1 Critical + 4 Important fixed post-ship.** The overrun-note lifetime
+  (C-1) was stated three different ways across the skill and unbounded in practice: nothing recorded
+  which update wrote a note, nothing forbade rewriting it under a fresh stamp. **Disposition:** the
+  note now carries the header stamp it was written under and is honored only while that stamp
+  matches the current header; renewal under a fresh stamp is forbidden; a leg needing excusing twice
+  is the signal to prune, not to renew. The content leg (I-2) fired on the current-state block every
+  update mandates writing, making it unconditionally true and therefore ignorable. **Disposition:**
+  the current-state block is now an explicit exemption; the leg applies to next-up, open threads and
+  gotchas. The hooks (I-3) had no non-interactive path once the prune trigger fired: blocking,
+  silent overwrite, and silent skip were the only three readings, and all three violate a stated
+  rule. **Disposition:** a hook-driven update writes the entry, defers the prune, records an
+  owed-prune line under the header, and announces it; the user runs prune when ready. The size
+  ceiling (I-5) was checked against the motivating incident (83 lines, verified against the backup
+  mirror) and would not have tripped a 100-line-only check. **Disposition:** 100 stays as a stated
+  backstop, not the primary catcher; the skill now says so and names the content leg as what
+  actually caught the incident, worked example included. I-4's two Done-when statements disagreed on
+  whether an overrun suppresses the fire; both now point at the single stamp-matching rule in the
+  trigger section. Six Minors and three Nits applied as written, including M-4 (the parent working
+  copy is resolved via `git rev-parse --git-common-dir`, the same linked-worktree mechanic the
+  isolation step already uses) and M-1/M-2/M-3/M-5/M-6 (materialize-on-update for a
+  contract-mismatched doc, an ignore-file check inside update, the header line pinned to the stamp
+  line, the hook stated to run on every ship completion, and the uncommitted-doc exception to ship's
+  clean-tree precondition, respectively). AC-3, AC-11 and AC-13 were updated to state the tightened
+  shape; `verification-report.md` rows updated to match. No task's file set or `AC-N` numbering
+  changed; no new component.
+
 ## Banked follow-ups (out of scope, recorded so they are not rediscovered)
 
 - **The hooks are documented but unexercised.** Nothing in this repo's own pipeline run exercised

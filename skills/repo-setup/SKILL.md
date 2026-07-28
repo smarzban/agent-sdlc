@@ -37,8 +37,7 @@ against the skeletons this skill leaves behind.
    violates its contract: `AGENTS.md` lost one of its five routing-guideline elements, `CLAUDE.md`
    grew past its one-line pointer, `.gitignore` lost the `AGENTS.local.md` entry or the
    `HANDOFF.md` entry, or a template/`CODEOWNERS` file was emptied). On an empty repo every item is
-   missing — same procedure,
-   not a shortcut.
+   missing (same procedure, not a shortcut).
 2. **Present the audit report** before proposing any change. Nothing is created or modified until
    the owner sees the full present/missing/drifted picture.
 3. **Offer each missing item** — propose materializing it from the matching fenced block in
@@ -73,8 +72,8 @@ against the skeletons this skill leaves behind.
 8. **Declare the seed token and the awaiting-fill list** in the report: the canonical token is
    `repo-setup:seed`. It appears in `AGENTS.md` (body sections only — the routing guideline itself
    is complete-at-seed), `AGENTS.local.md`, `.gitignore`, the CI workflow skeleton, the issue
-   template, the PR template, `CODEOWNERS`, the README stub, and `HANDOFF.md` — 9 of the 12 seeded
-   files. Three are complete-at-seed and never carry it: `CLAUDE.md` (exactly one line, forever) and
+   template, the PR template, `CODEOWNERS`, the README stub, and `HANDOFF.md` (9 of the 12 seeded
+   files). Three are complete-at-seed and never carry it: `CLAUDE.md` (exactly one line, forever) and
    `.gitattributes`/`.editorconfig` (self-sufficient baselines — no `writing-*` skill fills
    machinery; stack rules are an optional owner extension, not an awaiting-fill obligation).
 9. **Report** what was created, what was updated in place (with the surfaced diff), what remains

@@ -282,9 +282,9 @@ declares awaiting-fill (every block except the three complete-at-seed templates 
 `.gitattributes`, and `.editorconfig`, which carry no token), no more and no fewer.
 
 Some agent harnesses shim `grep` to a gitignore-honoring implementation (Claude Code's Bash tool
-shims it to `ugrep --ignore-files`), which silently omits gitignored files — both `AGENTS.local.md`
+shims it to `ugrep --ignore-files`), which silently omits gitignored files (both `AGENTS.local.md`
 and `HANDOFF.md` are gitignored **and** awaiting-fill here, so both are exact files this assertion
-must include — and false-fails this step. `command grep` bypasses any shell-function shim to run
+must include), and false-fails this step. `command grep` bypasses any shell-function shim to run
 the real binary; if the system `grep` binary itself honors ignore files, grep the expected files
 explicitly instead of relying on this recursive form.
 
