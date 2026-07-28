@@ -111,6 +111,9 @@ cat > "$FIXTURE/.gitignore" <<'EOF'
 # AGENTS.local.md is the private, per-working-copy overlay — never committed.
 AGENTS.local.md
 
+# HANDOFF.md is the live working-state doc, private by default per the handoff skill's tradeoff.
+HANDOFF.md
+
 # repo-setup:seed — skeleton awaiting real content; fill, then remove this line
 # <stack-derived ignores: build output, dependency directories, local env files>
 EOF
@@ -189,10 +192,34 @@ cat > "$FIXTURE/README.md" <<'EOF'
 <!-- repo-setup:seed — skeleton awaiting real content; fill via the writing-readmes skill -->
 # <project name>
 EOF
+
+cat > "$FIXTURE/HANDOFF.md" <<'EOF'
+<!-- repo-setup:seed — skeleton awaiting real content; fill via the handoff skill -->
+# HANDOFF: live working state
+
+Where we left off, for the next agent (any agent, any day). Standing rules live in the repo's
+agent-instruction files, not here (see the litmus). Keep this short and current: prune on the
+trigger, don't append forever.
+
+_<date> · by: <agent> · <branch> @ `<short-sha>` (<clean/dirty>)_
+
+## Current state
+<One short paragraph: what just happened, what state the repo is in, anything in flight now.>
+
+## Next up
+- <What the next agent should pick up first.>
+
+## Open threads
+- <In-flight branches / PRs / undecided questions, one line each plus a pointer. Collapsed or
+  dropped once closed, per the litmus and the prune trigger.>
+
+## Gotchas
+- <Narrative git history alone doesn't capture. Pruned aggressively, evicted when durable.>
+EOF
 ```
 
-**Expected observation:** all 11 files created, `find "$FIXTURE" -not -path '*/.git/*' -type f | wc -l`
-reports 11. No guarantee decided (setup only).
+**Expected observation:** all 12 files created, `find "$FIXTURE" -not -path '*/.git/*' -type f | wc -l`
+reports 12. No guarantee decided (setup only).
 
 ## Step 3 — Assert the agent-instruction file set
 
@@ -227,17 +254,26 @@ echo "diff-exit:$?"
 
 **Expected observation:** no diff output; `diff-exit:0`. **Decides guarantee 1.**
 
-## Step 5 — Assert AGENTS.local.md is gitignored
+## Step 5 — Assert AGENTS.local.md and HANDOFF.md are gitignored
 
-**Purpose:** guarantee 1's `.gitignore` clause, asserted with the exact command it names.
+**Purpose:** guarantee 1's `.gitignore` clause (`AGENTS.local.md`) plus the seed set's other
+ignore-on-seed entry (`HANDOFF.md`), each asserted with the exact command it names. The
+`HANDOFF.md` half is not part of guarantee 1 (it is not an agent-instruction file), but it is half
+of what the seed set's ignore contract requires, so it needs its own fixture proof rather than
+riding on guarantee 1's pass.
 
 ```bash
 cd "$FIXTURE"
 git check-ignore AGENTS.local.md
 echo "exit:$?"
+git check-ignore HANDOFF.md
+echo "exit:$?"
 ```
 
-**Expected observation:** prints `AGENTS.local.md`; `exit:0`. **Decides guarantee 1.**
+**Expected observation:** prints `AGENTS.local.md` then `exit:0`, then prints `HANDOFF.md` then
+`exit:0`. The `AGENTS.local.md` pair **decides guarantee 1**; the `HANDOFF.md` pair proves the
+seed set's other ignore-on-seed entry (no guarantee number: guarantees 1–4 predate this file, see
+*Reading the results*).
 
 ## Step 6 — Seed-token grep vs. the declared awaiting-fill list
 
@@ -246,10 +282,11 @@ declares awaiting-fill (every block except the three complete-at-seed templates 
 `.gitattributes`, and `.editorconfig`, which carry no token), no more and no fewer.
 
 Some agent harnesses shim `grep` to a gitignore-honoring implementation (Claude Code's Bash tool
-shims it to `ugrep --ignore-files`), which silently omits the gitignored `AGENTS.local.md` — the
-exact file this assertion must include — and false-fails this step. `command grep` bypasses any
-shell-function shim to run the real binary; if the system `grep` binary itself honors ignore files,
-grep the expected files explicitly instead of relying on this recursive form.
+shims it to `ugrep --ignore-files`), which silently omits gitignored files — both `AGENTS.local.md`
+and `HANDOFF.md` are gitignored **and** awaiting-fill here, so both are exact files this assertion
+must include — and false-fails this step. `command grep` bypasses any shell-function shim to run
+the real binary; if the system `grep` binary itself honors ignore files, grep the expected files
+explicitly instead of relying on this recursive form.
 
 ```bash
 cd "$FIXTURE"
@@ -266,6 +303,7 @@ cat > "$EXPECTED" <<'EOF'
 .gitignore
 AGENTS.local.md
 AGENTS.md
+HANDOFF.md
 README.md
 EOF
 sort -o "$EXPECTED" "$EXPECTED"

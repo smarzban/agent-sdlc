@@ -84,12 +84,15 @@ cloned this repo, it belongs in AGENTS.md instead, not here.
 
 ## .gitignore
 
-Seed status: **awaiting-fill** — the `AGENTS.local.md` entry itself is complete-at-seed; the
-stack-derived section carries the token.
+Seed status: **awaiting-fill**, the `AGENTS.local.md` and `HANDOFF.md` entries are
+complete-at-seed; the stack-derived section carries the token.
 
 ```gitignore
 # AGENTS.local.md is the private, per-working-copy overlay — never committed.
 AGENTS.local.md
+
+# HANDOFF.md is the live working-state doc, private by default per the handoff skill's tradeoff.
+HANDOFF.md
 
 # repo-setup:seed — skeleton awaiting real content; fill, then remove this line
 # <stack-derived ignores: build output, dependency directories, local env files>
@@ -202,4 +205,35 @@ skill's.
 ```markdown
 <!-- repo-setup:seed — skeleton awaiting real content; fill via the writing-readmes skill -->
 # <project name>
+```
+
+## HANDOFF.md
+
+Seed status: **awaiting-fill**, matching the `handoff` skill's own artifact exactly. Real content
+(the current-state entry, next-up, open threads, gotchas) is filled by that skill on its first
+update, not by this skill (seeding it here means scaffold is already satisfied); this section never
+invents a second shape.
+
+```markdown
+<!-- repo-setup:seed — skeleton awaiting real content; fill via the handoff skill -->
+# HANDOFF: live working state
+
+Where we left off, for the next agent (any agent, any day). Standing rules live in the repo's
+agent-instruction files, not here (see the litmus). Keep this short and current: prune on the
+trigger, don't append forever.
+
+_<date> · by: <agent> · <branch> @ `<short-sha>` (<clean/dirty>)_
+
+## Current state
+<One short paragraph: what just happened, what state the repo is in, anything in flight now.>
+
+## Next up
+- <What the next agent should pick up first.>
+
+## Open threads
+- <In-flight branches / PRs / undecided questions, one line each plus a pointer. Collapsed or
+  dropped once closed, per the litmus and the prune trigger.>
+
+## Gotchas
+- <Narrative git history alone doesn't capture. Pruned aggressively, evicted when durable.>
 ```

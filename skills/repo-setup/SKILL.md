@@ -1,6 +1,6 @@
 ---
 name: repo-setup
-description: "Use when setting up a new repo or auditing an existing one for the operational baseline: the agent-instruction set (a public AGENTS.md plus a gitignored AGENTS.local.md private overlay, wired through a frozen CLAUDE.md pointer for Claude Code and read natively by other harnesses), gitignore/gitattributes/editorconfig, a CI skeleton, issue/PR templates, CODEOWNERS, a canonical verify command, and a README stub — machinery and marked skeletons, never prose. On a repo that already carries rich agent-instructions (e.g. a populated CLAUDE.md), it migrates them into the split rather than stubbing over them. The machinery counterpart of the writing-* docs skills: this skill stubs, they fill. Triggers: \"set up this repo\", \"repo setup\", \"scaffold the repo\", \"bootstrap the repo\", \"agent instructions setup\", \"AGENTS.md setup\", \"migrate CLAUDE.md to AGENTS.md\". Scope: standalone scaffolding for any repo, independent of the Agent SDLC pipeline — not code review, code-quality audits, or evaluation."
+description: "Use when setting up a new repo or auditing an existing one for the operational baseline: the agent-instruction set (a public AGENTS.md plus a gitignored AGENTS.local.md private overlay, wired through a frozen CLAUDE.md pointer for Claude Code and read natively by other harnesses), a seeded HANDOFF.md live-state doc, gitignore/gitattributes/editorconfig, a CI skeleton, issue/PR templates, CODEOWNERS, a canonical verify command, and a README stub — machinery and marked skeletons, never prose. On a repo that already carries rich agent-instructions (e.g. a populated CLAUDE.md), it migrates them into the split rather than stubbing over them. The machinery counterpart of the writing-* docs skills: this skill stubs, they fill. Triggers: \"set up this repo\", \"repo setup\", \"scaffold the repo\", \"bootstrap the repo\", \"agent instructions setup\", \"AGENTS.md setup\", \"migrate CLAUDE.md to AGENTS.md\". Scope: standalone scaffolding for any repo, independent of the Agent SDLC pipeline — not code review, code-quality audits, or evaluation."
 ---
 
 # Repo setup: machinery and marked skeletons
@@ -24,17 +24,20 @@ against the skeletons this skill leaves behind.
 
 ## Checklist (do in order)
 
-1. **Audit the universal target surface** — enumerate all eleven seeded files: `AGENTS.md`,
+1. **Audit the universal target surface** — enumerate all twelve seeded files: `AGENTS.md`,
    `CLAUDE.md`, `AGENTS.local.md`, `.gitignore`, `.gitattributes`, `.editorconfig`, the CI workflow
-   skeleton, the issue template, the PR template, `CODEOWNERS`, and the README stub. Judge each
-   against its **contract** (`reference/templates.md`'s block purpose), never against byte-identity
-   with the raw template: report **present** (exists and satisfies its contract — for an
+   skeleton, the issue template, the PR template, `CODEOWNERS`, the README stub, and `HANDOFF.md`
+   (live state routes to `HANDOFF.md`, standing rules route to the instruction files, per the
+   litmus the `handoff` skill states). Judge each against its **contract**
+   (`reference/templates.md`'s block purpose), never against byte-identity with the raw template:
+   report **present** (exists and satisfies its contract — for an
    awaiting-fill file, the seed token is gone and the required elements hold; a properly filled file
    is present, never drifted), **missing** (absent, OR an awaiting-fill file whose seed token is
    still there — report as "awaiting fill", offer nothing destructive), or **drifted** (exists but
    violates its contract: `AGENTS.md` lost one of its five routing-guideline elements, `CLAUDE.md`
-   grew past its one-line pointer, `.gitignore` lost the `AGENTS.local.md` entry, or a
-   template/`CODEOWNERS` file was emptied). On an empty repo every item is missing — same procedure,
+   grew past its one-line pointer, `.gitignore` lost the `AGENTS.local.md` entry or the
+   `HANDOFF.md` entry, or a template/`CODEOWNERS` file was emptied). On an empty repo every item is
+   missing — same procedure,
    not a shortcut.
 2. **Present the audit report** before proposing any change. Nothing is created or modified until
    the owner sees the full present/missing/drifted picture.
@@ -70,8 +73,8 @@ against the skeletons this skill leaves behind.
 8. **Declare the seed token and the awaiting-fill list** in the report: the canonical token is
    `repo-setup:seed`. It appears in `AGENTS.md` (body sections only — the routing guideline itself
    is complete-at-seed), `AGENTS.local.md`, `.gitignore`, the CI workflow skeleton, the issue
-   template, the PR template, `CODEOWNERS`, and the README stub — 8 of the 11 seeded files. Three
-   are complete-at-seed and never carry it: `CLAUDE.md` (exactly one line, forever) and
+   template, the PR template, `CODEOWNERS`, the README stub, and `HANDOFF.md` — 9 of the 12 seeded
+   files. Three are complete-at-seed and never carry it: `CLAUDE.md` (exactly one line, forever) and
    `.gitattributes`/`.editorconfig` (self-sufficient baselines — no `writing-*` skill fills
    machinery; stack rules are an optional owner extension, not an awaiting-fill obligation).
 9. **Report** what was created, what was updated in place (with the surfaced diff), what remains

@@ -18,7 +18,7 @@ item is reported:
   and the required elements hold);
 - **missing** — absent, or an awaiting-fill stub whose seed token is still there ("awaiting fill");
 - **drifted** — exists but violates its contract (e.g. `CLAUDE.md` grew past its one line, or
-  `.gitignore` lost the `AGENTS.local.md` entry).
+  `.gitignore` lost the `AGENTS.local.md` or `HANDOFF.md` entry).
 
 No existing file is ever overwritten wholesale: it is read, diffed against the seed template, and
 the exact change is surfaced in the offer.
@@ -31,22 +31,23 @@ holds real content — a populated `CLAUDE.md`, or an instruction file richer th
 public); that flip is called out explicitly and the public half is de-leaked (local paths, private
 names, internal issue IDs, external-mirror URLs) before it is committed.
 
-## The eleven seeded files
+## The twelve seeded files
 
 `AGENTS.md`, `CLAUDE.md`, `AGENTS.local.md`, `.gitignore`, `.gitattributes`, `.editorconfig`, a CI
-workflow skeleton, an issue template, a PR template, `CODEOWNERS`, and a README stub. Content is
-adapted only at the clearly-marked `<placeholders>` (project name, stack, toolchain) — never
-reworded.
+workflow skeleton, an issue template, a PR template, `CODEOWNERS`, a README stub, and `HANDOFF.md`
+(the live working-state doc; live state routes there, standing rules route to the instruction
+files). Content is adapted only at the clearly-marked `<placeholders>` (project name, stack,
+toolchain) — never reworded.
 
 ## The seed token
 
 The canonical marker is `repo-setup:seed`, wrapped in each file's native comment syntax
 (`repo-setup:seed — skeleton awaiting real content; fill, then remove this line`). It marks a stub
-as a fill-target — the hand-off point the `writing-*` skills recognize, not a placeholder
-violation. It appears in 8 of the 11 files. Three are **complete-at-seed** and never carry it:
-`CLAUDE.md` (exactly one line, forever) and `.gitattributes`/`.editorconfig` (their baselines are
-self-sufficient — no `writing-*` skill fills machinery; stack-specific rules are an optional owner
-extension, not an awaiting-fill obligation).
+as a fill-target — the hand-off point the `writing-*` (or, for `HANDOFF.md`, the `handoff`) skill
+recognizes, not a placeholder violation. It appears in 9 of the 12 files. Three are
+**complete-at-seed** and never carry it: `CLAUDE.md` (exactly one line, forever) and
+`.gitattributes`/`.editorconfig` (their baselines are self-sufficient — no `writing-*` skill fills
+machinery; stack-specific rules are an optional owner extension, not an awaiting-fill obligation).
 
 ## The agent-instruction split
 
