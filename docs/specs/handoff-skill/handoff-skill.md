@@ -161,17 +161,21 @@ its `SKILL.md` plus any reference file it links.
   registration. *(Verification type: **reviewer-checked**, Spec Conformance.)*
 - **AC-11**: The build stage triggers an update at build entry, after a ready-to-build verdict and
   before the first task is dispatched. It acts only when the doc already exists, announces that it
-  did, and never creates it. It never blocks for confirmation: when the prune trigger fires it
-  writes the entry, defers the prune, and announces that one is owed rather than pruning inline or
-  asking. *(Verification type: **reviewer-checked**, Spec Conformance.)*
+  did, and never creates it. It never blocks for confirmation: when the prune trigger fires and no
+  owed-prune marker exists yet, it writes the entry, defers the prune, and announces that one is
+  owed rather than pruning inline or asking. The deferral is capped at one update: if the marker
+  is already there from a prior run, the hook writes nothing and announces that the prune has been
+  owed since the stamped update instead of restating the marker. *(Verification type:
+  **reviewer-checked**, Spec Conformance.)*
 - **AC-12**: The pipeline's entry-point skill tells an agent to read the handoff doc first when one is
   present, and says what it is for, so a resuming agent finds it without knowing it exists.
   *(Verification type: **reviewer-checked**, Spec Conformance.)*
 - **AC-13**: The ship stage triggers an update at its park step, under the same three conditions:
   only when the doc exists, announced, never creating it, and never blocking for confirmation (the
-  same fired-trigger deferral as AC-11). Stated separately from AC-11 because the two hooks sit at
-  different moments and either can be satisfied while the other is not. *(Verification type:
-  **reviewer-checked**, Spec Conformance.)*
+  same capped, fired-trigger deferral as AC-11, including the second-encounter skip-and-announce
+  behavior). Stated separately from AC-11 because the two hooks sit at different moments and
+  either can be satisfied while the other is not. *(Verification type: **reviewer-checked**, Spec
+  Conformance.)*
 - **AC-14**: The repo's docs surface carries a usage page for the skill, covering all three modes and
   linked from the docs index, so the usage coverage ledger closes. *(Verification type:
   **reviewer-checked**, Spec Conformance.)*

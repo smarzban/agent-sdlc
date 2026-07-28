@@ -153,6 +153,25 @@ strict YAML.
   shape; `verification-report.md` rows updated to match. No task's file set or `AC-N` numbering
   changed; no new component.
 
+- **D-6: PR #26 adversarial re-read, follow-up fix.** D-5's I-3 disposition (a hook-driven update
+  writes the entry, defers the prune, records an owed-prune line, announces it) left the marker
+  itself unstamped and uncapped: any hook-driven run could keep restating "owed" indefinitely with
+  nothing to check it against, the same defect class as the overrun-note loophole C-1 had just
+  closed, in the feature's core promise. **Disposition:** the owed-prune marker now carries the
+  exact header stamp of the update that raised it, the same mechanic as the overrun note.
+  Deferral is capped at one update: an update that finds the marker already there, with a user
+  present, prunes inline and shows the result instead of deferring again; a hook that finds it
+  already there does not write at all, it skips the update entirely and announces "prune owed
+  since the stamped update, handoff not updated," since a hook cannot show a show-before-overwrite
+  result and the skipped write is what makes the deferral cost something. Restating the marker
+  under a fresh stamp is forbidden, same as the overrun note. Red flags and Done-when reconciled to
+  the capped, stamp-bound reading; no site left phrased loosely enough to survive the looser one.
+  AC-11 and AC-13 promised only an unbounded non-blocking deferral; both now state the one-update
+  cap and the second-encounter skip-and-announce behavior, and `verification-report.md` rows
+  updated to match. AC-3 was checked and left unchanged: it defines the trigger and the overrun
+  note, not the hook's deferral, which AC-11/AC-13 already own. No task's file set or `AC-N`
+  numbering changed; no new component.
+
 ## Banked follow-ups (out of scope, recorded so they are not rediscovered)
 
 - **The hooks are documented but unexercised.** Nothing in this repo's own pipeline run exercised

@@ -19,11 +19,15 @@ on absence alone, unasked. Update is the default for writing today's entry, and 
 prune trigger check first: when the trigger has fired, update disposes of every entry per the
 litmus (evict standing rules, collapse or drop closed threads) and shows the trimmed result before
 overwriting, in the same pass, rather than deferring the prune or telling the user to run it
-separately. The one exception is a hook-driven update with no user present to confirm: it writes
-the current entry, never prunes inline, and instead records under the header that a prune is owed
-and which leg fired, then announces both (see Update, hook-driven case, below). Prune stays
-separately invocable, for when the user asks for a prune pass on its own without writing a current
-entry, or to clear an owed-prune marker a hook left behind. If the mode still cannot be determined this way, say so and ask
+separately. The one exception is a hook-driven update with no user present to confirm: the first
+such update after the trigger fires writes the current entry, never prunes inline, and instead
+records under the header that a prune is owed, which leg fired, and the header stamp at that
+moment, then announces all three (see Update, hook-driven case, below). That deferral covers
+exactly one update. Any later update that finds the marker still there must resolve it now: prune
+inline if a user is present, or, if it is again hook-driven with no user present, skip the write
+entirely and announce that the handoff was not updated rather than deferring a second time. Prune
+stays separately invocable, for when the user asks for a prune pass on its own without writing a
+current entry, or to clear an owed-prune marker a hook left behind. If the mode still cannot be determined this way, say so and ask
 rather than picking: scaffold and prune differ in whether anything is destroyed, and guessing
 wrong on that axis is the one mistake this skill cannot recover from. A prune pass, standalone or
 inline inside an update, never overwrites `HANDOFF.md` before showing the user the trimmed result.
@@ -77,14 +81,23 @@ If the doc exists but does not match the template's contract (no header, no curr
 section, or sections out of order), materialize it to the template first: show the rewritten
 result before overwriting, the same as any lossy rewrite, then continue with the steps below.
 
-1. Check the prune trigger first (mechanical, below). If it has fired and a user is present to
-   confirm, dispose of every entry per the litmus (evict standing rules, collapse or drop closed
-   threads) and show the trimmed result to the user before continuing, exactly as prune's
-   show-before-overwrite step does.
+1. Check the prune trigger first (mechanical, below), and check whether an owed-prune marker is
+   already under the header. Handle in this order:
 
-   **Hook-driven case (no user present):** never prune inline. Write the current entry (steps
-   2-5 below) as usual, add one line under the header naming the leg that fired and that a prune
-   is owed, and say so in the announcement. Leave the disposal itself for a user-run prune pass.
+   - **A user is present and the trigger has fired** (marker present or not): dispose of every
+     entry per the litmus (evict standing rules, collapse or drop closed threads), show the
+     trimmed result to the user before continuing, exactly as prune's show-before-overwrite step
+     does, and clear any owed-prune marker in the same pass.
+   - **No user is present and an owed-prune marker is already there:** the one update of
+     deferral it bought already ran. Skip this update entirely, write nothing, and announce:
+     prune owed since the stamped update, handoff not updated. A hook cannot show a
+     show-before-overwrite result, so it does not get a second deferral.
+   - **No user is present, the trigger has fired, and no marker exists yet (hook-driven case):**
+     never prune inline. Write the current entry (steps 2-5 below) as usual, add one line under
+     the header naming the leg that fired and carrying the exact header stamp at the moment it is
+     written (the same mechanic as an overrun note, below), and say so in the announcement. Leave
+     the disposal for a user-run prune pass, or, if none comes, the next update resolves it per
+     the case above.
 2. Rewrite the current-state section fresh: do not append below the old entry. State what just
    happened and the true current repo state (branch, head, clean/dirty, what shipped).
 3. Check the ignore-file entry (`git check-ignore`) unless `HANDOFF.md` is already tracked by git
@@ -96,7 +109,8 @@ result before overwriting, the same as any lossy rewrite, then continue with the
 6. Refresh the stamped header line.
 7. Write the file: the trimmed result from step 1 if the trigger fired and a user confirmed it,
    otherwise the edited file as-is (with the owed-prune line, in the hook-driven case). Either
-   way, this is still one mode: update.
+   way, this is still one mode: update. (The already-deferred hook case in step 1 exits before
+   this step: nothing is written.)
 
 ### Prune
 
@@ -146,6 +160,15 @@ stamp per Update step 6, prunes regardless of what the note says. Never rewrite 
 note with a fresh stamp to keep it alive: a leg that needs excusing twice is the signal to prune
 it, not to renew the waiver.
 
+An owed-prune marker (the hook-driven case's deferral line, see Update above) follows the same
+mechanic. It carries the exact header stamp at the moment it is written, and it excuses deferring
+the prune for exactly one update: the one that wrote it. Any later update that finds the marker
+already there, its stamp necessarily from before that update's own, must resolve it now rather
+than restating it: prune inline and show the result if a user is present, or, if it is again
+hook-driven with no user present, skip the write entirely and announce that the handoff was not
+updated. Restating the marker under a fresh stamp instead of resolving it is the same forbidden
+move as renewing an overrun note.
+
 ## Principles
 
 - **The litmus decides placement, once.** Every other rule in this skill is a consequence of it,
@@ -171,6 +194,7 @@ it, not to renew the waiver.
 | "The user can just read the git log." | Git records what changed, never what was being attempted or deliberately left undone. That gap is the entire reason this doc exists. |
 | "It's only a few extra lines over the trigger." | The trigger fires at the line: more than 100 lines, no fuzz. A stated, deliberate overrun is the only sanctioned exception, and it is honored only for the update whose stamp it carries: the next update prunes regardless. |
 | "I'll just restate the overrun note so it stays valid." | Rewriting the same leg's note with a fresh stamp is forbidden. A leg that needs excusing twice is the signal to prune it, not to renew the waiver. |
+| "I'll just leave the owed-prune line, the hook will get it next update." | The deferral is good for one update only. The next update either prunes inline (user present) or skips the write and says so (hook, no user present); restating the line is the same forbidden renewal as an overrun note. |
 | "I didn't have time to update it." | An update pass is short by design: rewrite current-state, next-up, and closed threads. Skipping it is what hands the next agent nothing. |
 | "I'll just delete the stale-looking stuff, it's faster." | Delete is for threads that are already merged, shipped, closed, or decided. Anything that reads like a standing rule gets evicted, not deleted, because this may be its only copy. |
 | "The doc already exists, I'll scaffold a fresh one to clean it up." | That is a prune, not a scaffold, and it skips the show-before-overwrite step scaffold doesn't have. Pick the mode the condition actually selects. |
@@ -190,7 +214,8 @@ it, not to renew the waiver.
 - The mode was guessed rather than determined by the condition table, especially scaffold-vs-prune.
 - An update that left the prune trigger fired without disposing of entries inline, and without a
   user present to justify deferring it via the owed-prune line.
-- An owed-prune line left under the header with no later prune pass clearing it.
+- An owed-prune line still present at a later update (its stamp no longer that update's own)
+  that was neither pruned inline nor caused a hook to skip the write and announce as much.
 - Placement reasoning restated inline instead of pointing back to the litmus.
 
 ## Done when
@@ -201,12 +226,16 @@ it, not to renew the waiver.
 - On scaffold: the file exists from the template, the current-state entry is real (not a
   placeholder), the ignore-file entry is added or confirmed, and the user was told both, including
   the one-line tradeoff.
-- On update: the prune trigger was checked first. If it fired and a user was present, entries
-  were disposed of per the litmus and the trimmed result was shown before the write. If it fired
-  with no user present, the current entry was written, the disposal was deferred, and an
-  owed-prune line naming the fired leg was added and announced instead. Either way: current-state
-  and next-up are rewritten fresh, closed threads are collapsed or dropped, the ignore-file entry
-  was checked, and the stamp is refreshed.
+- On update: the prune trigger and any existing owed-prune marker were checked first. If the
+  trigger fired and a user was present, entries were disposed of per the litmus, any owed-prune
+  marker was cleared in the same pass, and the trimmed result was shown before the write. If the
+  trigger fired with no user present and no marker existed yet, the current entry was written,
+  the disposal was deferred, and an owed-prune marker naming the fired leg and carrying the
+  header stamp was added and announced instead. If no user was present and a marker already
+  existed, the update was skipped entirely and "handoff not updated" was announced instead of
+  writing. Whenever the file was written: current-state and next-up are rewritten fresh, closed
+  threads are collapsed or dropped, the ignore-file entry was checked, and the stamp is
+  refreshed.
 - On prune (standalone): every entry was checked against the litmus, standing rules were evicted
   rather than deleted, the trimmed result was shown and confirmed before the overwrite, any owed
   prune-line was cleared, and any deliberate overrun left in place carries the current header
@@ -244,11 +273,13 @@ On scaffold, also: an ignore-file entry for `HANDOFF.md`, and a stated line to t
 was added plus the one-line ignored-versus-committed tradeoff.
 
 A deliberate overrun note or an owed-prune line, when either applies, is one line placed
-immediately after the stamp line and before `## Current state`, and an overrun note quotes the
-header's own stamp verbatim so it can be checked against it later, e.g. `_Overrun (size):
-keeping the full incident writeup one more update, stamp 2024-03-01 · by: fixer · main @
-`a1b2c3d` (clean)._` or, for the hook case, `_Prune owed: content leg fired, deferred by the
-ship hook._`
+immediately after the stamp line and before `## Current state`. Both quote the header's own stamp
+verbatim at the moment they are written, so either can be checked against the current header
+stamp later: an overrun note as `_Overrun (size): keeping the full incident writeup one more
+update, stamp 2024-03-01 · by: fixer · main @ `a1b2c3d` (clean)._`, an owed-prune line as `_Prune
+owed: content leg fired, stamp 2024-03-01 · by: fixer · main @ `a1b2c3d` (clean), deferred by the
+ship hook._`. Neither is renewed under a fresh stamp: a note or marker still present at the next
+update gets resolved (pruned inline, or the write skipped), not restated.
 
 On prune (standalone or inline inside an update), also: the trimmed result shown for confirmation
 before it overwrites the file, and, where anything was evicted, the addition to the repo's
