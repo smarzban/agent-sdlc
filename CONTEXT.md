@@ -55,6 +55,22 @@ Canonical vocabulary for this repo's spec chain. Glossary only, no implementatio
 - **scratch visual**: the visual aid rendered as a standalone page the user opens, for
   comparisons a spec diagram cannot express: throwaway, never committed, and offered for consent
   before first use because it spends tokens and sends the user out of the terminal.
+- **handoff doc**: the repo-root "where we left off" document the next agent reads to resume, holding
+  live state rather than standing rules. Ignored by default (per working copy, so it can be written
+  frankly), and distinct from the spec chain: the chain hands a FEATURE forward, the handoff doc hands
+  the WORKING COPY forward.
+- **live state**: what is true about the work right now and will be wrong next week: an in-flight
+  branch, a PR number, the next action, an undecided question. The complement of a standing rule,
+  which is true next month and belongs in the repo's agent instructions. This one distinction decides
+  every placement question the handoff doc raises.
+- **prune pass**: the maintenance pass that keeps a handoff doc trustworthy: closed threads collapse
+  to a pointer or go, duplicated sections merge, and the doc is shown before it is overwritten.
+  Triggered mechanically (size, structure, or an entry naming something already shipped), never left
+  to the moment's judgement, because "prune aggressively" is the instruction every bloated doc was
+  already under.
+- **eviction**: moving a durable lesson OUT of the handoff doc into the standing rules, rather than
+  deleting it. The default disposition when a prune pass finds something true next month, because the
+  handoff doc is often the only copy.
 - **checker silence**: the checker's failure to report a defect that is present. The complement of
   what a green suite proves: the suite tests what the checker reports, so silence is the part of its
   behaviour that no passing test constrains.
