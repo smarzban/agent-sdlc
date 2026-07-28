@@ -108,14 +108,20 @@ against the base, runs its reviewers, and returns a deterministic verdict:
   has nothing to check and silently returns empty. Pass the feature's `## Acceptance Criteria` (and
   the design / ADRs) into the invocation so the contract review is real, not blind — never assume the
   worktree contains the spec.
-- **Verdict vocabulary:** `pass` (no blocking findings) or `block` (blocking findings must be
-  resolved or justified).
+- **Verdict vocabulary:** `pass` (no blocking findings), `block` (blocking findings must be
+  resolved or justified), or `inconclusive` (the panel did not review enough of the change to judge
+  it: too few models or families voted, or the scanner tier did not positively run clean).
 - **Severity:** `critical` · `high` · `medium` gate (block); `low` · `info` are advisory.
 - It posts the verdict as a PR comment.
 
 **Branch on the verdict, not on memory:** treat only an explicit `pass` as ready. On `block`, surface
 the blocking findings to the user and ask before any fix-and-re-push. ship never merges — even on a
 clean pass, the merge is a human's or the gate's own step.
+
+**`inconclusive` is not a block, and never a pass.** It says nothing about the code, so there is
+nothing to fix: the remedy is to re-run the gate with a fuller, more diverse panel, or with a
+working scanner tier. Never report it as ready, never "fix" findings in response to it, and never
+re-run the same panel unchanged and expect a different verdict. Surface it and say what is missing.
 
 The gate depends on Node plus the `@empanel/cli` npm package (the skills invoke it via
 `npx @empanel/cli@0`, so a network-reachable npm registry or a global install suffices) and at

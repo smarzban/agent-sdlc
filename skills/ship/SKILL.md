@@ -71,12 +71,14 @@ it stops and asks before changing anything — a PR is an outward artifact.
    explicitly — the `## Acceptance Criteria` and the design — because its reviewers explore the
    committed worktree, where a gitignored or uncommitted spec is invisible and the conformance lens
    would otherwise check against nothing. It diffs the PR against the base, reviews, posts a verdict
-   comment, and returns **pass** or **block**. If the gate skill is not installed (or the
+   comment, and returns **pass**, **block**, or **inconclusive**. If the gate skill is not installed (or the
    `@empanel/cli` runtime is missing), fall back to a dispatched whole-PR reviewer subagent and say
    so — the PR is still created and reviewed, by the portable path.
 8. **Verdict** **pass** → report "PR ready, gate ✅" with the URL. **block** → surface the
    blocking findings and recommended fixes, then STOP and ask whether to dispatch fixers and
-   re-push, or hand it back. Do not auto-loop on an outward artifact.
+   re-push, or hand it back. Do not auto-loop on an outward artifact. **inconclusive** → the panel
+   did not review enough of the change to judge it; report it as unreviewed (never as ready, never
+   as a block to fix) and ask to re-run with a fuller panel or a working scanner tier.
 9. **Park with the reviewed head visible** when the merge is someone else's call (an overseer's or
    maintainer's review — parking the PR instead of finishing): before declaring it parked, the branch
    is **pushed** and the **PR head equals the local reviewed head** — `git rev-parse HEAD` ==
@@ -154,6 +156,7 @@ it stops and asks before changing anything — a PR is an outward artifact.
   the plan was ingested, its provenance + the gate's mid-chain-entry / `untraced` note.
 - The gate (or the fallback reviewer) has returned a verdict, posted on the PR.
 - On pass: the PR URL and the ✅ verdict are reported. On block: findings surfaced and the user asked.
+  On inconclusive: reported as unreviewed, with a re-run on a fuller panel offered.
 - If the PR is parked / handed off for review rather than finished: the branch is pushed, the PR head
   equals the local reviewed head (`git rev-parse HEAD` == the PR's `headRefOid`), and the handoff
   message states that SHA; every post-open fix round re-pushed before re-parking.
