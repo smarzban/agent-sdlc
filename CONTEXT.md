@@ -55,6 +55,20 @@ Canonical vocabulary for this repo's spec chain. Glossary only, no implementatio
 - **scratch visual**: the visual aid rendered as a standalone page the user opens, for
   comparisons a spec diagram cannot express: throwaway, never committed, and offered for consent
   before first use because it spends tokens and sends the user out of the terminal.
+- **run record**: the structured, append-only account of what a pipeline run cost and what that cost
+  bought, one entry per stage boundary and per task. Written by committed code, stored outside the
+  repository, and never transmitted anywhere. Distinct from the spec chain, which records what a run
+  PRODUCED: the run record is the only place its cost is visible at all.
+- **stage boundary**: the point a pipeline stage starts or finishes, and the only place a run record
+  is written. Boundaries are where a clock can be trusted: everything between them is model inference
+  the pipeline cannot observe directly.
+- **harvested signal**: a fact the pipeline already writes into its own artifacts (a deviation, a
+  fired tripwire, a review round) collected into the run record automatically rather than re-typed. A
+  signal that must be restated by hand is a signal that will be dropped.
+- **feedback item**: an evidence-bound report about the PIPELINE ITSELF, not about the work it was
+  used on: a command that failed, a documented step that had to be worked around, a doc that
+  contradicts the tool. Rare by design, cites the command or the quoted line or it is not written at
+  all, and silence is the expected outcome of a run.
 - **handoff doc**: the repo-root "where we left off" document the next agent reads to resume, holding
   live state rather than standing rules. Ignored by default (per working copy, so it can be written
   frankly), and distinct from the spec chain: the chain hands a FEATURE forward, the handoff doc hands
