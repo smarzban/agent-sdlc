@@ -28,9 +28,9 @@ agent-sdlc/                          ← repo root = the plugin AND its marketpl
   the plugin work the moment it's installed.
 - **One plugin, self-hosted marketplace.** Each harness's manifest lists the same plugin at the
   repo root; skills are auto-discovered from `skills/`, so the manifests almost never change.
-- **Invoke-if-present cross-plugin contracts.** `ship` invokes the Empanel gate (`/empanel:merge-gate`)
-  when present and announces a loud degraded fallback (a dispatched reviewer subagent) when not —
-  never a silent skip. The checker follows the same rule when Node is absent.
+- **Invoke-if-present cross-plugin contracts.** `ship` invokes the Empanel gate
+  (`/empanel:merge-gate`) when present and announces a loud degraded fallback (a dispatched reviewer
+  subagent) when not — never a silent skip. The checker follows the same rule when Node is absent.
 - **The spec tree is the memory.** Every feature of the pipeline shipped through the pipeline;
   `docs/specs/` holds the immutable per-feature chains and the living overview. The artifact model is
   described in [usage/pipeline.md](usage/pipeline.md).
