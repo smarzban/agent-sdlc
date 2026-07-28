@@ -113,3 +113,342 @@ contract the moment anyone has data in the old shape. Surprising without context
 may not report its own timings" reads as distrust of a component we otherwise trust to write code.
 And a real tradeoff, since the machine-stamped half costs a tool call per boundary, which slightly
 increases the very thing being measured.
+
+## Acceptance Criteria
+
+Two terms are load-bearing enough to restate inline. A **machine field** is one the recorder reads
+itself, from a clock or from git. A **reported field** is one only the agent can know. The whole
+trust model is that a reader can always tell which is which.
+
+### The recorder: machine fields (test-backed)
+
+- **AC-1**: The recorder writes a start event and an end event, each stamped from its own clock.
+  Elapsed is derived by the reader from the pair and is never accepted as an input, so an agent can
+  fail to record a boundary but cannot state a duration. *(Verification type: **test-backed**, unit.)*
+- **AC-2**: Branch, head commit, and changed lines and files are read by the recorder from git, and a
+  caller-supplied value for any of them is rejected rather than trusted. *(Verification type:
+  **test-backed**, unit.)*
+- **AC-3**: A run record carries no free text. Every field is a number, a timestamp, an enumerated
+  value, or an identifier matching a declared shape, and anything else is rejected. Privacy is
+  structural rather than remembered: there is no field a file path, a prompt, or a snippet of source
+  could be written into. *(Verification type: **test-backed**, unit.)*
+- **AC-4**: Records are append-only, one event per line, each carrying a schema version. A malformed
+  or truncated earlier line never prevents a later append and never crashes the reader.
+  *(Verification type: **test-backed**, unit.)*
+- **AC-5**: The store lives outside the repository and is keyed by the repository's remote when it
+  has one, falling back to a hash of its absolute path. Two checkouts sharing a directory name never
+  write to the same key. Falsifiable: the naive basename key that a sibling tool uses collides on
+  exactly this case. *(Verification type: **test-backed**, unit.)*
+- **AC-6**: On any failure the recorder exits non-zero with a diagnostic on stderr and writes nothing
+  partial, so a failed record is always distinguishable from a stage that never ran. The documented
+  half, that a stage announces the failure and proceeds, is AC-16's. *(Verification type:
+  **test-backed**, unit.)*
+
+### The recorder: reported fields (test-backed)
+
+- **AC-7**: Agent-supplied fields (review rounds, findings by severity, tripwires fired, deviations
+  recorded) are namespaced separately from machine fields in every record, so no reader can mistake a
+  claim for an observation. *(Verification type: **test-backed**, unit.)*
+- **AC-8**: Harness enrichment (token counts, tool-use counts) is optional, and its absence is
+  recorded as explicitly absent rather than as zero. A reader can always distinguish "the harness
+  does not expose this" from "this was zero". *(Verification type: **test-backed**, unit.)*
+
+### The reporter (test-backed)
+
+- **AC-9**: The reporter summarises one run: elapsed per stage and per task, review rounds, findings
+  by severity, changed lines and files, commits after first green, and the share of elapsed time that
+  fell after the first green bar. *(Verification type: **test-backed**, unit.)*
+- **AC-10**: The reporter aggregates across runs and across repositories in one view, since a
+  cross-run pattern is the only kind that justifies a pipeline change. *(Verification type:
+  **test-backed**, unit.)*
+- **AC-11**: The reporter never fabricates a number it cannot derive. An unpaired boundary, an absent
+  enrichment, or a missing record is reported as such, never rendered as zero or silently omitted.
+  *(Verification type: **test-backed**, unit.)*
+
+### Harvest (test-backed)
+
+- **AC-12**: Signals the pipeline already writes into its own artifacts (recorded deviations, review
+  rounds) are collected from those artifacts rather than re-typed by the agent, and a signal that
+  cannot be parsed is reported rather than dropped. *(Verification type: **test-backed**, unit.)*
+
+### The feedback channel (reviewer-checked)
+
+- **AC-13**: The channel is stated once, in one document, and the stages that end a run refer to it
+  rather than restating it. *(Verification type: **reviewer-checked**, Spec Conformance.)*
+- **AC-14**: The channel states: what qualifies, including the trigger that a documented step was
+  skipped, weakened, or worked around; the evidence rule (cite the command, the error, or the quoted
+  line, or do not report); what must never be written (praise, feature wishes, speculation, recaps);
+  the local-only destination outside the repository; a redaction rule; a fixed short item format; and
+  that writing nothing is the expected outcome of a run. *(Verification type: **reviewer-checked**,
+  Spec Conformance.)*
+- **AC-15**: The channel is marked for removal before a 1.0.0 release, and the removal is enforced by
+  a test that fails while the marker survives at a 1.x version, not by anyone remembering.
+  *(Verification type: **test-backed**, unit.)*
+
+### Portability and wiring (reviewer-checked)
+
+- **AC-16**: The stages that bound a run record their boundaries, and the recorder is resolved by the
+  same rule the checker already uses, degrading loudly and proceeding when it cannot be resolved.
+  *(Verification type: **reviewer-checked**, Spec Conformance.)*
+- **AC-17**: Nothing in the recorder, the reporter, or the documented wiring assumes a language,
+  build tool, test runner, or directory layout of the repository being worked on. Falsifiable by
+  inspection: no invocation of a stack-specific command, and no path convention outside the store
+  and the spec tree. *(Verification type: **reviewer-checked**, Spec Conformance.)*
+- **AC-18**: The recorder's and the reporter's imports are confined to a declared allowlist of
+  standard-library modules, none of them network-capable. This is what makes the no-transmission
+  promise checkable rather than a statement of intent, and it mirrors the existing rule that pins the
+  checker's own imports. *(Verification type: **test-backed**, unit.)*
+
+### Negative criteria
+
+- **NC-1**: Nothing is transmitted anywhere: no upload, no network call, no issue, no pull-request
+  comment, nothing added to a commit.
+- **NC-2**: No file contents, prompts, diffs, titles, or work identifiers are recorded. Counts,
+  durations, and enumerated values only.
+- **NC-3**: No shipping gate on the numbers in this release. Deferred with its reason.
+- **NC-4**: The recorder never blocks, never fails a stage, and never writes inside the repository
+  being worked on.
+- **NC-5**: No change to what any stage produces. This adds recording; it alters no artifact.
+- **NC-6**: No runtime dependency, and no requirement that a harness expose token counts.
+- **NC-7**: No second enforcement mechanism. The checker verifies the chain; this measures the run;
+  neither consults the other.
+
+### Verification map
+
+| Criterion | Oracle kind / review axis |
+| --- | --- |
+| AC-1 | unit |
+| AC-2 | unit |
+| AC-3 | unit |
+| AC-4 | unit |
+| AC-5 | unit |
+| AC-6 | unit |
+| AC-7 | unit |
+| AC-8 | unit |
+| AC-9 | unit |
+| AC-10 | unit |
+| AC-11 | unit |
+| AC-12 | unit |
+| AC-13 | Spec Conformance |
+| AC-14 | Spec Conformance |
+| AC-15 | unit |
+| AC-16 | Spec Conformance |
+| AC-17 | Spec Conformance |
+| AC-18 | unit |
+
+### Glossary terms touched
+
+`run record`, `stage boundary`, `harvested signal` and `feedback item` were added at the idea stage.
+`machine field` and `reported field` are defined inline above and are added at this stage.
+
+## Design
+
+The instruction and enforcement split holds and gains a third role. Skills instruct, the checker
+verifies the chain, and the recorder observes the run. The recorder is trusted code for the same
+reason the checker is: what it reports must not be what the agent says happened.
+
+### Components
+
+1. **recorder**: Appends one event per stage boundary. Owns the clock and the git reads, validates
+   every field against the schema, and refuses anything free-form. Kind: a zero-dependency
+   command-line program.
+2. **run store**: The on-disk shape and location of the records, and the repository keying rule.
+   Kind: an append-only line-delimited file tree outside the repository.
+3. **reporter**: Derives durations from boundary pairs and renders a single run or an aggregate.
+   Kind: a pure read-only command-line program over the store.
+4. **harvester**: Extracts signals the pipeline already wrote into its own artifacts. Kind: a pure
+   parsing function reusing the checker's existing artifact parsers.
+5. **feedback channel document**: States what qualifies, the evidence rule, the destination, and the
+   format, once. Kind: an instruction document.
+
+### Outside the checker (changed components)
+
+1. **gate skill text**: records its boundary.
+2. **build skill text**: records task boundaries and the harvested per-task signals.
+3. **ship skill text**: records the closing boundary.
+
+### Contracts
+
+**recorder.** In: an event kind, a run identity, and reported fields as typed arguments. Out: one
+appended line, or a non-zero exit with a diagnostic and nothing written. It reads the clock, the
+branch, the head, and the diff statistics itself, and rejects any attempt to supply them. It never
+writes inside the repository under work, never emits partial lines, and never exits zero on a failed
+write: a silent success on a failed record is worse than a loud failure, because the absence is
+indistinguishable from a stage that never ran.
+
+**run store.** Keyed by the repository's remote when one exists, otherwise by a hash of its absolute
+path, never by its directory name. Each line carries a schema version, because a schema becomes a
+contract the moment anyone holds data in the old shape.
+
+**reporter.** In: the store, optionally filtered. Out: a rendered summary. Pure and read-only. It
+derives every duration from a boundary pair and reports an unpaired boundary as unpaired. Never
+mutates the store, never repairs a malformed line, never infers a missing value.
+
+**harvester.** In: a build report. Out: the deviations and rounds it declares. A signal it cannot
+parse is reported, never dropped, because a harvester that silently drops is a channel that quietly
+empties.
+
+### Data flow and key state
+
+Boundaries flow one way: stage to recorder to store. The reporter reads and renders. Nothing reads
+the store to make a decision, in this release by choice, which is what keeps the recorder harmless:
+no stage can be blocked, slowed, or altered by what a previous run recorded.
+
+### Trust and failure boundaries
+
+The recorder is trusted for what it observes and neutral about what it is told, which is why the two
+kinds of field are namespaced apart rather than merged into one flat record. The failure direction is
+chosen deliberately: on any doubt the recorder writes nothing and says so, because a missing record
+is honest while a fabricated one silently poisons every aggregate built on it afterwards.
+
+The privacy boundary is structural, not procedural. There is no free-text field, so there is no field
+for a secret to be written into, and no reviewer has to remember to check.
+
+### Criterion to component map
+
+| Criterion | Component |
+| --- | --- |
+| AC-1 | recorder |
+| AC-2 | recorder |
+| AC-3 | recorder |
+| AC-4 | run store |
+| AC-5 | run store |
+| AC-6 | recorder |
+| AC-7 | recorder |
+| AC-8 | recorder |
+| AC-9 | reporter |
+| AC-10 | reporter |
+| AC-11 | reporter |
+| AC-12 | harvester |
+| AC-13 | feedback channel document |
+| AC-14 | feedback channel document |
+| AC-15 | feedback channel document |
+| AC-16 | gate skill text, build skill text, ship skill text |
+| AC-17 | recorder, reporter, gate skill text, build skill text, ship skill text |
+| AC-18 | recorder, reporter |
+
+### ADRs created
+
+`ADR-0003`: the recording trust model and the store's location. Records why timings are machine-read
+rather than reported, why the store sits outside the repository and is keyed by remote rather than by
+directory name, and the accepted cost of a tool call per boundary.
+
+### Glossary terms touched
+
+`machine field` and `reported field` added at the acceptance-criteria stage.
+
+## Tech Stack
+
+Fast path: no new product. Every component is realized by what the repo already declares, pins, and
+ships.
+
+### Load-bearing claims
+
+- **Runtime: Node >= 22, ESM, zero runtime dependencies.** Unchanged, and already the checker's
+  declared stack. The recorder and reporter are siblings of the existing checker binary and inherit
+  its resolution rule.
+- **Storage format: line-delimited JSON, written with an append.** No dependency, crash-safe in the
+  only way that matters here (a torn last line never invalidates earlier ones), and readable by every
+  tool a maintainer already has.
+- **Git facts via the existing repository-facts reader.** The checker already shells out to git under
+  a fixed argument vector with no shell interpolation; the recorder reuses that path rather than
+  inventing a second one.
+- **Test runner: the existing node:test suite**, picked up by the existing glob, so no CI change.
+
+### Unverified / flagged
+
+- **Token and tool-use counts are harness-specific and unpinned.** They are optional by design, and
+  the schema records their absence rather than assuming a shape. No claim is made that any harness
+  supplies them.
+
+### Glossary terms touched
+
+None.
+
+## Plan
+
+Ordered so the store's shape is settled before anything writes to it, and so each task is one
+concern with a small expected diff. The feedback channel is independent of the recorder and can run
+in parallel with it.
+
+### Tasks
+
+- **T-1 - The store: schema, keying, and append.** Define the event schema (versioned), the repository
+  keying rule (remote, else path hash, never basename), and the append behaviour including tolerance
+  of a malformed earlier line. Files: `checker/run-store.mjs` (new), `checker/run-store.test.mjs`
+  (new). Test-first: the basename-collision case, which is the failure a sibling tool actually has.
+  *Advances:* AC-4, AC-5. *Component:* run store. *Deps:* none.
+- **T-2 - The recorder: machine fields.** The command-line program, its clock, its git reads, and its
+  refusal of caller-supplied machine values. Files: `checker/sdlc-record.mjs` (new),
+  `checker/record.test.mjs` (new), `bin/sdlc-record` (new). Test-first: a caller supplying a branch or
+  an elapsed value is rejected.
+  *Advances:* AC-1, AC-2, AC-6, AC-18. *Component:* recorder. *Deps:* T-1.
+- **T-3 - The recorder: reported fields and the no-free-text rule.** Typed reported fields, namespaced
+  apart from machine fields, with validation that rejects anything not numeric, enumerated, or a
+  declared identifier, plus explicit-absence for harness enrichment. Files: `checker/sdlc-record.mjs`
+  (edit), `checker/record.test.mjs` (edit). Test-first: a free-text value is rejected, and an absent
+  enrichment reads as absent rather than zero.
+  *Advances:* AC-3, AC-7, AC-8. *Component:* recorder. *Deps:* T-2.
+- **T-4 - The reporter: one run.** Derive durations from boundary pairs, render per-stage and per-task
+  lines, the post-first-green share, and report an unpaired boundary as unpaired. Files:
+  `checker/sdlc-report.mjs` (new), `checker/report.test.mjs` (new), `bin/sdlc-report` (new).
+  Test-first: an unpaired boundary is reported, never rendered as zero.
+  *Advances:* AC-9, AC-11, AC-18. *Component:* reporter. *Deps:* T-1.
+- **T-5 - The reporter: aggregate across runs and repos.** Files: `checker/sdlc-report.mjs` (edit),
+  `checker/report.test.mjs` (edit). Test-first: two repositories with the same directory name
+  aggregate separately.
+  *Advances:* AC-10. *Component:* reporter. *Deps:* T-4.
+- **T-6 - The harvester.** Extract recorded deviations and review rounds from a build report, reusing
+  the checker's existing parsers, reporting rather than dropping an unparseable signal. Files:
+  `checker/harvest.mjs` (new), `checker/harvest.test.mjs` (new). Test-first: an unparseable signal is
+  reported.
+  *Advances:* AC-12. *Component:* harvester. *Deps:* T-1.
+- **T-7 - The feedback channel document.** What qualifies (including the skipped-or-worked-around
+  trigger), the evidence rule, the never-write list, the destination, redaction, the item format, and
+  that silence is the expected outcome. Plus the pre-1.0 removal marker. Files:
+  `skills/getting-started/reference/pipeline-feedback.md` (new). Test-first: explicit verification,
+  every required element present and stated once.
+  *Advances:* AC-13, AC-14. *Component:* feedback channel document. *Deps:* none.
+- **T-8 - The removal ratchet.** A test that fails while the removal marker survives at a 1.x version,
+  with the guarded phrase repeated in the marker so deleting only the section still trips it. Files:
+  `checker/feedback-ratchet.test.mjs` (new). Test-first: the test fails against a simulated 1.0.0
+  manifest while the marker exists.
+  *Advances:* AC-15. *Component:* feedback channel document. *Deps:* T-7.
+- **T-9 - Stage wiring and the ADR.** Record boundaries from the three stages that bound a run, refer
+  to the feedback document from their closing checklists, resolve the recorder by the existing rule
+  and degrade loudly, and write `ADR-0003`. Files: `skills/gate/SKILL.md` (edit),
+  `skills/build/SKILL.md` (edit), `skills/ship/SKILL.md` (edit),
+  `docs/specs/adr/ADR-0003-run-recording-trust-model.md` (new). Test-first: explicit verification,
+  each stage states where it records and what it does when the recorder is absent.
+  *Advances:* AC-16, AC-17. *Component:* gate skill text, build skill text, ship skill text. *Deps:* T-3, T-7.
+
+### Task-to-criterion coverage map
+
+| Criterion | Advanced by |
+| --- | --- |
+| AC-1 | T-2 |
+| AC-2 | T-2 |
+| AC-3 | T-3 |
+| AC-4 | T-1 |
+| AC-5 | T-1 |
+| AC-6 | T-2 |
+| AC-7 | T-3 |
+| AC-8 | T-3 |
+| AC-9 | T-4 |
+| AC-10 | T-5 |
+| AC-11 | T-4 |
+| AC-12 | T-6 |
+| AC-13 | T-7 |
+| AC-14 | T-7 |
+| AC-15 | T-8 |
+| AC-16 | T-9 |
+| AC-17 | T-9 |
+| AC-18 | T-2, T-4 |
+
+### Notes
+
+- Nine tasks, each one concern, each with a small expected diff. This is deliberate and follows the
+  sizing lesson measured elsewhere: the tasks that ran long were the ones bundling several concerns.
+- T-1 and T-7 have no dependencies and can start together. T-4 and T-6 unblock as soon as T-1 lands.
+- Blast radius: five new files under the checker directory, two new launchers, one new reference
+  document, one ADR, and one paragraph each in three stage bodies. Nothing existing changes shape.
