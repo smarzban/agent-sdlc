@@ -55,3 +55,13 @@ Canonical vocabulary for this repo's spec chain. Glossary only, no implementatio
 - **scratch visual**: the visual aid rendered as a standalone page the user opens, for
   comparisons a spec diagram cannot express: throwaway, never committed, and offered for consent
   before first use because it spends tokens and sends the user out of the terminal.
+- **checker silence**: the checker's failure to report a defect that is present. The complement of
+  what a green suite proves: the suite tests what the checker reports, so silence is the part of its
+  behaviour that no passing test constrains.
+- **seeded defect**: a defect deliberately planted in a minimal spec fixture so the checker's
+  detection of it is asserted rather than assumed. The seed set is drawn from defects that actually
+  occurred, not from imagined ones.
+- **expected miss**: a seeded defect the checker is known NOT to detect, recorded with the reason it
+  was left unfixed, and asserted in both directions: it fails if detection is lost from a defect we
+  do catch, and equally if an expected miss starts being caught, so the ledger cannot drift out of
+  agreement with the checker in either direction.
