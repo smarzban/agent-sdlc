@@ -131,9 +131,20 @@ links parse as zero (the retro that motivated this: a plan written to this skill
   multi-word component name silently reads as **dangling**.) `*Advances:*`/`*Deps:*` cite `AC-N`/`T-N`
   ids; `*Component:*` cites a component name, or `none`.
 - **Task-to-criterion coverage map:** a table whose **2nd-column header matches
-  `/advanced by|component/i`** — a literal `Task(s)` header parses as **zero** links. The 1st-column
-  cell must be a bare id (`AC-N`); rows need **literal `T-N` tokens** (prose like "all tasks" traces
-  nothing).
+  `/advanced by|component/i`** (a literal `Task(s)` header parses as **zero** links). The 1st-column
+  cell must be a bare id (`AC-N`). The header wording picks the cell grammar, and the two shapes
+  differ: a **`Component`-headed** map cites components by name and is scanned whole-cell (any id or
+  component name anywhere in the cell counts). An **`Advanced by`-headed** map is the coverage map,
+  and only there does the leading-id rule below apply.
+  A coverage-map cell links the ids it LISTS: comma-separated, each entry LEADING with the id. A
+  leading run of backtick, asterisk, or `[` is tolerated (`` `T-1` ``, `**T-1**`, `[T-1](#t-1)` all
+  link); other decoration is not, so underscore emphasis (`_T-1_`) drops the id with no link and no
+  note (an underscore is a word character, so the id token itself never matches). A parenthetical
+  ANNOTATES, it does not link (`T-8 (supersedes T-5)` links `T-8` only); an unmatched `(` strips
+  everything after it to the end of the cell, so close every paren you open. A prose join does not
+  link either (`T-1 and T-2` links `T-1` only, write a comma instead). An id mentioned but not
+  linked (inside a parenthetical, or at a non-leading position) yields a NOTE, not a finding, so it
+  stays visible rather than silent. Prose like "all tasks" traces nothing.
 - **IDs are defined at a bold-lead** — `**AC-N**`, `**T-N**` — distinct from a plain-text citation. A
   slash-run citation (`AC-1/2/3`) expands to each id.
 - **Every AC needs a carrying task — reviewer-checked included.** Forward coverage holds **every**

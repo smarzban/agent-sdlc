@@ -172,6 +172,8 @@ Downstream, the gate/ship checker parses this section literally:
 - **Carrying-task rule (pinned) — verification type never exempts an AC from forward coverage.** The
   `coverage-forward` check holds **every defined `AC-N`, reviewer-checked and test-backed alike**, to
   being reached by ≥1 task (a task's `*Advances:*` field ∪ a Task-to-criterion coverage-map row). A
+  coverage-map row links only the id each comma-separated cell entry LEADS with; a parenthetical
+  annotates and does not link (the plan skill's grammar owns the full rule). A
   **reviewer-checked** AC is not auto-traced by being reviewer-checked; its **carrying task is the one
   that produces the artifact the reviewer checks** — name that AC in that task's `*Advances:*`. Pin
   this because it is counter-intuitive (a reviewer-checked criterion still needs a build task).
