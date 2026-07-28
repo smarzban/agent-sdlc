@@ -6,10 +6,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync, execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync, readFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync, mkdirSync, readFileSync, readdirSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { checkForwardCoverage, checkBackwardCoverage } from './sdlc-check.mjs';
 
 const CLI = fileURLToPath(new URL('./sdlc-check.mjs', import.meta.url));
 const SOURCE = fileURLToPath(new URL('./sdlc-check.mjs', import.meta.url));
@@ -341,18 +342,21 @@ test('fail-closed: a ledger present but the run directory is not a git repo exit
 // itself, so these numbers are never refreshed from the new implementation.
 
 const SPEC_ROOT = fileURLToPath(new URL('../docs/specs/', import.meta.url));
-const CHAINS = [
-  'enforcement-spine',
-  'repo-setup',
-  'visual-aids',
-  'adoption-quickwins',
-  'spec-location-under-docs',
-  'explicit-ownership',
-];
 
 function chainPath(name) {
   return path.join(SPEC_ROOT, name, `${name}.md`);
 }
+
+// Derived from the tree, not hardcoded: a directory under docs/specs/ counts as a chain when it
+// holds a same-named `<name>.md` (excludes `adr/`, which has no `adr.md`, and any bare file such
+// as `overview.md`). A chain added later is therefore swept into every test below that iterates
+// CHAINS with no edit here. A discovery bug that silently found nothing would make every consumer
+// below vacuously pass instead, so fail loudly here rather than let that happen.
+const CHAINS = readdirSync(SPEC_ROOT, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory() && existsSync(chainPath(entry.name)))
+  .map((entry) => entry.name)
+  .sort();
+assert.ok(CHAINS.length > 0, 'chain discovery under docs/specs/ must never silently enumerate nothing');
 
 async function parseChain(name) {
   const { parseSpec } = await import('./sdlc-check.mjs');
@@ -504,6 +508,14 @@ test('AC-3: the enforcement-spine AC-14 correction agrees with that spec\'s own 
   assert.equal(model.acVerification.get('AC-14'), 'test-backed');
 });
 
+// This element-wise equality (pinned minus REMOVED_LINKS equals current) also carries AC-9's
+// "nothing is ADDED" direction on its own: current === pinned minus REMOVED_LINKS implies
+// current subset of pinned unconditionally, for every chain with a pre-change pinned table. A
+// separate subset-only assertion over the same (name, pinned) pairs would therefore have zero
+// incremental falsification power over this one, so there is one assertion here, not two. Proven
+// to have teeth: a disposable copy of sdlc-check.mjs with a bogus link forced into every
+// coverage-cell extraction (never the real file) made this exact equality assertion go red before
+// it was written; see the T-4 report for the transcript.
 test('the real chains\' trace fields and forward-coverage links are preserved element-wise, minus T-3\'s four named deletions', async () => {
   for (const [name, count] of Object.entries(FIELD_TRACES_BEFORE)) {
     const model = await parseChain(name);
@@ -520,5 +532,36 @@ test('every chain under docs/specs/ still exits 0 under the real CLI', () => {
   for (const name of CHAINS) {
     const result = spawnSync(process.execPath, [CLI, chainPath(name)], { encoding: 'utf8' });
     assert.equal(result.status, 0, `${name}: ${result.stdout}${result.stderr}`);
+  }
+});
+
+// --- AC-9: the real-corpus safety claim, asserted rather than argued ---------------------------
+//
+// AC-9's exact bar (checker-silence-eval.md): "no criterion loses its last carrying task and no
+// task loses its last criterion", falsifiable with the four named deltas above, and "nothing is
+// ADDED: the rule only ever removes links". The forward-coverage/element-wise-equality test above
+// already proves the four named deletions, nothing else moved, and the addition direction (see its
+// own comment), for the five chains with a pre-change pinned table; it is also, on its own, exactly
+// what the CLI exit-0 test above would fail on, since run() always runs both coverage checks and
+// any finding sets exit 1, so this block adds precision (a named, localized failure per chain), not
+// independent falsification power. This block proves the two properties AC-9 states as CURRENT-STATE
+// invariants (not deltas), directly off the parsed model, and reused across all seven chains: a
+// chain added after T-3 landed (checker-silence-eval) has no pre-change table to pin against
+// (neither does explicit-ownership, a pre-existing gap inherited from before this task), but each
+// still owes the same coverage property today.
+
+test('AC-9: no criterion loses its last carrying task, and no task loses its last criterion (every real chain)', async () => {
+  for (const name of CHAINS) {
+    const model = await parseChain(name);
+    assert.equal(model.ok, true, `${name}: must parse`);
+    // checkForwardCoverage: every defined AC-N is reached by at least one task. It returns
+    // findings only (an unreached criterion is never a note), so any entry here is a real gap.
+    const forwardFindings = checkForwardCoverage(model);
+    assert.deepEqual(forwardFindings.map((f) => f.message), [], `${name}: no criterion may lose its last carrying task`);
+    // checkBackwardCoverage: every defined T-N reaches at least one criterion OR carries an
+    // explicit untraced marker. It mixes findings (a real gap) and notes (a deliberate, surfaced
+    // untraced decision) in one array, so filter to findings before asserting.
+    const backwardFindings = checkBackwardCoverage(model).filter((i) => i.type === 'finding');
+    assert.deepEqual(backwardFindings.map((f) => f.message), [], `${name}: no task may lose its last criterion`);
   }
 });

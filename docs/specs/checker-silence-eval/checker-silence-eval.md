@@ -157,7 +157,7 @@ a `Task-to-criterion coverage map`, the table whose second column header matches
 
 ### The real corpus (test-backed)
 
-- **AC-9**: Given the six chains in `docs/specs/`, after this feature every chain exits 0 under the
+- **AC-9**: Given the seven chains in `docs/specs/`, after this feature every chain exits 0 under the
   CLI, and element-wise no criterion loses its last carrying task and no task loses its last
   criterion. Falsifiable, with the expected deltas named up front and measured before the change:
   exactly four map-derived links disappear, `T-12 -> AC-13` and `T-12 -> AC-14` (`enforcement-spine`,
