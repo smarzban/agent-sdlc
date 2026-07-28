@@ -27,16 +27,30 @@ lines ("Implement task T-N. Read your brief at <path>. Follow the disciplines it
 paste the plan, the session history, or other tasks into the prompt. The same rule governs what
 comes BACK: reports and findings land in files beside the brief; a subagent's final message is a
 short status, never the artifact itself. And the conductor produces the reviewer's diff file
-**blind** — `git add -N . ':(exclude).agent-sdlc' && git diff >
-.agent-sdlc/briefs/<feature>/T-N-review.diff && git reset -q` (intent-to-add first, so NEW
-files — a TDD task's first artifact — appear in the diff; the trailing reset clears the `-N`
-entries — a mixed reset, so the working tree is untouched, and the diff runs before step 4d
-stages anything (a resumed tree with a task already staged resolves that first — commit or
-unstage deliberately). The reset is REQUIRED: a lingering intent-to-add entry not really
-staged at commit time makes step 4d's stash fail — `Entry not uptodate. Cannot merge.`) — never by
-reading the diff into its own context first: the reviewer is the diff's reader, the conductor is
-its courier. Context bloat in the conductor is the failure subagent-driven development exists to
-avoid.
+**blind**, and **scoped to the task's own files**:
+
+```
+git add -N -- <T-N's files> && git diff -- <T-N's files> > .agent-sdlc/briefs/<feature>/T-N-review.diff && git reset -q
+```
+
+The paths are not a judgment call: the plan names every task's exact files, so the scope is already
+written down. A file the task created that the plan did not foresee is added by path too.
+
+**Never scope it repo-wide** (`git add -N .`, with or without a `':(exclude)…'` pathspec). A
+repo-wide intent-to-add sweeps every untracked file in the tree into the reviewer's diff: a scratch
+note, another feature's leftovers, anything the working copy deliberately keeps untracked. That is
+the same failure the repo-wide `git add -A` ban exists to prevent, and it hands the reviewer
+material that has nothing to do with `T-N`, on the one input its verdict rests on.
+
+Intent-to-add comes first, so NEW files (a TDD task's first artifact) appear in the diff. The
+trailing reset clears the `-N` entries: a mixed reset, so the working tree is untouched. The diff
+runs before step 4d stages anything (a resumed tree with a task already staged resolves that first,
+by committing or unstaging deliberately). The reset is REQUIRED: a lingering intent-to-add entry not
+really staged at commit time makes step 4d's stash fail with `Entry not uptodate. Cannot merge.`
+
+Never produce the diff by reading it into the conductor's own context first: the reviewer is the
+diff's reader, the conductor is its courier. Context bloat in the conductor is the failure
+subagent-driven development exists to avoid.
 
 ## The three roles
 
