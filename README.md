@@ -19,9 +19,9 @@ Test and deploy are the next stages downstream, extending the same chain.
   fail-closed.
 - **Start anywhere** — enter at any stage, from any source (a prompt, a doc, a Linear issue set),
   without weakening a single gate; a **light tier** compresses authoring for small fixes.
-- **Four standalone skills** — three documentation skills (`writing-readmes`, `writing-repo-docs`,
-  `writing-technical-docs`) for documenting what you build, plus `repo-setup` for scaffolding it —
-  usable on any repo.
+- **Five standalone skills** — three documentation skills (`writing-readmes`, `writing-repo-docs`,
+  `writing-technical-docs`) for documenting what you build, `repo-setup` for scaffolding it, and
+  `handoff` for the live "where we left off" doc — usable on any repo.
 
 Packaged as a plugin for [Claude Code](https://claude.com/claude-code),
 [Cursor](https://cursor.com), and [OpenAI Codex](https://developers.openai.com/codex) (**this repo
@@ -97,13 +97,15 @@ pass — same gate, build, and checker: [docs/usage/light-tier.md](docs/usage/li
 
 ## Standalone skills
 
-Four skills outside the pipeline: three for documenting a codebase, plus `repo-setup` for the
-operational machinery. The three documentation skills are source-grounded (every
-concrete claim is checked against the actual code) and adapt their structure to the repo's type.
-They split by depth: the front door, the essentials, the internals. A fourth standalone skill,
-`repo-setup`, sits alongside them — not a documentation skill but its machinery counterpart: it
-stubs a repo's operational baseline (the agent-instruction split, CI/templates/CODEOWNERS
-scaffolding) for these three to later fill with prose.
+Five skills outside the pipeline: three for documenting a codebase, `repo-setup` for the
+operational machinery, and `handoff` for the live working-state doc. The three documentation
+skills are source-grounded (every concrete claim is checked against the actual code) and adapt
+their structure to the repo's type. They split by depth: the front door, the essentials, the
+internals. `repo-setup` sits alongside them — not a documentation skill but its machinery
+counterpart: it stubs a repo's operational baseline (the agent-instruction split, CI/templates/
+CODEOWNERS scaffolding, and a seeded `HANDOFF.md`) for these three to later fill with prose.
+`handoff` scaffolds, updates, and prunes `HANDOFF.md` itself, and two pipeline stages (`build`,
+`ship`) update it automatically when it already exists.
 
 | Skill | What it does |
 | --- | --- |
@@ -111,6 +113,7 @@ scaffolding) for these three to later fill with prose.
 | `writing-repo-docs` | The essentials a repo needs to be usable and contributable — landing index + quickstart + install + comprehensive per-feature usage + running-it-locally + contributing/community-health files, plus at most a light architecture overview. |
 | `writing-technical-docs` | Full maintainer-grade internals — architecture with design rationale, data models, per-subsystem pages with invariants, the security model, and a complete module/API reference under a coverage-ledger contract (every exported symbol documented or explicitly excluded). |
 | `repo-setup` | Take a repo — empty or existing — to an operational baseline: the public/private agent-instruction split, gitignore/CI/templates/CODEOWNERS scaffolding, and opt-in pipeline setup. Machinery and marked skeletons, not prose. |
+| `handoff` | Scaffold, update, or prune `HANDOFF.md`, the working copy's live "where we left off" doc: what's in flight, what to pick up next, ignored by default. |
 
 How they chain and when to pick which: [docs/usage/documentation-skills.md](docs/usage/documentation-skills.md).
 

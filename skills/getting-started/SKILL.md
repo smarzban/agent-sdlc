@@ -89,6 +89,9 @@ Stated once here; the stage skills reference them by name rather than restating.
   must displace, generalize, or merge with an existing line — appending is the exception and needs
   justifying in the PR. Pipeline SKILL bodies hold a soft ceiling of ~300 lines; a change that
   breaches it says why. Instruction sets only ever grow unless subtraction is a rule too.
+- **If `HANDOFF.md` exists at the repo root, read it first.** It carries live working state, where
+  the last session left off, as against the standing rules in the instruction files. See the
+  `handoff` skill to set one up or keep it current.
 
 ## Routing: project vs feature
 
