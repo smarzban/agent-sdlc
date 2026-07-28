@@ -30,11 +30,28 @@ short status, never the artifact itself. And the conductor produces the reviewer
 **blind**, and **scoped to the task's own files**:
 
 ```
-git add -N -- <T-N's files> && git diff -- <T-N's files> > .agent-sdlc/briefs/<feature>/T-N-review.diff && git reset -q
+existing=$(for f in <T-N's files>; do [ -e "$f" ] && ! git check-ignore -q "$f" && printf '%s\n' "$f"; done)
+[ -n "$existing" ] && git add -N -- $existing
+git diff -- <T-N's files> > .agent-sdlc/briefs/<feature>/T-N-review.diff
+git reset -q -- <T-N's files>
 ```
 
 The paths are not a judgment call: the plan names every task's exact files, so the scope is already
-written down. A file the task created that the plan did not foresee is added by path too.
+written down. `git add -N -- <paths>` is all-or-nothing: one path the task never touched (a
+plan-named file it did not reach, or a gitignored one) makes the whole command fail, and under a
+bare `&&` chain that aborts the diff entirely and leaves a stale or missing `T-N-review.diff`
+behind for the reviewer. Filter to paths that actually exist and are not gitignored before adding:
+a plan-named path the task never created is a finding for the reviewer's contract check, not a
+reason to abort the hand-off; a gitignored path is never force-added (`-f`), an ignored artifact
+does not belong in a review diff either way. `git diff`/`git reset` still take the full plan-named
+list, the paths that were never added simply produce no diff lines, which is correct.
+
+A file the task created that the plan did not foresee is added by path too. The conductor is blind
+by construction, so it learns that path from a named channel, never by reading the diff itself: the
+Implementer's returned status names "the files touched" (see Implementer, below), or a name-only
+`git status --porcelain -- <the task's directories>` scoped to where the task was allowed to write.
+Listing names is not reading the diff, so either is fair game. Add the discovered path(s) to the
+filter-and-add list above before generating the diff.
 
 **Never scope it repo-wide** (`git add -N .`, with or without a `':(exclude)…'` pathspec). A
 repo-wide intent-to-add sweeps every untracked file in the tree into the reviewer's diff: a scratch
@@ -43,10 +60,18 @@ the same failure the repo-wide `git add -A` ban exists to prevent, and it hands 
 material that has nothing to do with `T-N`, on the one input its verdict rests on.
 
 Intent-to-add comes first, so NEW files (a TDD task's first artifact) appear in the diff. The
-trailing reset clears the `-N` entries: a mixed reset, so the working tree is untouched. The diff
-runs before step 4d stages anything (a resumed tree with a task already staged resolves that first,
-by committing or unstaging deliberately). The reset is REQUIRED: a lingering intent-to-add entry not
-really staged at commit time makes step 4d's stash fail with `Entry not uptodate. Cannot merge.`
+trailing reset is scoped to the same paths, matching the add: a mixed reset over just `T-N`'s files,
+so the working tree is untouched and any unrelated work staged from elsewhere survives untouched
+too. The diff runs before step 4d stages anything (a resumed tree with a task already staged
+resolves that first, by committing or unstaging deliberately). The reset is REQUIRED: a lingering
+intent-to-add entry not really staged at commit time makes step 4d's stash fail with `Entry not
+uptodate. Cannot merge.`
+
+**Before dispatching the reviewer, assert the diff file is non-empty.** A 0-byte `T-N-review.diff`
+is far likelier to mean the scope was wrong (a drifted or mistyped path) than that the task was a
+genuine no-op: one blank file must never go silently to the reviewer. On empty, re-check the
+task's files against what actually changed (`git status --porcelain -- <the task's directories>`)
+and fix the path list before regenerating; do not dispatch a reviewer against an empty diff.
 
 Never produce the diff by reading it into the conductor's own context first: the reviewer is the
 diff's reader, the conductor is its courier. Context bloat in the conductor is the failure
@@ -94,7 +119,9 @@ it does not loop.
 ### Fixer (only when the reviewer finds Critical/Important)
 
 **Brief contains:** the findings file and the diff file. The fixer follows `tdd.md` (a fix gets a guarding
-test) and `debugging.md` (stop-the-line: root cause, not symptom). Regenerate the diff file (same blind command), then re-review after each fix. **Bound
+test) and `debugging.md` (stop-the-line: root cause, not symptom). Regenerate the diff file (same blind,
+filter-and-scope command; a fix that adds a file names it back the same way: the fixer's own returned
+status, or a scoped `git status --porcelain` name-listing), then re-review after each fix. **Bound
 the cycle to ~2–3 rounds**; if it still fails, the task is blocked — record it and raise it, do not
 grind.
 

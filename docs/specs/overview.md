@@ -61,7 +61,7 @@ The repo's shape, as it exists:
   by an agent; guarantees that must hold mechanically are owned by trusted committed code (the
   enforcement spine for pipeline mechanics; the external Empanel spine for review verdicts).
 - **Cross-plugin contracts are invoke-if-present.** ship invokes the external Empanel gate
-  (`/empanel:gate`) when present and announces a loud degraded fallback (a dispatched reviewer
+  (`/empanel:merge-gate`) when present and announces a loud degraded fallback (a dispatched reviewer
   subagent) when absent — never a silent skip.
 - **Spec chains live in `docs/specs/`** per the consolidated artifact model (one sectioned spec per
   feature; process reports beside the spec, never inside it); a repo that already has a root
@@ -74,5 +74,5 @@ Cross-cutting reality:
 - **agent-sdlc** — Markdown skills (no runtime). Executable additions are zero-dependency,
   committed, bare-`node` ESM (floor ≥ 22, checked 2026-07-02); tests via stdlib `node:test`.
   **Green bar:** `node --check checker/sdlc-check.mjs` + `node --test checker/*.test.mjs`.
-- **The Empanel gate** (external) — consumed as a product via `/empanel:gate` + `@empanel/cli`;
-  its stack is its own repo's concern.
+- **The Empanel gate** (external) — consumed as a product via `/empanel:merge-gate` +
+  `@empanel/cli`; its stack is its own repo's concern.

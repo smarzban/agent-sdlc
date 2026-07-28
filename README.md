@@ -30,9 +30,10 @@ is its own single-plugin marketplace**, `agent-sdlc`), and installable as a pack
 agent that reads instruction files.
 
 > **Pairs with [Empanel](https://github.com/smarzban/empanel)** — a multi-model code-review gate
-> + whole-repo audit. `ship` hands the open PR to its gate skill (`/empanel:merge-gate`) when installed,
-> and degrades to a portable reviewer subagent when it isn't. Empanel ships as its own plugin
-> marketplace plus the [`@empanel/cli`](https://www.npmjs.com/package/@empanel/cli) npm package.
+> + whole-repo audit. `ship` hands the open PR to its gate skill (`/empanel:merge-gate`) when
+> installed, and degrades to a portable reviewer subagent when it isn't. Empanel ships as its
+> own plugin marketplace plus the [`@empanel/cli`](https://www.npmjs.com/package/@empanel/cli)
+> npm package.
 
 **Contents:** [Quickstart](#quickstart) · [The idea](#the-idea) · [Stages](#stages) ·
 [Standalone skills](#standalone-skills) · [Install](#install) · [Layout](#layout) ·

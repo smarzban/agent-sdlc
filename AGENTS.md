@@ -43,8 +43,8 @@ The pipeline: `idea → acceptance-criteria → architecture-design → techstac
 Traceability spine `AC-N → C-N → product → T-N`; the read-only gate walks the chain; `build` is a
 subagent-per-task TDD conductor with harness-captured per-test green-bar evidence; `ship` writes
 the AC→proof `verification-report.md`, runs `sdlc-check` fail-closed, opens the PR, and hands it to
-the Empanel review gate (`/empanel:merge-gate`; a portable multi-lens reviewer-subagent fallback runs
-when the gate is absent). A light tier compresses small changes (same gate/build/checker).
+the Empanel review gate (`/empanel:merge-gate`; a portable multi-lens reviewer-subagent fallback
+runs when the gate is absent). A light tier compresses small changes (same gate/build/checker).
 `linear-sync` (off by default) mirrors stages into Linear.
 
 ## Build / test / verify

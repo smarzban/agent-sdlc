@@ -111,7 +111,9 @@ against the base, runs its reviewers, and returns a deterministic verdict:
 - **Verdict vocabulary:** `pass` (no blocking findings), `block` (blocking findings must be
   resolved or justified), or `inconclusive` (the panel did not review enough of the change to judge
   it: too few models or families voted, or the scanner tier did not positively run clean).
-- **Severity:** `critical` · `high` · `medium` gate (block); `low` · `info` are advisory.
+- **Severity:** `critical` · `high` gate (block); `medium` gates only when adjudicated. A lone,
+  unconfirmed single-model contested medium is advisory by default (the spine itself excludes it
+  from the blocking set); `low` · `info` are advisory.
 - It posts the verdict as a PR comment.
 
 **Branch on the verdict, not on memory:** treat only an explicit `pass` as ready. On `block`, surface
@@ -119,9 +121,14 @@ the blocking findings to the user and ask before any fix-and-re-push. ship never
 clean pass, the merge is a human's or the gate's own step.
 
 **`inconclusive` is not a block, and never a pass.** It says nothing about the code, so there is
-nothing to fix: the remedy is to re-run the gate with a fuller, more diverse panel, or with a
-working scanner tier. Never report it as ready, never "fix" findings in response to it, and never
-re-run the same panel unchanged and expect a different verdict. Surface it and say what is missing.
+nothing to fix. Read the gate's own Coverage line first, it names what was lost. An unchanged
+re-run is the right, cheapest remedy when the loss was a transient non-vote (a model returning a
+pure-prose non-vote is routine and intermittent; Empanel's own guard prescribes a plain re-run, or a
+swap to a different roster model, before anything more expensive). Reach for a fuller or more
+diverse panel, or a working scanner tier, only when the Coverage line shows a structurally thin
+panel, not a transient one. Never report it as ready, never "fix" findings in response to it, and
+never spin the same degraded configuration hoping the next run gets lucky. Surface it and say what
+is missing.
 
 The gate depends on Node plus the `@empanel/cli` npm package (the skills invoke it via
 `npx @empanel/cli@0`, so a network-reachable npm registry or a global install suffices) and at
@@ -135,8 +142,9 @@ dispatch a **whole-PR reviewer subagent**:
 - Brief: the PR diff (base..head), the feature's `## Acceptance Criteria`, and the global
   constraints.
 - It reviews across correctness, the criteria, security, and quality; returns findings by severity.
-- Map its result to the same pass/block decision and report which reviewer ran. Say plainly that the
-  portable path was used.
+- Map its result to the same pass/block decision: the portable path has no coverage floor, so it
+  cannot structurally return `inconclusive`, only `pass` or `block`. Report which reviewer ran. Say
+  plainly that the portable path was used.
 
 ## Parking / handing off for review (the PR must show the reviewed head)
 
