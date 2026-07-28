@@ -56,6 +56,15 @@ lists, so a parenthetical annotates instead of fabricating a link, which forced 
 weaker relations explicitly is the recorded follow-up, rejected for scope and not on merit
 (`adr/ADR-0002`).
 
+`handoff-skill` shipped 2026-07-28: a fifth standalone skill for the working copy's live-state doc,
+the counterpart to the spec chain (a chain hands a FEATURE forward, `HANDOFF.md` hands the WORKING
+COPY forward). Ignored by default so it can be written frankly, with one litmus deciding placement
+and a prune trigger that is mechanical rather than advisory: the doc this repo kept had bloated while
+already under an instruction to prune aggressively. Seeded by `repo-setup`, routed from
+`getting-started`, and updated by two hooks (`build` entry, `ship` park) that act only on an existing
+doc. Both of the trigger's escape hatches are stamp-bound and expire, which took three review rounds:
+each round's finding was in the exception introduced by the previous round's fix.
+
 ## Architecture
 
 The repo's shape, as it exists:

@@ -4,6 +4,17 @@ The authoritative release notes live on
 [GitHub Releases](https://github.com/smarzban/agent-sdlc/releases) — one release per version,
 cut with a plugin-scoped tag (`agent-sdlc-vX.Y.Z`). This file is the one-line index.
 
+- **[0.17.0](https://github.com/smarzban/agent-sdlc/releases/tag/agent-sdlc-v0.17.0)** (2026-07-28) —
+  **`handoff`, a fifth standalone skill**: the pipeline handed a *feature* forward well and the
+  *working copy* not at all. `HANDOFF.md` is the repo-root live-state doc the next agent reads to
+  resume, and the skill scaffolds, updates, and prunes it. One litmus decides what belongs in it
+  (wrong next week -> the doc; true next month -> the standing rules), three modes select
+  deterministically, and the prune trigger is **mechanical**: it fires on size, on structure, or on
+  an entry describing something already merged, shipped, closed, or decided. Both of its escape
+  hatches are stamp-bound and expire, because "prune aggressively" as advice is what every bloated
+  doc was already under. Ignored by default, so it can be written frankly. `repo-setup` seeds it,
+  `getting-started` routes to it, and `build` (at entry) and `ship` (at park) update it when it
+  already exists, never creating it and never blocking.
 - **[0.16.0](https://github.com/smarzban/agent-sdlc/releases/tag/agent-sdlc-v0.16.0)** (2026-07-28) —
   two new install targets and a checker that is now scored on its silence. **OpenAI Codex** (a
   marketplace under `.agents/plugins/`) and **pi** (a direct package install, `pi.skills` in
