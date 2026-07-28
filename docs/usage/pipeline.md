@@ -45,7 +45,7 @@ of the same promises, fail-closed. Anything unmapped surfaces before code, not d
   [`skills/build/reference/`](../../skills/build/reference/).
 - **`ship`** verifies green → writes, checker-verifies, and commits the `verification-report.md`
   AC→proof map (all before any PR exists) → pushes → opens a PR synthesized from the spec → hands
-  the PR to the [Empanel](https://github.com/smarzban/empanel) gate (`/empanel:gate`) when
+  the PR to the [Empanel](https://github.com/smarzban/empanel) gate (`/empanel:merge-gate`) when
   installed, or a dispatched reviewer subagent when not. It stops-and-asks on a blocking verdict
   and **never merges**.
 

@@ -41,7 +41,7 @@ sdlc-check docs/specs/<feature>/<feature>.md --require ledger \
 ```
 
 Sequence this **before** `gh pr create` — it is the mechanical spine gate; the post-PR
-`/empanel:gate` panel (below) is the separate judgment gate. Runtime present → run,
+`/empanel:merge-gate` panel (below) is the separate judgment gate. Runtime present → run,
 interpret the exit code: 0 = corroborated, proceed to push/PR. Nonzero, or the checker crashing, is
 itself a failed check (fail-closed) → **stop-and-ask**: do not open the PR, or if one is already open
 do not treat it as shipped. Any human override to proceed past a failed check must be **recorded in
@@ -101,7 +101,8 @@ Write the body to a file and pass `--body-file` — it keeps newlines and markdo
 The gate is a **post-PR merge gate**. It checks out the PR branch in its own worktree, diffs
 against the base, runs its reviewers, and returns a deterministic verdict:
 
-- Invoke: `/empanel:gate` against the open PR.
+- Invoke: `/empanel:merge-gate` against the open PR (the skill is named `merge-gate`; on a harness
+  that namespaces by skill rather than by plugin, e.g. pi, the same skill is `/skill:merge-gate`).
 - **Supply the spec explicitly.** The gate's reviewers explore the checked-out worktree; a spec
   that is gitignored or uncommitted is *absent* there, and the conformance (`lens-spec`) pass then
   has nothing to check and silently returns empty. Pass the feature's `## Acceptance Criteria` (and

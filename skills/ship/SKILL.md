@@ -67,7 +67,7 @@ it stops and asks before changing anything — a PR is an outward artifact.
 6. **Linear** if sync is enabled in `.agent-sdlc/config.json`, attach the PR url to the feature's
    issues and post a project status update — via the `linear-sync` skill. The project stays In
    Progress (Linear projects have no In-Review state — mapping.md, ship row).
-7. **Review** invoke the Empanel gate — `/empanel:gate` — on the open PR, passing it the spec
+7. **Review** invoke the Empanel merge gate — `/empanel:merge-gate` — on the open PR, passing it the spec
    explicitly — the `## Acceptance Criteria` and the design — because its reviewers explore the
    committed worktree, where a gitignored or uncommitted spec is invisible and the conformance lens
    would otherwise check against nothing. It diffs the PR against the base, reviews, posts a verdict
@@ -189,7 +189,7 @@ are in [reference/finishing.md](reference/finishing.md)):
   contract: present and clean → corroborated, proceed; present and failing (or crashing) →
   stop-and-ask, override recorded in the PR body; absent → an announced degraded fallback, never a
   silent skip.
-- Invokes `/empanel:gate` (the Empanel plugin — repo `smarzban/empanel`) for the whole-PR review,
+- Invokes `/empanel:merge-gate` (the Empanel plugin — repo `smarzban/empanel`) for the whole-PR review,
   with a portable reviewer-subagent fallback when it is absent.
 - Does not merge and does not clean the worktree on the PR path.
 - Downstream consumer: a human or the gate merges; a later `deploy` stage owns promotion.
