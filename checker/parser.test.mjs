@@ -3,7 +3,14 @@
 // Fixtures are minimal inline spec strings (per plan Notes) — no committed fixture files.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseSpec, parseLedger, parseVerificationReport, checkBackwardCoverage } from './sdlc-check.mjs';
+import {
+  parseSpec,
+  parseLedger,
+  parseVerificationReport,
+  checkBackwardCoverage,
+  checkTraceIntegrity,
+  formatReport,
+} from './sdlc-check.mjs';
 
 // --- Typed parse failure: never a throw, never an empty-model pass ---
 
@@ -267,6 +274,173 @@ test('captures a coverage-map table row as a trace reference (citing site + cite
   const row = result.traces.find((t) => t.from === 'AC-10' && t.kind === 'map-row');
   assert.ok(row, 'expected a map-row trace for AC-10');
   assert.deepEqual(row.refs.sort(), ['T-1', 'T-2']);
+});
+
+// --- Coverage-cell links (T-3) ---
+//
+// A coverage cell ("Advanced by" column) links only the ids written as list entries: strip
+// parenthesized spans FIRST, split on commas SECOND, take each segment's leading id token and only
+// that. AC-2's comma-inside-parentheses case is written first: splitting on commas before
+// stripping parentheses leaves the segment "T-12)" from `T-7 (write side: T-11, T-12)`, which
+// leads with an id and would fabricate a link under the naive (wrong) order.
+
+test('a comma inside a parenthesized span does not fabricate a link (AC-2, order is the contract)', () => {
+  const spec = [
+    '## Plan',
+    '### Task-to-criterion coverage map',
+    '| Criterion | Advanced by |',
+    '| --- | --- |',
+    '| AC-1 | T-7 (write side: T-11, T-12) |',
+  ].join('\n');
+  const result = parseSpec(spec, 'x.md');
+  assert.equal(result.ok, true);
+  const row = result.traces.find((t) => t.from === 'AC-1' && t.kind === 'map-row');
+  assert.ok(row, 'expected a map-row trace for AC-1');
+  assert.deepEqual(row.refs, ['T-7'], 'splitting on the comma inside the parenthetical must not link T-11 or T-12');
+});
+
+test('an id cited only inside a parenthesized span contributes no link (AC-1)', () => {
+  const spec = [
+    '## Plan',
+    '### Task-to-criterion coverage map',
+    '| Criterion | Advanced by |',
+    '| --- | --- |',
+    '| AC-1 | T-8 (supersedes T-5) |',
+  ].join('\n');
+  const result = parseSpec(spec, 'x.md');
+  assert.equal(result.ok, true);
+  const row = result.traces.find((t) => t.from === 'AC-1' && t.kind === 'map-row');
+  assert.ok(row, 'expected a map-row trace for AC-1');
+  assert.deepEqual(row.refs, ['T-8'], 'the parenthesized T-5 must not link');
+});
+
+test('a plain comma-separated coverage cell links every id, regardless of cell length (AC-3)', () => {
+  const spec = [
+    '## Plan',
+    '### Task-to-criterion coverage map',
+    '| Criterion | Advanced by |',
+    '| --- | --- |',
+    '| AC-2 | T-2, T-3, T-6 |',
+  ].join('\n');
+  const result = parseSpec(spec, 'x.md');
+  assert.equal(result.ok, true);
+  const row = result.traces.find((t) => t.from === 'AC-2' && t.kind === 'map-row');
+  assert.ok(row, 'expected a map-row trace for AC-2');
+  assert.deepEqual(row.refs.sort(), ['T-2', 'T-3', 'T-6']);
+});
+
+test('a coverage-cell id token that produced no link surfaces as a note naming the row and that id, never a finding (AC-4)', () => {
+  const spec = [
+    '## Plan',
+    '### Task-to-criterion coverage map',
+    '| Criterion | Advanced by |',
+    '| --- | --- |',
+    '| AC-1 | T-8 (supersedes T-5) |',
+  ].join('\n');
+  const result = parseSpec(spec, 'x.md');
+  assert.equal(result.ok, true);
+  const row = result.traces.find((t) => t.from === 'AC-1' && t.kind === 'map-row');
+  assert.deepEqual(row.mentionedNotLinked, ['T-5'], 'T-5 is cited in the raw cell but produced no link');
+  const items = checkTraceIntegrity(result);
+  const note = items.find((i) => i.type === 'note' && i.ids.includes('T-5'));
+  assert.ok(note, 'expected a note naming T-5');
+  assert.ok(note.message.includes('AC-1'), 'the note must name the row (AC-1)');
+  assert.ok(note.message.includes('T-5'), 'the note must name the stray id (T-5)');
+  assert.ok(
+    note.message.includes('not defined anywhere in the spec'),
+    'T-5 is not defined anywhere in this fixture, so the note must say so (M-2)',
+  );
+  assert.equal(
+    items.some((i) => i.type === 'finding' && i.ids.includes('T-5')),
+    false,
+    'a note must never also be reported as a finding',
+  );
+});
+
+test('AC-4: a spec whose only issue is a stray coverage-cell id exits 0 (the note never blocks)', () => {
+  const spec = [
+    '## Acceptance Criteria',
+    '- **AC-1** — first criterion.',
+    '',
+    '## Plan',
+    '',
+    '**T-8 — Do it.** Detail. *Advances:* none. *Component:* none. *Deps:* none.',
+    '',
+    '### Task-to-criterion coverage map',
+    '| Criterion | Advanced by |',
+    '| --- | --- |',
+    '| AC-1 | T-8 (supersedes T-5) |',
+  ].join('\n');
+  const result = parseSpec(spec, 'x.md');
+  assert.equal(result.ok, true);
+  const items = checkTraceIntegrity(result);
+  assert.ok(
+    items.some((i) => i.type === 'note' && i.ids.includes('T-5')),
+    'sanity: the stray T-5 id must still surface as a note',
+  );
+  assert.equal(
+    items.some((i) => i.type === 'finding'),
+    false,
+    'sanity: only a note, no finding (T-5 is undefined but only ever appears as a stray id, never a trace.refs entry)',
+  );
+  assert.equal(formatReport(items).exitCode, 0, 'a note-only result must exit 0');
+});
+
+test('a leading run of Markdown decoration (backtick, bold, link bracket) does not stop a coverage-cell id from linking (I-1, AC-3)', () => {
+  const spec = [
+    '## Plan',
+    '### Task-to-criterion coverage map',
+    '| Criterion | Advanced by |',
+    '| --- | --- |',
+    '| AC-1 | `T-1`, `T-2` |',
+    '| AC-2 | **T-3** |',
+    '| AC-3 | [T-4](#t-4) |',
+  ].join('\n');
+  const result = parseSpec(spec, 'x.md');
+  assert.equal(result.ok, true);
+  const row1 = result.traces.find((t) => t.from === 'AC-1' && t.kind === 'map-row');
+  assert.deepEqual(row1.refs.sort(), ['T-1', 'T-2'], 'backticked leading ids must still link');
+  const row2 = result.traces.find((t) => t.from === 'AC-2' && t.kind === 'map-row');
+  assert.deepEqual(row2.refs, ['T-3'], 'a bolded leading id must still link');
+  const row3 = result.traces.find((t) => t.from === 'AC-3' && t.kind === 'map-row');
+  assert.deepEqual(row3.refs, ['T-4'], 'a Markdown-linked leading id must still link');
+});
+
+test('the leading-id rule never ADDS a link ID_REF_RE would not have made (M-1, boundary regex)', () => {
+  const spec = [
+    '## Plan',
+    '### Task-to-criterion coverage map',
+    '| Criterion | Advanced by |',
+    '| --- | --- |',
+    '| AC-1 | T-1/2/3 |',
+    '| AC-2 | T-12abc |',
+  ].join('\n');
+  const result = parseSpec(spec, 'x.md');
+  assert.equal(result.ok, true);
+  const row1 = result.traces.find((t) => t.from === 'AC-1' && t.kind === 'map-row');
+  assert.deepEqual(row1.refs.sort(), ['T-1', 'T-2', 'T-3'], 'a slash-abbreviated run must still fully link');
+  const row2 = result.traces.find((t) => t.from === 'AC-2' && t.kind === 'map-row');
+  assert.equal(row2, undefined, 'T-12abc must not fabricate a link to T-12; it links and mentions nothing id-shaped');
+});
+
+test('a Criterion-to-component map cell keeps scanning the whole cell for a component name; the leading-id rule does not reach it (AC-5)', () => {
+  const spec = [
+    '## Design',
+    '### Components',
+    '1. **Widget** — does widget things.',
+    '',
+    '## Acceptance Criteria',
+    '### Criterion-to-component map',
+    '| Criterion | Component |',
+    '| --- | --- |',
+    '| AC-5 | see the notes below, Widget |',
+  ].join('\n');
+  const result = parseSpec(spec, 'x.md');
+  assert.equal(result.ok, true);
+  const row = result.traces.find((t) => t.from === 'AC-5' && t.kind === 'map-row');
+  assert.ok(row, 'expected a map-row trace for AC-5');
+  assert.ok(row.refs.includes('C-1'), 'Widget must still resolve even though it is not the leading token');
+  assert.equal(row.mentionedNotLinked, undefined, 'a component-map row never carries mentionedNotLinked; that field is coverage-map only');
 });
 
 test('expands a slash-abbreviated citation run, carrying the prefix across the whole run', () => {

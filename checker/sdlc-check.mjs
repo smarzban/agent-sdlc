@@ -503,6 +503,68 @@ function extractIdRefs(text) {
   return refs;
 }
 
+// The coverage-cell link extractor (AC-1..AC-4): a Task-to-criterion coverage-map cell ("Advanced
+// by" column) lists task ids as list entries, and a parenthesized span is a human annotation that
+// never links, even when the annotation itself contains a comma. The order is the contract: strip
+// parenthesized spans FIRST, split on commas SECOND, then take each segment's leading id token and
+// only that: splitting first would leave "T-12)" as its own segment from
+// `T-7 (write side: T-11, T-12)`, which leads with an id and would fabricate a link.
+//
+// Depth-counted, never regex-recursive: handles nesting and, per AC-1's contract, never throws on
+// an unbalanced/unterminated parenthesis (an unmatched `(` simply strips to the end of the cell,
+// fewer links, never a fabricated one), and a stray `)` with no opener is dropped harmlessly.
+function stripParenSpans(raw) {
+  let out = '';
+  let depth = 0;
+  for (const ch of raw) {
+    if (ch === '(') {
+      depth += 1;
+      continue;
+    }
+    if (ch === ')') {
+      if (depth > 0) depth -= 1;
+      continue;
+    }
+    if (depth === 0) out += ch;
+  }
+  return out;
+}
+
+// A segment's LEADING id token only (anchored at the segment start, not scan-anywhere like
+// ID_REF_RE): text after the id is prose and contributes nothing, by AC-1..AC-3's contract. The
+// trailing negative lookahead (M-1) mirrors ID_REF_RE's `\b` boundary semantics so this rule can
+// only ever DROP a link, never add one: without it `T-12abc` would match a leading `T-12` and
+// fabricate a link `ID_REF_RE` never made (a sub-task label like `T-3a`/`T-3b` is the realistic
+// trigger). `T-1/2/3`'s slash-abbreviated run still matches; `T-12abc` and `T-1_2` match nothing.
+const LEADING_ID_RE = /^(AC|C|T)-\d+(?:\/\d+)*(?![A-Za-z0-9_])/;
+
+// A leading run of ordinary Markdown decoration (backtick, asterisk, opening bracket) is stripped
+// before matching the leading id, so `` `T-1`, `T-2` ``, `**T-1**, T-2`, and `[T-4](#t-4)` still
+// link: AC-3's claim ("removes fabricated links, never authored ones") must hold literally, and a
+// backticked or bolded id is ordinary authoring, not fabrication. Only a LEADING run: decoration
+// inside prose after the id is unaffected because the id has already matched by then.
+const LEADING_DECORATION_RE = /^[`*[]+/;
+
+// Returns { links: Set<string>, mentionedNotLinked: string[] } for one coverage cell (the design's
+// `### Contracts` shape). `mentionedNotLinked` (AC-4) is every id token cited anywhere in the RAW
+// cell (a parenthesized annotation, or any non-leading position within a comma segment) that
+// produced no link: cited by the author, dropped from the links, and surfaced as a note rather
+// than silently lost.
+function extractCoverageCellLinks(raw) {
+  const links = new Set();
+  const stripped = stripParenSpans(raw);
+  for (const segment of stripped.split(',')) {
+    const decorationStripped = segment.trim().replace(LEADING_DECORATION_RE, '');
+    const m = LEADING_ID_RE.exec(decorationStripped);
+    if (!m) continue;
+    const prefix = m[1];
+    const nums = m[0].slice(prefix.length + 1).split('/');
+    for (const n of nums) links.add(`${prefix}-${n}`);
+  }
+  const mentionedNotLinked = [...extractIdRefs(raw)].filter((id) => !links.has(id));
+  return { links, mentionedNotLinked };
+}
+
 // By-name component resolution: a *Component:* field or a component/map-row table row may cite a
 // component by NAME (an unanchored substring match) rather than by ID. Scoped to those two trace
 // kinds only — an *Advances:*/*Deps:* field is a plain ID citation, and applying substring
@@ -651,33 +713,63 @@ function extractTableTraces(section, componentsByName) {
         const cells = splitTableCells(bodyLines[j]);
         const fromId = /^(AC|C|T)-\d+$/.test(cells[0]) ? cells[0] : null;
         if (fromId && cells[1]) {
-          const refs = extractIdRefs(cells[1]);
-          for (const id of resolveComponentRefs(cells[1], componentsByName)) refs.add(id);
-          if (refs.size > 0) {
-            traces.push({
-              from: fromId,
-              kind: 'map-row',
-              table: header[1],
-              refs: [...refs],
-              raw: cells[1],
-              line: section.line + j + 1,
-            });
-          } else if (isComponentMap && !isNonDanglingComponentValue(cells[1])) {
-            // A component-map row that resolved to nothing and isn't the `none` null marker is a
-            // dangling component citation (an "outside the checker" component now resolves as a real
-            // C-ext-N, so it never reaches here) — carry it as an
-            // empty-refs trace with `unresolvedComponent`, mirroring extractFieldTraces' shape so
-            // checkTraceIntegrity's dangling-component arm flags it. Empty `refs` keeps it harmless
-            // to buildTaskAcLinks / coverage (both iterate `refs`).
-            traces.push({
-              from: fromId,
-              kind: 'map-row',
-              table: header[1],
-              refs: [],
-              raw: cells[1],
-              unresolvedComponent: cells[1],
-              line: section.line + j + 1,
-            });
+          if (isComponentMap) {
+            // Untouched by the coverage-cell leading-id rule below (AC-5): a Criterion-to-component
+            // map cell cites components by NAME and name resolution must keep scanning the whole
+            // cell, so it stays on the old extractIdRefs + resolveComponentRefs path.
+            const refs = extractIdRefs(cells[1]);
+            for (const id of resolveComponentRefs(cells[1], componentsByName)) refs.add(id);
+            if (refs.size > 0) {
+              traces.push({
+                from: fromId,
+                kind: 'map-row',
+                table: header[1],
+                refs: [...refs],
+                raw: cells[1],
+                line: section.line + j + 1,
+              });
+            } else if (!isNonDanglingComponentValue(cells[1])) {
+              // A component-map row that resolved to nothing and isn't the `none` null marker is a
+              // dangling component citation (an "outside the checker" component now resolves as a real
+              // C-ext-N, so it never reaches here) — carry it as an
+              // empty-refs trace with `unresolvedComponent`, mirroring extractFieldTraces' shape so
+              // checkTraceIntegrity's dangling-component arm flags it. Empty `refs` keeps it harmless
+              // to buildTaskAcLinks / coverage (both iterate `refs`).
+              traces.push({
+                from: fromId,
+                kind: 'map-row',
+                table: header[1],
+                refs: [],
+                raw: cells[1],
+                unresolvedComponent: cells[1],
+                line: section.line + j + 1,
+              });
+            }
+          } else {
+            // The coverage-map arm ("Advanced by") only: AC-1..AC-3's leading-id-per-segment rule,
+            // carrying forward AC-4's mentioned-not-linked ids (cited in the cell, linked to
+            // nothing) for checkTraceIntegrity to surface as notes. A row that links nothing and
+            // mentions nothing extra (e.g. a blank cell) contributes no trace at all, same as
+            // before. Unlike the isComponentMap arm above, this arm no longer also calls
+            // resolveComponentRefs: before T-3, a coverage cell was scanned for component NAMES too
+            // and any hit was added to refs, so an id-shaped cell mentioning a component by name
+            // could add a ref from a non-leading position. Traced through checkTraceIntegrity and
+            // buildTaskAcLinks: a name-resolved ref is always a defined C-N, which
+            // checkTraceIntegrity never flags and buildTaskAcLinks' map-row arm only ever consumes
+            // T- refs from, so dropping it here loses no finding and no link. It is a second
+            // fabricated-link source this feature removes, left unstated until now.
+            const { links, mentionedNotLinked } = extractCoverageCellLinks(cells[1]);
+            if (links.size > 0 || mentionedNotLinked.length > 0) {
+              traces.push({
+                from: fromId,
+                kind: 'map-row',
+                table: header[1],
+                refs: [...links],
+                raw: cells[1],
+                mentionedNotLinked,
+                line: section.line + j + 1,
+              });
+            }
           }
         }
       }
@@ -988,6 +1080,25 @@ export function checkTraceIntegrity(model) {
         message: `${trace.from} cites component '${trace.unresolvedComponent}' (line ${trace.line}), which does not exist anywhere in the spec`,
         ids: [trace.from],
       });
+    }
+    // AC-4: a coverage-cell id token that produced no link (only inside a parenthesized
+    // annotation, or a non-leading position within a comma segment) is not silently dropped: the
+    // author wrote it, so it surfaces as a NOTE naming the row and the id. A note, never a finding
+    // (it must not change the exit code): only extractTableTraces' coverage-map arm ever sets
+    // `mentionedNotLinked`, a Criterion-to-component map row never does.
+    if (trace.mentionedNotLinked) {
+      for (const strayId of trace.mentionedNotLinked) {
+        // M-2: when the mentioned id is not defined anywhere in the spec (as opposed to a real id
+        // that simply reads as prose here, e.g. a superseded task named in passing), the note says
+        // so, so the author is not left thinking it is a live, defined id.
+        const suffix = defined.has(strayId) ? '' : ', and is not defined anywhere in the spec';
+        findings.push({
+          type: 'note',
+          rule: 'trace-integrity',
+          message: `${trace.from}'s coverage-map cell (line ${trace.line}) also cites ${strayId}, but only inside a parenthetical or a non-leading position, so it reads as prose and links nothing${suffix}`,
+          ids: [strayId],
+        });
+      }
     }
   }
   return findings;

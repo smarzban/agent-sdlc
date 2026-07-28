@@ -395,13 +395,28 @@ const FIELD_TRACES_BEFORE = {
 };
 
 // Pre-change task<->criterion forward-coverage links, element-wise (the union of an *Advances:*
-// field and a coverage-map row, exactly as checkForwardCoverage consumes it).
+// field and a coverage-map row, exactly as checkForwardCoverage consumes it). This table is never
+// regenerated from the new implementation: its whole value is that it was measured before T-3's
+// coverage-cell link extractor landed. T-3 deliberately deletes exactly four map-derived links that
+// were fabricated by scraping a parenthesized annotation: enforcement-spine's `AC-13 | T-3, T-7
+// (write side: T-12)` and `AC-14 | T-7 (write side: T-11, T-12)` rows each stopped scraping T-12
+// out of their parenthetical, and repo-setup's `AC-10`/`AC-11` rows (both `T-8 (supersedes T-5)`)
+// each stopped scraping T-5. REMOVED_LINKS below names the four deletions explicitly and the
+// assertion reads as "the pre-change set, minus exactly these four named deletions, equals the
+// current set", so it stays a live check on today's code, not a self-agreeing echo of it.
 const LINKS_BEFORE = {
   'enforcement-spine': ['T-1->AC-10','T-1->AC-8','T-10->AC-15','T-10->AC-16','T-10->AC-17','T-11->AC-14','T-11->AC-15','T-11->AC-16','T-11->AC-17','T-11->AC-5','T-12->AC-13','T-12->AC-14','T-12->AC-16','T-12->AC-18','T-2->AC-1','T-2->AC-10','T-2->AC-2','T-2->AC-3','T-3->AC-13','T-3->AC-14','T-3->AC-3','T-3->AC-5','T-3->AC-6','T-4->AC-1','T-4->AC-2','T-4->AC-3','T-5->AC-5','T-5->AC-6','T-6->AC-4','T-7->AC-13','T-7->AC-14','T-8->AC-8','T-8->AC-9','T-9->AC-11','T-9->AC-12','T-9->AC-7'],
   'repo-setup': ['T-1->AC-14','T-2->AC-3','T-2->AC-4','T-2->AC-7','T-3->AC-3','T-3->AC-5','T-3->AC-6','T-3->AC-7','T-4->AC-1','T-4->AC-12','T-4->AC-2','T-4->AC-7','T-4->AC-8','T-4->AC-9','T-5->AC-10','T-5->AC-11','T-6->AC-3','T-6->AC-5','T-6->AC-6','T-6->AC-7','T-7->AC-13','T-8->AC-10','T-8->AC-11'],
   'visual-aids': ['T-1->AC-1','T-1->AC-10','T-1->AC-11','T-1->AC-4','T-1->AC-5','T-1->AC-6','T-1->AC-7','T-1->AC-8','T-1->AC-9','T-2->AC-1','T-2->AC-3','T-3->AC-2','T-3->AC-3','T-4->AC-2','T-4->AC-3'],
   'adoption-quickwins': ['T-1->AC-1','T-1->AC-2','T-1->AC-7','T-2->AC-3','T-2->AC-6','T-2->AC-7','T-3->AC-4','T-3->AC-7','T-4->AC-5','T-4->AC-7','T-5->AC-7'],
   'spec-location-under-docs': ['T-1->AC-3','T-1->AC-4','T-2->AC-1','T-3->AC-2','T-4->AC-2','T-4->AC-5','T-5->AC-6'],
+};
+
+// The four links T-3's coverage-cell link extractor deliberately deletes (measured, not derived):
+// see LINKS_BEFORE's comment above.
+const REMOVED_LINKS = {
+  'enforcement-spine': ['T-12->AC-13', 'T-12->AC-14'],
+  'repo-setup': ['T-5->AC-10', 'T-5->AC-11'],
 };
 
 // Mirrors buildTaskAcLinks (not exported): the union of a task's own *Advances:* field and a
@@ -489,13 +504,15 @@ test('AC-3: the enforcement-spine AC-14 correction agrees with that spec\'s own 
   assert.equal(model.acVerification.get('AC-14'), 'test-backed');
 });
 
-test('the real chains\' trace fields and forward-coverage links are preserved element-wise', async () => {
+test('the real chains\' trace fields and forward-coverage links are preserved element-wise, minus T-3\'s four named deletions', async () => {
   for (const [name, count] of Object.entries(FIELD_TRACES_BEFORE)) {
     const model = await parseChain(name);
     assert.equal(model.ok, true);
     const fields = model.traces.filter((t) => ['advances', 'component', 'deps'].includes(t.kind));
     assert.equal(fields.length, count, `${name} trace fields`);
-    assert.deepEqual(taskAcLinks(model), LINKS_BEFORE[name], `${name} forward-coverage links`);
+    const removed = new Set(REMOVED_LINKS[name] || []);
+    const expected = LINKS_BEFORE[name].filter((link) => !removed.has(link));
+    assert.deepEqual(taskAcLinks(model), expected, `${name} forward-coverage links`);
   }
 });
 

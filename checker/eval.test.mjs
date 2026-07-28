@@ -78,20 +78,15 @@ const SEEDS = [
     incident:
       'a coverage-map cell like "T-1 (supersedes T-2)" scrapes T-2 out of the parenthesized span ' +
       'and counts it as a link, fabricating backward coverage for a task that advances nothing.',
-    detected: false,
-    expectedMissReason:
-      'the coverage-cell link extractor does not yet strip parenthesized spans before counting ' +
-      'links (T-3 fixes this); today the parenthetical is scraped and counted as a real link.',
+    detected: true,
+    expectedMissReason: null,
     // Discriminates on the parenthetical: T-2 is cited only inside the parenthesized span of AC-1's
     // coverage-map cell, and T-2's own field is `*Advances:* none.`, so T-2 genuinely advances
-    // nothing and a coverage-backward finding naming T-2 would be correct. Today's checker scrapes
-    // T-2 out of the parenthetical and counts a link, so no finding fires. Pinned to the actual
-    // scrape mechanism, not just its absence: T-2 must be a defined id, and the map-row trace off
-    // AC-1 must list T-2 in `refs` (the fabricated link is the miss's mechanism). If either of
-    // those stops holding (T-2 no longer defined, or the extractor stops scraping the
-    // parenthetical), this assertion fails loudly rather than passing for the wrong reason. T-3
-    // must move this seed to `detected`: that is the ledger's second direction firing under real
-    // conditions.
+    // nothing. T-3's coverage-cell link extractor strips the parenthesized span before counting
+    // links, so T-2 no longer scrapes into AC-1's map-row refs and checkBackwardCoverage now
+    // reports a coverage-backward finding naming T-2 (T-2 has no untraced marker in this fixture,
+    // so the miss surfaces as a finding, not a note). This is the ledger's second direction firing
+    // under real conditions: T-3 moved this seed here from expected-miss once its own fix landed.
     fixture: [
       '## Acceptance Criteria',
       '- **AC-1** — first criterion.',
@@ -117,19 +112,18 @@ const SEEDS = [
       );
       const row = m.traces.find((t) => t.from === 'AC-1' && t.kind === 'map-row');
       assert.ok(row, 'expected a map-row trace from AC-1');
-      assert.ok(
+      assert.equal(
         row.refs.includes('T-2'),
-        'expected miss mechanism: the parenthetical "(supersedes T-2)" must be scraped into the ' +
-          'map-row refs today',
+        false,
+        'fixed mechanism: the parenthetical "(supersedes T-2)" must no longer scrape into the ' +
+          'map-row refs',
       );
       const findings = checkBackwardCoverage(m);
-      const detectsT2 = findings.some((f) => f.type === 'finding' && f.ids.includes('T-2'));
-      assert.equal(
-        detectsT2,
-        false,
-        'expected miss: T-2 is (wrongly) treated as backward-covered today via the scraped ' +
-          'parenthetical; this must flip to true once the coverage-cell link extractor strips ' +
-          'parentheses before linking',
+      const hit = findings.find((f) => f.type === 'finding' && f.rule === 'coverage-backward' && f.ids.includes('T-2'));
+      assert.ok(
+        hit,
+        'expected a coverage-backward finding naming T-2, now that the parenthetical no longer ' +
+          'fabricates a link',
       );
     },
   },
