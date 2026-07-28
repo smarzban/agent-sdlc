@@ -71,6 +71,14 @@ branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
    failed check (fail-closed) — **stop-and-ask**, do not resume task work; any human override must be
    recorded in `build-report.md` (who/what, why continuing despite the failed check). Runtime absent
    → write an **announced degraded fallback** line into `build-report.md` now — never a silent skip.
+   **Handoff, if present.** Before the first task is dispatched, check for `HANDOFF.md` at the
+   root of the working copy this run belongs to, not the isolated workspace from step 2, and skip
+   with a reason if that root cannot be resolved. If it exists there, update it now (the `handoff`
+   skill's update mode) with the branch, the confirmed ready-to-build verdict, and the task
+   roster, and say that the doc was updated. This hook never asks: if the update mode can't be
+   determined without a question, skip and announce why instead of blocking. If it does not exist,
+   do nothing here: this step never creates it, presence is the only opt-in.
+
 4. **For each task `T-N`, in dependency order** (before the first dispatch, **read
    [reference/subagent-loop.md](reference/subagent-loop.md) now** — the brief contents, the
    fix-cycle bound, the file hand-off mechanics, and the death sequence live ONLY there; a loop

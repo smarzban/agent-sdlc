@@ -87,6 +87,15 @@ it stops and asks before changing anything — a PR is an outward artifact.
    stale code while the gate comments describe the new head. **Re-push before every re-park:** each
    post-open fix round ends by pushing and re-syncing the PR head, never left behind after the first
    push. (Mechanics in [reference/finishing.md](reference/finishing.md).)
+
+   **Handoff, if present.** Check for `HANDOFF.md` at the root of the working copy this run
+   belongs to, not the isolated workspace, before parking, and skip with a reason if that root
+   cannot be resolved. If it exists there, update it now (the `handoff` skill's update mode) with
+   the branch, the PR, and the parked state, say that the doc was updated, and leave the change
+   uncommitted (a team that commits the doc handles that commit separately, after the state above
+   is already fixed). This hook never asks: if the update mode can't be determined without a
+   question, skip and announce why instead of blocking. If it does not exist, do nothing here:
+   this step never creates it, presence is the only opt-in.
 10. **Leave the worktree** the PR is open; do not clean up the workspace on the PR path.
 
 ## Principles
