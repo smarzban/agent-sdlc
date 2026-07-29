@@ -1,110 +1,98 @@
-# Gate report: run-observability
+# Gate report: run-observability (re-gated after scope reduction)
 
-Read-only consistency and coverage gate over `docs/specs/run-observability/run-observability.md`.
-Full-chain entry (idea through plan in one session), so no provenance markers and no mid-chain-entry
-coverage note.
+Read-only gate over `docs/specs/run-observability/run-observability.md`. This is the **second** gate
+on this chain. The first passed a much larger design; two pre-build consultations then found that
+design unsound, and the chain was cut back to a marked, throwaway experiment. This gate is over the
+reduced chain.
+
+## What changed, and why
+
+The first chain specified a durable measurement product: schema versioning, a repository keying rule,
+cross-repository aggregation, a harvester, an import allowlist, structural privacy.
+
+Two consultations before any code was written returned **7 Critical, 12 Important, 6 Minor** and an
+independent second opinion on portability and the cost model. The decisive finding was not a defect
+in any component: it was that the instrument as specified would ship and then produce a confidently
+wrong conclusion, in the exact shape of the two wrong conclusions that motivated the feature. Its
+cost columns would be measured, its quality columns would be the same agent narration under
+suspicion, incomplete runs would silently drop out of aggregates, and the rendered table would carry
+the authority of a committed instrument.
+
+The scope was then reduced deliberately: this is throwaway instrumentation for a handful of runs on
+our own machines, deleted afterwards. That reduction retires most of those findings by removing what
+they attacked. What it does not retire are the four that attack the **conclusions**, and every one of
+those is now a criterion:
+
+| Consultation finding | Where it landed |
+| --- | --- |
+| Runs that fail never record an end, so aggregates flatter us | AC-2, AC-9 |
+| Self-reported quality rendered beside measured cost reads as fact | AC-4, AC-8 |
+| Round counts cannot separate task-size cost from review-round cost | AC-3, AC-7 |
+| Wall clock at a boundary silently includes idleness | AC-10 |
+
+The independent second opinion's sharpest point is also here: it argued the single worked example
+supports "review-round cost dominates" at least as well as "task size drives cost", and that
+separating them needs round-level timestamps rather than counts. That is AC-3, and it corrects a
+generalisation made earlier in this repo's own reasoning from one decomposition.
 
 ## Chain coverage
 
 | Criterion | Component | Product | Task(s) | Status |
 | --- | --- | --- | --- | --- |
-| AC-1 | recorder | Node >= 22 ESM (declared stack) | T-2 | traced |
-| AC-2 | recorder | Node >= 22 ESM, git via the existing facts reader | T-2 | traced |
-| AC-3 | recorder | Node >= 22 ESM | T-3 | traced |
-| AC-4 | run store | line-delimited JSON | T-1 | traced |
-| AC-5 | run store | line-delimited JSON | T-1 | traced |
-| AC-6 | recorder | Node >= 22 ESM | T-2 | traced |
-| AC-7 | recorder | Node >= 22 ESM | T-3 | traced |
-| AC-8 | recorder | Node >= 22 ESM | T-3 | traced |
-| AC-9 | reporter | Node >= 22 ESM | T-4 | traced |
-| AC-10 | reporter | Node >= 22 ESM | T-5 | traced |
-| AC-11 | reporter | Node >= 22 ESM | T-4 | traced |
-| AC-12 | harvester | the checker's existing artifact parsers | T-6 | traced |
-| AC-13 | feedback channel document | Markdown prose | T-7 | traced |
-| AC-14 | feedback channel document | Markdown prose | T-7 | traced |
-| AC-15 | feedback channel document | node:test | T-8 | traced |
-| AC-16 | gate, build and ship skill texts | Markdown prose | T-9 | traced |
-| AC-17 | recorder, reporter, the three skill texts | Node >= 22 ESM, Markdown prose | T-9 | traced |
-| AC-18 | recorder, reporter | Node >= 22 ESM | T-2, T-4 | traced |
+| AC-1 | recorder | Node >= 22 ESM (declared stack) | T-1 | traced |
+| AC-2 | recorder | Node >= 22 ESM | T-1 | traced |
+| AC-3 | recorder | Node >= 22 ESM | T-1 | traced |
+| AC-4 | recorder | Node >= 22 ESM, git via fixed argv | T-1 | traced |
+| AC-5 | recorder | line-delimited JSON | T-1 | traced |
+| AC-6 | recorder | Node >= 22 ESM | T-1 | traced |
+| AC-7 | summary | Node >= 22 ESM | T-2 | traced |
+| AC-8 | summary | Node >= 22 ESM | T-2 | traced |
+| AC-9 | summary | Node >= 22 ESM | T-2 | traced |
+| AC-10 | summary | Node >= 22 ESM | T-2 | traced |
+| AC-11 | summary | Node >= 22 ESM | T-2 | traced |
+| AC-12 | gate, build and ship skill texts | Markdown prose | T-3 | traced |
+| AC-13 | feedback note | Markdown prose | T-3 | traced |
+| AC-14 | recorder, summary, feedback note | node:test | T-4 | traced |
 
-Coverage is clean in both directions after the findings below. Every criterion is advanced by at
-least one task, every task advances at least one criterion, and every component named by a task
-exists in the Design. The checker corroborates: exit 0, 0 findings, 0 notes.
+Coverage is clean in both directions. The checker corroborates: exit 0, 0 findings, 0 notes.
 
 ## Findings
 
-### F1 (Medium, resolved): a negative criterion with nothing enforcing it
+### F1 (Low, accepted): T-1 carries six criteria
 
-*Location:* NC-1 versus the criteria set. *Owner:* acceptance-criteria.
+*Location:* the Plan. *Owner:* plan.
 
-NC-1 promises that nothing is transmitted anywhere. Nothing in the chain held the build to it: no
-criterion, no task, no test. A promise of that shape is the one most likely to be believed without
-being checked, and it is exactly the promise a user is trusting when they let a tool record how long
-their work took.
+Six criteria on one task is exactly the compound shape flagged as a cost driver elsewhere this week.
+Accepted here on two grounds: they describe one program's behaviour rather than several concerns, and
+the expected diff is a couple of hundred lines. Recorded so the acceptance is visible rather than
+implicit. If T-1's review comes back long, that is the signal that this judgement was wrong.
 
-The repo already has the pattern that fixes it. The enforcement-spine chain pins the checker's own
-imports to standard-library modules by test. Added AC-18: the recorder's and the reporter's imports
-are confined to a declared allowlist containing nothing network-capable, advanced by T-2 and T-4.
+### F2 (Low, resolved): the removal claim needed an oracle
 
-That converts NC-1 from a statement of intent into a property a test fails on.
+*Location:* AC-14. *Owner:* acceptance-criteria.
 
-### F2 (Medium, resolved): a compound criterion, half code and half prose
-
-*Location:* AC-6 as originally written. *Owner:* acceptance-criteria.
-
-AC-6 asserted both a code behaviour (non-zero exit, no partial write) and a documented contract (the
-stage announces and proceeds), under one test-backed verification type. The prose half cannot be
-unit-tested, so the criterion would have been reported as met by a test that only exercised the code
-half, and the documented half could have gone missing silently.
-
-Narrowed AC-6 to the code behaviour, and pointed it at AC-16, which already carries the documented
-half as a reviewer-checked criterion. Same class as the compound-hook finding on the previous chain,
-which suggests the pattern is worth watching for at this stage generally.
-
-### F3 (Low, resolved): a criterion whose components disagreed with its task's
-
-*Location:* AC-17 in the criterion-to-component map versus T-9's component field. *Owner:* plan.
-
-AC-17 constrains the recorder, the reporter, and the documented wiring, but the map listed only the
-first two while the task advancing it named only the three skill texts. Neither side was wrong on its
-own and together they described different scopes. Corrected the map to list all five, since AC-17 is
-a cross-cutting inspection over the whole surface rather than a property of one component.
+"Everything is marked so removal is a grep" is the kind of promise that is true on the day it is
+written and false three commits later. It now carries a test: the marker search returns every touched
+file and nothing else. Throwaway code that cannot be found is not throwaway, it is residue.
 
 ## Constitution and convention checks
 
-- **Rules-ratchet:** no new checker rule and no grammar change. The recorder and reporter are new
-  programs beside the checker, and NC-7 keeps them from consulting it or it them.
-- **Fail-closed direction:** on doubt the recorder writes nothing and says so. A missing record is
-  honest; a fabricated one poisons every aggregate built on it afterwards.
-- **Privacy is structural, not procedural.** AC-3 removes the possibility of a free-text field rather
-  than instructing anyone to be careful, which is the same move as writing a scratch artifact to a
-  temporary directory instead of remembering not to commit it.
-- **Portability:** AC-17 holds the whole surface to assuming no language, build tool, test runner, or
-  layout. This is the criterion most likely to be quietly violated, because the repo it is developed
-  in is a Node repo.
+- **Rules-ratchet:** no checker rule, no grammar change, nothing added to the trusted half.
+- **Fail-closed:** the recorder writes nothing on doubt and never blocks a stage.
 - **No em-dashes** in the new spec text. Checked.
-- **Unresolved placeholders:** none.
-
-## Ordering and sizing check
-
-Nine tasks, each one concern, each with a small expected diff. That is a deliberate response to the
-sizing evidence gathered this week: elsewhere, the tasks that ran an hour or more were the ones
-bundling several concerns, and their review rounds inherited the same size. T-1 and T-7 have no
-dependencies and can start together; T-4 and T-6 unblock as soon as T-1 lands.
+- **Placeholders:** none.
+- **Scope honesty:** the chain states plainly that the deliverable is the answer, not the code.
 
 ## Risks noted, not findings
 
-- **The instrument measures what it can reach, not what costs the most.** A clock is trustworthy at a
-  boundary, and everything between boundaries is model inference. This will show that a task took 45
-  minutes over a 2,200-line diff and two rounds; it will not show why the implementer needed 239
-  turns. Token counts would, where a harness exposes them, which is why they are optional rather than
-  absent. The chain should not later be read as claiming more resolution than it has.
-- **An unused instrument is a dead one.** Nothing consults the store in this release, by choice
-  (NC-3). The risk is that recording becomes ceremony nobody reads. The mitigation is that the next
-  milestone is instrumented from its first task, so a baseline exists before anyone argues from
-  memory again.
+- **The experiment can still mislead, just less.** Labelling a column "claimed" does not make it
+  true, and a reader determined to act on a self-reported zero can still do so. The mitigation is
+  social rather than technical: the summary says what it cannot see, every time.
+- **Instrumentation changes what it measures.** Every recorder call is a tool call in the run being
+  timed. Small, and it inflates precisely the number under study. Worth checking against an
+  unrecorded run rather than assuming.
 
 ## Verdict
 
-**Ready to build.** Three findings raised and resolved in-flight (two Medium, one Low). No finding
-remains open, the chain exits 0 under the checker, and coverage is complete in both directions.
+**Ready to build.** Two findings, both Low, one accepted with its reason and one resolved. The chain
+exits 0 under the checker and coverage is complete in both directions.
