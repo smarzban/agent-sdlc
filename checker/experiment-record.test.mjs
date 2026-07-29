@@ -256,13 +256,27 @@ test('AC-5: each run identity gets its own file', () => {
 // environment where the naive home-directory join WOULD land inside it: some CI sandboxes set HOME
 // to the workspace/repository itself. AC-5 forbids the default store resolving inside the
 // repository under work outright, so this must fall back rather than silently violate that.
+// Compare canonically, never by raw string. `defaultStoreRoot` returns a symlink-resolved path, and
+// on macOS `tmpdir()` reports `/var/folders/...` while its resolved form is `/private/var/...`. An
+// assertion written against the unresolved form passes on Linux and fails on macOS, which is
+// exactly the mistake the code under test was fixed for: this comment exists so it is not
+// reintroduced here a third time.
+const canonicalPath = (p) => {
+  try {
+    return realpathSync(p);
+  } catch {
+    return path.resolve(p);
+  }
+};
+
 test('AC-5: if the home directory lies inside the repository under work, the store falls back outside it', () => {
   const repo = makeRepo();
   try {
     const root = defaultStoreRoot(repo, repo); // HOME == the repository under work
-    assert.notEqual(root, repo);
-    assert.ok(!root.startsWith(`${repo}${path.sep}`));
-    assert.ok(root.startsWith(tmpdir()));
+    const realRepo = canonicalPath(repo);
+    assert.notEqual(root, realRepo);
+    assert.ok(!root.startsWith(`${realRepo}${path.sep}`));
+    assert.ok(root.startsWith(canonicalPath(tmpdir())));
   } finally {
     rmSync(repo, { recursive: true, force: true });
   }
@@ -274,7 +288,7 @@ test('AC-5: if the home directory equals the repository under work exactly, the 
     const nested = path.join(repo, 'sub', 'dir');
     // homeDir nested under the repo (not just equal to it) is the same failure mode.
     const root = defaultStoreRoot(repo, nested);
-    assert.ok(!root.startsWith(`${repo}${path.sep}`));
+    assert.ok(!root.startsWith(`${canonicalPath(repo)}${path.sep}`));
   } finally {
     rmSync(repo, { recursive: true, force: true });
   }
@@ -522,7 +536,7 @@ test('a temporary-directory fallback that also lands inside the repo is refused,
       threw = true;
     }
     assert.ok(
-      threw || !resolved.startsWith(repo + path.sep),
+      threw || !resolved.startsWith(canonicalPath(repo) + path.sep),
       'the store must never resolve inside the repository under work, by either root',
     );
   } finally {

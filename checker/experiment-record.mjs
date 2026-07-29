@@ -159,26 +159,35 @@ async function readHeadCommit(cwd) {
 // paths that are the same directory, and the store lands in the repo the check exists to protect.
 // Resolve both sides before comparing, and fall back to the literal path when a component does not
 // exist yet (the store root usually does not).
-function realOrResolved(target) {
-  const resolved = path.resolve(target);
-  try {
-    return realpathSync(resolved);
-  } catch {
-    return resolved;
+// Canonicalise by resolving the longest EXISTING ancestor and re-appending the rest. Resolving only
+// when the whole path exists is not enough and was the second half of this bug: the repository
+// exists so it resolves, while the store root usually does not, so one side came back resolved and
+// the other literal, and the comparison failed again in the opposite direction.
+function canonical(target) {
+  let head = path.resolve(target);
+  const tail = [];
+  for (;;) {
+    try {
+      return path.join(realpathSync(head), ...tail.reverse());
+    } catch {
+      const parent = path.dirname(head);
+      if (parent === head) return path.resolve(target);
+      tail.push(path.basename(head));
+      head = parent;
+    }
   }
 }
 
 export function defaultStoreRoot(cwd = process.cwd(), homeDir = os.homedir()) {
-  const realHome = realOrResolved(homeDir);
-  const preferred = path.join(realHome, '.agent-sdlc-experiments', 'run-observability');
-  const resolvedCwd = realOrResolved(cwd);
+  const preferred = canonical(path.join(homeDir, '.agent-sdlc-experiments', 'run-observability'));
+  const resolvedCwd = canonical(cwd);
   const inside = (candidate) =>
     candidate === resolvedCwd || candidate.startsWith(resolvedCwd + path.sep);
   if (!inside(preferred)) return preferred;
   // The home-based root would land inside the repository under work, so fall back to the system
   // temporary directory. That fallback is checked too: TMPDIR can itself point inside the repo,
   // which would put the store back exactly where it must never be.
-  const fallback = path.join(realOrResolved(os.tmpdir()), '.agent-sdlc-experiments', 'run-observability');
+  const fallback = canonical(path.join(os.tmpdir(), '.agent-sdlc-experiments', 'run-observability'));
   if (!inside(fallback)) return fallback;
   throw new Error(
     'experiment store: both the home and temporary roots resolve inside the repository under work; ' +
