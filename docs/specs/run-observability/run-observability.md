@@ -120,9 +120,11 @@ The bar is "can this answer the question without misleading us", not "is this a 
 
 ### The summary (test-backed)
 
-- **AC-7**: The summary renders, per task: elapsed, review-round count and each round's duration,
-  changed lines and files (derived by the summary itself from a pair of recorded head commits, not
-  read from the recorder's events), and findings by severity. *(Verification type: **test-backed**,
+- **AC-7**: The summary renders, per task: elapsed, review-round count (never undercounted by a gap
+  in the round numbering) and each round's duration, lines and files changed **between the recorded
+  task-start and task-end boundaries** (derived by the summary itself from a pair of recorded head
+  commits, not read from the recorder's events, and named for what it measures rather than implying
+  it isolates the task's own diff), and findings by severity. *(Verification type: **test-backed**,
   unit.)*
 - **AC-8**: Every rendered column is marked measured or claimed, in the rendering itself and not only
   in the underlying file. *(Verification type: **test-backed**, unit.)*
@@ -138,8 +140,11 @@ The bar is "can this answer the question without misleading us", not "is this a 
 ### Wiring and removal (reviewer-checked)
 
 - **AC-12**: The stages that bound a run record their boundaries and their review rounds, and each
-  states what it does when the recorder is unavailable: announce and proceed. *(Verification type:
-  **reviewer-checked**, Spec Conformance.)*
+  states what it does when the recorder is unavailable: announce and proceed. `task-end` is recorded
+  **after** the task's own commit lands, never before: AC-7's between-boundaries column is only
+  meaningful under that ordering, and identical head commits are the summary's signal that this
+  ordering was not followed for a given task. *(Verification type: **reviewer-checked**, Spec
+  Conformance.)*
 - **AC-13**: The feedback file is described once: what qualifies (including that a documented step
   was skipped, weakened, or worked around), the evidence rule (cite the command, the error, or the
   quoted line, or do not write it), the local destination, and that writing nothing is the expected
