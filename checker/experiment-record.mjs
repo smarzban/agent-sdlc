@@ -30,7 +30,7 @@
 // never inside any repository under work.
 import { parseArgs, promisify } from 'node:util';
 import { execFile } from 'node:child_process';
-import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, realpathSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -153,16 +153,32 @@ async function readHeadCommit(cwd) {
 // arrange by setting HOME to the workspace, the preferred path would resolve inside the repository
 // under work, which AC-5 forbids outright; fall back to the OS temp directory instead, which this
 // repository can never contain.
+// Symlinks decide this, not strings. On macOS `/var` is a symlink to `/private/var`, so a child
+// process started with cwd inside a temporary directory reports the RESOLVED cwd while `$HOME`
+// keeps the unresolved form. Comparing those as strings says "not inside the repository" about two
+// paths that are the same directory, and the store lands in the repo the check exists to protect.
+// Resolve both sides before comparing, and fall back to the literal path when a component does not
+// exist yet (the store root usually does not).
+function realOrResolved(target) {
+  const resolved = path.resolve(target);
+  try {
+    return realpathSync(resolved);
+  } catch {
+    return resolved;
+  }
+}
+
 export function defaultStoreRoot(cwd = process.cwd(), homeDir = os.homedir()) {
-  const preferred = path.resolve(path.join(homeDir, '.agent-sdlc-experiments', 'run-observability'));
-  const resolvedCwd = path.resolve(cwd);
+  const realHome = realOrResolved(homeDir);
+  const preferred = path.join(realHome, '.agent-sdlc-experiments', 'run-observability');
+  const resolvedCwd = realOrResolved(cwd);
   const inside = (candidate) =>
     candidate === resolvedCwd || candidate.startsWith(resolvedCwd + path.sep);
   if (!inside(preferred)) return preferred;
   // The home-based root would land inside the repository under work, so fall back to the system
   // temporary directory. That fallback is checked too: TMPDIR can itself point inside the repo,
   // which would put the store back exactly where it must never be.
-  const fallback = path.resolve(path.join(os.tmpdir(), '.agent-sdlc-experiments', 'run-observability'));
+  const fallback = path.join(realOrResolved(os.tmpdir()), '.agent-sdlc-experiments', 'run-observability');
   if (!inside(fallback)) return fallback;
   throw new Error(
     'experiment store: both the home and temporary roots resolve inside the repository under work; ' +

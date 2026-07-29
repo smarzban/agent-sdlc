@@ -3,7 +3,7 @@
 Every criterion, and the proof that it holds. Twelve of fourteen are test-backed, because this is an
 instrument and an instrument that cannot be tested is an opinion.
 
-Green bar at the reviewed head: `node --test checker/*.test.mjs` -> **283/283, exit 0** (read
+Green bar at the reviewed head: `node --test checker/*.test.mjs` -> **284/284, exit 0** (read
 directly, unpiped). All nine chains under `docs/specs/` exit 0, and this chain passes
 `--require ledger`.
 

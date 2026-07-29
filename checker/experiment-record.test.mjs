@@ -8,7 +8,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync, appendFileSync, readFileSync, existsSync, readdirSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync, appendFileSync, readFileSync, existsSync, readdirSync, mkdirSync, symlinkSync, realpathSync } from 'node:fs';
 import { tmpdir, homedir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -528,5 +528,52 @@ test('a temporary-directory fallback that also lands inside the repo is refused,
   } finally {
     os.default.tmpdir = realTmpdir;
     rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+// --- macOS CI regression: a symlinked home versus a resolved cwd ---
+//
+// Caught by the macOS leg of CI, invisible on Linux. On macOS `/var` is a symlink to `/private/var`,
+// so a child started with `cwd` inside a temporary directory reports the RESOLVED cwd while `$HOME`
+// keeps the unresolved form. Comparing those as strings said "not inside the repository" about two
+// paths that are the same directory, and the store was written into the repo the check protects.
+//
+// Reproduced on any platform by pointing a symlink at the repo and passing the symlinked path as
+// the home directory while the cwd is the real one. The assertion resolves the returned root before
+// judging it: comparing the returned STRING is what the bug did, so a test that compares strings
+// passes against the bug (verified: it did).
+function effectiveLocation(target) {
+  let head = target;
+  const tail = [];
+  for (;;) {
+    if (existsSync(head)) return path.join(realpathSync(head), ...tail.reverse());
+    const parent = path.dirname(head);
+    if (parent === head) return target;
+    tail.push(path.basename(head));
+    head = parent;
+  }
+}
+
+test('a symlinked home pointing at the repository is still recognised as inside it', () => {
+  const parent = mkdtempSync(path.join(tmpdir(), 'exp-symlink-'));
+  const repo = path.join(parent, 'repo');
+  const link = path.join(parent, 'link-to-repo');
+  try {
+    mkdirSync(repo);
+    symlinkSync(repo, link);
+    let root = null;
+    try {
+      root = defaultStoreRoot(repo, link);
+    } catch {
+      return; // refusing outright is also a correct outcome
+    }
+    const landed = effectiveLocation(root);
+    const realRepo = realpathSync(repo);
+    assert.ok(
+      landed !== realRepo && !landed.startsWith(realRepo + path.sep),
+      `the store must not resolve inside the repository via a symlinked home (landed at ${landed})`,
+    );
+  } finally {
+    rmSync(parent, { recursive: true, force: true });
   }
 });
