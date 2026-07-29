@@ -86,7 +86,10 @@ branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
 4. **For each task `T-N`, in dependency order** (before the first dispatch, **read
    [reference/subagent-loop.md](reference/subagent-loop.md) now** — the brief contents, the
    fix-cycle bound, the file hand-off mechanics, and the death sequence live ONLY there; a loop
-   run from this body alone improvises all four):
+   run from this body alone improvises all four). **Experiment recording
+   (`EXPERIMENT: run-observability`): record task-start now, before dispatching the implementer in
+   4a** (details, including the invocation, are in the recording block after 4g below; this pointer
+   exists so task-start fires before the first dispatch, not after it).
    a. Dispatch the **implementer** subagent with a file brief for `T-N` only.
    b. Dispatch the **reviewer** subagent on the resulting diff.
    c. If the reviewer finds Critical/Important issues, dispatch a **fixer** and re-review (bounded).
@@ -119,6 +122,23 @@ branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
       (per *Reading the green bar*).
    g. If Linear sync is enabled in `.agent-sdlc/config.json`, transition `T-N`'s issue via the
       `linear-sync` skill.
+
+   **Experiment recording (`EXPERIMENT: run-observability`, removed with the rest of the experiment).**
+   `task-start` fires above, before 4a. Bracket each reviewer pass with round-start/round-end (4b,
+   and again around each fixer + re-review iteration in 4c), numbering rounds from 1 within the task,
+   one number per reviewer pass: a fix cycle is the next round, never a repeat of the number before
+   it. Pass the reviewer's findings counts to round-end's `--critical`/`--important`/`--minor` flags
+   so the summary's findings column carries real numbers. Record task-end only after the task's
+   commit exists (4d's commit-first form, or 4e; whichever actually lands the commit), never before:
+   the summary's between-boundaries column is derived from this pair of recorded head commits, and
+   an identical pair renders as a wiring fault, not a real zero. A task that ends with no commit (a
+   subagent death, an abandoned task) gets no task-end recorded at all: never invent one to force a
+   pair. Invoke `bin/sdlc-record` (resolve it the same way as `sdlc-check`, per the
+   checker-resolution rule) with `--run <feature>` (the run identity every stage derives the same
+   way, see experiment-feedback's Run identity). If the recorder is unavailable, announce it once
+   and proceed: the experiment never blocks the build loop. See
+   [experiment-feedback](../getting-started/reference/experiment-feedback.md) for the run identity
+   and for when a task also warrants a feedback note.
 
    If an implementer reports a **plan/reality mismatch** (a named file/path is wrong, a symbol was
    renamed, the task must split, an assumed dependency differs), **read

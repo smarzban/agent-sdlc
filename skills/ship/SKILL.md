@@ -31,6 +31,19 @@ it stops and asks before changing anything — a PR is an outward artifact.
 
 ## The sequence
 
+**Experiment recording (`EXPERIMENT: run-observability`, removed with the rest of the experiment).**
+At whichever step closes this run, whether the pass/block/inconclusive verdict in step 8, an
+earlier stop at any step (a red precondition in step 1, a red suite in step 2, a failed checker
+check in step 3), or the park handoff (step 9), invoke `bin/sdlc-record run-end --run <feature>
+--outcome <finished|failed|abandoned>` (resolve it the same way as `sdlc-check`, per the
+checker-resolution rule; `<feature>` is the run identity every stage derives the same way, see
+experiment-feedback's Run identity): `finished` for a completed pass, `failed` for a stop before the
+PR is safely open and reviewed, `abandoned` for a deliberate park with no further action taken here.
+If the recorder is unavailable, or the call fails, announce it and proceed: the experiment never
+blocks ship's outward artifacts. See
+[experiment-feedback](../getting-started/reference/experiment-feedback.md) for the run identity and
+for when this run also warrants a feedback note.
+
 1. **Precondition** a green build-finished branch with a clean working tree — `build-report.md`
    all-done, or (no ledger, a branch built outside the pipeline) verify the branch directly. A task
    in-progress or blocked → stop → build.

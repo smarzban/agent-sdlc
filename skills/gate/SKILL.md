@@ -94,6 +94,16 @@ a verdict: ready to build, or not.
    did not fail (or its failure was explicitly overridden and the override is recorded).
 9. **Write `gate-report.md`** and stop. Do not fix anything. If Linear sync is enabled in
    `.agent-sdlc/config.json`, also post the gate's status update + report via the `linear-sync` skill.
+   **Experiment recording (`EXPERIMENT: run-observability`, removed with the rest of the experiment).**
+   Once the report is written, and only on this run's first gate pass (a re-run after a fix, or an
+   inline gate `build` triggers, does not record it again), invoke `bin/sdlc-record run-start --run
+   <feature>` (resolve it the same way as `sdlc-check`, per the checker-resolution rule; `<feature>`
+   is the run identity every stage derives the same way, see experiment-feedback's Run identity): it
+   marks the run's start boundary, which the summary later reads to tell a complete run from one
+   that never got this far. If the recorder is unavailable, or the call fails, announce it in the
+   report and proceed: the experiment never blocks a gate verdict. See
+   [experiment-feedback](../getting-started/reference/experiment-feedback.md) for the run identity
+   and for when this run also warrants a feedback note.
 
 ## Principles
 
