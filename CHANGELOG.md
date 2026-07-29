@@ -4,6 +4,19 @@ The authoritative release notes live on
 [GitHub Releases](https://github.com/smarzban/agent-sdlc/releases) — one release per version,
 cut with a plugin-scoped tag (`agent-sdlc-vX.Y.Z`). This file is the one-line index.
 
+- **[0.18.0](https://github.com/smarzban/agent-sdlc/releases/tag/agent-sdlc-v0.18.0)** (2026-07-29) —
+  **a temporary measurement experiment, and skill frontmatter limits enforced by test.** The
+  experiment (`EXPERIMENT: run-observability`) records what a run costs to a **local file under your
+  home directory** and renders it as a table: stage, task and review-round boundaries, findings by
+  severity, and changes between boundaries. **It is on by default and records automatically when a
+  pipeline stage runs.** Nothing is transmitted anywhere and no file contents, prompts, or secrets
+  are recorded (counts, durations and enumerated values only), it never blocks a stage, and
+  `docs/usage/experiment-run-observability.md` documents both how to read it and how to remove it
+  completely. It exists to answer one question, whether elapsed time goes to task size or to review
+  rounds, and is deleted once it has. Separately, skill `description` (max 1024) and `name` (max 64)
+  are now held to the open standard's limits by test, because a validating harness only warns and
+  still loads the skill, so an over-long description degrades activation quietly in someone else's
+  repo.
 - **[0.17.0](https://github.com/smarzban/agent-sdlc/releases/tag/agent-sdlc-v0.17.0)** (2026-07-28) —
   **`handoff`, a fifth standalone skill**: the pipeline handed a *feature* forward well and the
   *working copy* not at all. `HANDOFF.md` is the repo-root live-state doc the next agent reads to

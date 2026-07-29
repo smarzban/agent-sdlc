@@ -56,6 +56,17 @@ lists, so a parenthetical annotates instead of fabricating a link, which forced 
 weaker relations explicitly is the recorded follow-up, rejected for scope and not on merit
 (`adr/ADR-0002`).
 
+`run-observability` shipped 2026-07-29, and is **deliberately temporary**: an experiment, marked
+`EXPERIMENT: run-observability` in every file it touches, that records what a run costs (stage and
+task and review-round boundaries, findings by severity, changes between boundaries) to a local file
+outside the repository, and renders it as a table. It exists to answer one question on a handful of
+real runs, whether elapsed time goes to task size or to review rounds, and is then deleted by the
+procedure in `docs/usage/experiment-run-observability.md`. Its design is shaped by what it must not
+do: failed runs record an explicit outcome so they cannot vanish from an aggregate, every rendered
+column is marked measured or claimed, and the summary states on its face that wall clock includes
+idleness. Two pre-build consultations cut it from a durable product to this after finding that the
+larger design would have shipped and produced a confidently wrong conclusion.
+
 `handoff-skill` shipped 2026-07-28: a fifth standalone skill for the working copy's live-state doc,
 the counterpart to the spec chain (a chain hands a FEATURE forward, `HANDOFF.md` hands the WORKING
 COPY forward). Ignored by default so it can be written frankly, with one litmus deciding placement
