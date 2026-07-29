@@ -3,7 +3,7 @@
 Every criterion, and the proof that it holds. Twelve of fourteen are test-backed, because this is an
 instrument and an instrument that cannot be tested is an opinion.
 
-Green bar at the reviewed head: `node --test checker/*.test.mjs` -> **259/259, exit 0** (read
+Green bar at the reviewed head: `node --test checker/*.test.mjs` -> **283/283, exit 0** (read
 directly, unpiped). All nine chains under `docs/specs/` exit 0, and this chain passes
 `--require ledger`.
 
@@ -50,7 +50,7 @@ exists precisely because the ordering requirement cannot be verified until then.
 **The numbers it will produce are bounded in three ways, all of them stated in the instrument's own
 output.** Wall clock between boundaries includes rate-limit backoff and idleness and does not isolate
 inference. The size column measures changes between recorded boundaries, which absorbs anything else
-committed in that window. Findings and notes are the agent's word, marked claimed in every rendering.
+committed in that window. Findings are the agent's word, marked claimed in every rendering.
 
 **And the instrument changes what it measures**, since every recorder call is a tool call inside the
 run being timed. An uninstrumented control run is worth timing rather than assuming the overhead away.

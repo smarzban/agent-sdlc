@@ -150,6 +150,18 @@ test('AC-3: --round is required for round-start/round-end', () => {
   assert.match(parsed.error, /round/i);
 });
 
+// A round number is bounded so a huge one can never make the summary's round-gap rendering
+// unbounded work (a wide-enough span would otherwise loop billions of times filling in "missing"
+// rounds between the lowest and highest recorded round number).
+test('AC-3: a round number above the bound is rejected, not silently accepted', () => {
+  const tooLarge = parseEventArgs(['round-start', '--run', 'r1', '--task', 'T-1', '--round', '100001']);
+  assert.equal(tooLarge.ok, false);
+  assert.match(tooLarge.error, /round/i);
+
+  const atBound = parseEventArgs(['round-start', '--run', 'r1', '--task', 'T-1', '--round', '100000']);
+  assert.equal(atBound.ok, true);
+});
+
 // --- property 4: machine vs reported namespaces; a caller-supplied machine value is rejected ---
 
 for (const flag of ['head-commit', 'commit', 'sha']) {
@@ -175,7 +187,7 @@ test('AC-4: machine-read and agent-reported fields are stored under separate nam
   const repo = makeRepo();
   const storeRoot = makeStoreRoot();
   try {
-    await run(['round-end', '--run', 'r1', '--task', 'T-1', '--round', '1', '--critical', '1', '--notes', 'flaky test'], {
+    await run(['round-end', '--run', 'r1', '--task', 'T-1', '--round', '1', '--critical', '1'], {
       cwd: repo,
       storeRoot,
       stderr: nullStderr(),
@@ -186,10 +198,35 @@ test('AC-4: machine-read and agent-reported fields are stored under separate nam
     assert.equal(typeof event.machine.timestamp, 'string');
     assert.equal(typeof event.machine.headCommit, 'string');
     assert.equal(event.reported.critical, 1);
-    assert.deepEqual(event.reported.notes, ['flaky test']);
     // The reported namespace never carries a timestamp or a commit; those are machine-only.
     assert.equal('timestamp' in event.reported, false);
     assert.equal('headCommit' in event.reported, false);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+    rmSync(storeRoot, { recursive: true, force: true });
+  }
+});
+
+// No free-text field exists anywhere in the schema (NC-3: no secrets, source, or prompts
+// recorded): a caller-supplied --notes is not a declared option at all, so it is rejected the same
+// way any undeclared flag is, with no separate allowlist to keep in sync.
+test('AC-4/NC-3: there is no free-text field; a caller-supplied --notes is rejected as an unknown option', () => {
+  const parsed = parseEventArgs(['round-end', '--run', 'r1', '--task', 'T-1', '--round', '1', '--notes', 'flaky test']);
+  assert.equal(parsed.ok, false);
+  assert.match(parsed.error, /unknown option.*notes/i);
+});
+
+test('AC-4/NC-3: a written event never carries a notes field of any kind', async () => {
+  const repo = makeRepo();
+  const storeRoot = makeStoreRoot();
+  try {
+    await run(['round-end', '--run', 'r1', '--task', 'T-1', '--round', '1', '--critical', '2', '--important', '1', '--minor', '0'], {
+      cwd: repo,
+      storeRoot,
+      stderr: nullStderr(),
+    });
+    const { events: [event] } = readEvents(storeFilePath('r1', storeRoot));
+    assert.equal('notes' in event.reported, false);
   } finally {
     rmSync(repo, { recursive: true, force: true });
     rmSync(storeRoot, { recursive: true, force: true });
@@ -213,6 +250,53 @@ test('AC-5: the default store root lives under the home directory, never inside 
 test('AC-5: each run identity gets its own file', () => {
   const root = '/tmp/example-root';
   assert.notEqual(storeFilePath('run-a', root), storeFilePath('run-b', root));
+});
+
+// The repository under work is never a safe place for the default store, even in the one
+// environment where the naive home-directory join WOULD land inside it: some CI sandboxes set HOME
+// to the workspace/repository itself. AC-5 forbids the default store resolving inside the
+// repository under work outright, so this must fall back rather than silently violate that.
+test('AC-5: if the home directory lies inside the repository under work, the store falls back outside it', () => {
+  const repo = makeRepo();
+  try {
+    const root = defaultStoreRoot(repo, repo); // HOME == the repository under work
+    assert.notEqual(root, repo);
+    assert.ok(!root.startsWith(`${repo}${path.sep}`));
+    assert.ok(root.startsWith(tmpdir()));
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test('AC-5: if the home directory equals the repository under work exactly, the store still falls back', () => {
+  const repo = makeRepo();
+  try {
+    const nested = path.join(repo, 'sub', 'dir');
+    // homeDir nested under the repo (not just equal to it) is the same failure mode.
+    const root = defaultStoreRoot(repo, nested);
+    assert.ok(!root.startsWith(`${repo}${path.sep}`));
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test('AC-5 (subprocess): HOME set to the repository under work never writes inside it', () => {
+  const repo = makeRepo();
+  try {
+    const result = spawnSync(process.execPath, [CLI, 'run-start', '--run', 'home-in-repo'], {
+      cwd: repo,
+      env: { ...process.env, HOME: repo },
+    });
+    assert.equal(result.status, 0, result.stderr?.toString());
+    const untracked = execFileSync(
+      'git',
+      ['-C', repo, 'ls-files', '--others', '--exclude-standard'],
+      { encoding: 'utf8' },
+    );
+    assert.doesNotMatch(untracked, /agent-sdlc-experiments/);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
 });
 
 test('AC-5: a malformed (newline-terminated) earlier line never prevents a later append or crashes the reader', async () => {
@@ -274,6 +358,27 @@ test('C1: a TRUNCATED (no trailing newline) last line does not swallow the next 
 
 // --- property 6: failure is loud and total; nothing partial written ---
 
+// Property 6's git-read branch: readHeadCommit's own failure path, exercised end to end via a cwd
+// that is not a git repository at all, so `git rev-parse HEAD` itself fails.
+test('AC-6: a cwd that is not a git repository fails loudly via the git-read failure path, writing nothing', async () => {
+  const notARepo = mkdtempSync(path.join(tmpdir(), 'experiment-record-norepo-'));
+  const storeRoot = makeStoreRoot();
+  const stderrChunks = [];
+  try {
+    const code = await run(['run-start', '--run', 'r1'], {
+      cwd: notARepo,
+      storeRoot,
+      stderr: { write: (s) => stderrChunks.push(s) },
+    });
+    assert.equal(code, 1);
+    assert.match(stderrChunks.join(''), /could not read HEAD commit via git/i);
+    assert.deepEqual(readdirSync(storeRoot), []);
+  } finally {
+    rmSync(notARepo, { recursive: true, force: true });
+    rmSync(storeRoot, { recursive: true, force: true });
+  }
+});
+
 test('AC-6: a missing --run exits nonzero with a diagnostic and writes nothing', async () => {
   const repo = makeRepo();
   const storeRoot = makeStoreRoot();
@@ -331,9 +436,97 @@ test('AC-6: the CLI (subprocess) rejects a caller-supplied --timestamp with nonz
   }
 });
 
+// --- HIGH: the bin/ launcher itself is executed, not only the .mjs it wraps -----------------
+
+// bin/sdlc-record is the invocation path the wiring skills actually name. Nothing else in this
+// suite runs it: a break in the launcher's own path resolution (e.g. `dirname`/`readlink`
+// portability) would still show every other test green while every stage boundary silently fails
+// to record, announces, and proceeds into an empty store, exactly the failure this feature has
+// already had once. Resolved the same layout-proof way as the .mjs tests: relative to this file.
+const BIN_RECORD = fileURLToPath(new URL('../bin/sdlc-record', import.meta.url));
+
+test('HIGH: bin/sdlc-record (subprocess) actually resolves, runs, and appends an event', () => {
+  const repo = makeRepo();
+  const home = makeStoreRoot();
+  try {
+    const result = spawnSync(BIN_RECORD, ['run-start', '--run', 'launcher-run'], {
+      cwd: repo,
+      env: { ...process.env, HOME: home },
+    });
+    assert.equal(result.status, 0, result.stderr?.toString());
+    const filePath = path.join(home, '.agent-sdlc-experiments', 'run-observability', 'launcher-run.jsonl');
+    const events = readFileSync(filePath, 'utf8').trim().split('\n').map((l) => JSON.parse(l));
+    assert.equal(events.length, 1);
+    assert.equal(events[0].kind, 'run-start');
+    assert.equal(events[0].run, 'launcher-run');
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test('HIGH: bin/sdlc-record (subprocess) propagates a failure (nonzero exit, diagnostic, nothing written)', () => {
+  const repo = makeRepo();
+  const home = makeStoreRoot();
+  try {
+    const result = spawnSync(BIN_RECORD, ['run-start'], {
+      cwd: repo,
+      env: { ...process.env, HOME: home },
+    });
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr.toString(), /--run/);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+// --- HIGH: nothing is transmitted anywhere (NC-3) -------------------------------------------
+
+test('HIGH/NC-3: the recorder imports only Node standard-library modules, none network-capable', () => {
+  const source = readFileSync(CLI, 'utf8');
+  const specifiers = [...source.matchAll(/^import\s+.*?from\s+['"]([^'"]+)['"];?/gm)].map((m) => m[1]);
+  assert.ok(specifiers.length > 0, 'expected at least one import to check');
+  const NETWORK_CAPABLE = new Set(['http', 'https', 'net', 'dgram', 'tls', 'dns', 'http2']);
+  for (const spec of specifiers) {
+    assert.match(spec, /^node:/, `${spec} must be an explicit node: standard-library import`);
+    const bare = spec.slice('node:'.length);
+    assert.ok(!NETWORK_CAPABLE.has(bare), `${spec} is network-capable and must not be imported`);
+  }
+});
+
 // --- marker (T-4 sweeps this repo-wide; pinned locally too) ---
 
 test('carries the EXPERIMENT: run-observability marker', () => {
   const source = readFileSync(CLI, 'utf8');
   assert.match(source, /EXPERIMENT: run-observability/);
+});
+
+// --- gate round 2 residual: the temporary-directory fallback was itself unchecked ---
+//
+// defaultStoreRoot falls back to the system temp dir when the home-based root would land inside the
+// repository under work. That fallback was not checked against the same rule, so a TMPDIR pointing
+// inside the repo put the store back exactly where it must never be. Found by probing the fix for
+// the store-location finding, not by the fix itself.
+test('a temporary-directory fallback that also lands inside the repo is refused, never used', async () => {
+  const os = await import('node:os');
+  const repo = mkdtempSync(path.join(tmpdir(), 'exp-repo-'));
+  const realTmpdir = os.default.tmpdir;
+  os.default.tmpdir = () => path.join(repo, 'tmpx');
+  try {
+    let resolved = null;
+    let threw = false;
+    try {
+      resolved = defaultStoreRoot(repo, repo);
+    } catch {
+      threw = true;
+    }
+    assert.ok(
+      threw || !resolved.startsWith(repo + path.sep),
+      'the store must never resolve inside the repository under work, by either root',
+    );
+  } finally {
+    os.default.tmpdir = realTmpdir;
+    rmSync(repo, { recursive: true, force: true });
+  }
 });

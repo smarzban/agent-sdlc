@@ -128,6 +128,31 @@ a scratch copy and diffed against `main`.
   Critical and four Important, which is at the heavy end, though the fix round closed them without a
   second round. The gate said the acceptance would be visible if it was wrong; the evidence is
   ambiguous rather than damning.
+- **D-4: Empanel merge-gate round 1 (PR #27), a 9-seat panel across 4 model families, all nine
+  findings accepted, none dismissed.** Fixed in place, no second review round requested for this
+  entry: (1) the free-text `--notes` field was removed entirely (4 votes, the most important one):
+  the recorder's schema is now numeric/enumerated only, the summary no longer renders a Notes
+  column, and the spec/verification-report/usage-doc mentions of notes were corrected to match. (2)
+  `defaultStoreRoot` now falls back to the OS temp directory when the user's home directory itself
+  lies inside the repository under work (3 votes, contradicted AC-5), covered by a new unit and
+  subprocess test. (3) Table/heading/banner/footnote rendering now escapes embedded newlines (not
+  only `|`), so a stored value can no longer forge a table row, a banner line, or a `[measured]`
+  marker (2 votes). (4) A negative elapsed (a clock step or mis-ordered boundary) now renders
+  unsupported with a reason instead of `[measured]`. (5) The recorder's git-read failure path (a
+  non-git cwd) is now exercised by a dedicated test (3 votes). (6) HIGH: `bin/sdlc-record` and
+  `bin/sdlc-report` are now actually executed as subprocesses by new tests, both the success and
+  failure paths, closing the gap where nothing ran the launchers the skills actually name. (7)
+  HIGH: both programs' imports are now asserted to be Node standard-library only, none
+  network-capable (NC-3). (8) A round number is now bounded (`MAX_ROUND` in the recorder, matched by
+  `MAX_ROUND_SPAN` in the summary's own gap-filling) so a huge or hand-edited round number can
+  never make rendering unbounded work; this is independent of (1), not made moot by it. (9) The
+  feedback note's `## Where` section now names a concrete destination path,
+  `~/.agent-sdlc-experiments/run-observability/feedback/<run-id>.md`, matching the recorder's own
+  store-root convention. **Verification:** `node --test checker/*.test.mjs` 283/283 exit 0 (up from
+  259, all new tests additive); `node checker/sdlc-check.mjs docs/specs/run-observability/run-observability.md
+  --require ledger --require verification-report` exit 0; every other real spec chain under
+  `docs/specs/` exits 0. No proof-map row was renamed or removed; existing test names cited in
+  `verification-report.md` are unchanged.
 
 ## Banked follow-ups (out of scope, recorded so they are not rediscovered)
 

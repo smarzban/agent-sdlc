@@ -13,19 +13,21 @@
 //   3. Review rounds are their own start and end events, so a round's DURATION is derivable, not
 //      just its count.
 //   4. Machine-read fields (timestamp, head commit) and agent-reported fields (findings by
-//      severity, notes) live in separate namespaces. A caller-supplied value for a machine field
-//      is rejected. Changed lines and files are NOT read here: they are derived at summary time
-//      from a pair of recorded head commits (T-2's job), so a git-diff failure here can never
-//      discard an otherwise-complete event.
+//      severity) live in separate namespaces. A caller-supplied value for a machine field is
+//      rejected. There is no free-text field anywhere: reported fields are numeric or enumerated
+//      only, so there is nothing for a secret, source, or prompt fragment to land in (NC-3).
+//      Changed lines and files are NOT read here: they are derived at summary time from a pair of
+//      recorded head commits (T-2's job), so a git-diff failure here can never discard an
+//      otherwise-complete event.
 //   5. Appends only, outside the repository under work. A malformed or truncated earlier line
 //      never prevents a later append and never crashes a reader.
 //   6. Failure is loud and total: on any error, non-zero exit, a diagnostic on stderr, nothing
 //      partial written.
 //
 // Interface: `experiment-record <kind> --run <id> [--task <id>] [--round <n>] [--outcome ...]
-// [--critical N --important N --minor N] [--notes a,b,c]`. Kinds: run-start, run-end, task-start,
-// task-end, round-start, round-end. Store: one file per run identity under the user's home
-// (defaultStoreRoot), never inside any repository.
+// [--critical N --important N --minor N]`. Kinds: run-start, run-end, task-start, task-end,
+// round-start, round-end. Store: one file per run identity under the user's home (defaultStoreRoot),
+// never inside any repository under work.
 import { parseArgs, promisify } from 'node:util';
 import { execFile } from 'node:child_process';
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
@@ -39,6 +41,10 @@ const GIT_TIMEOUT_MS = 5000;
 const EVENT_KINDS = new Set(['run-start', 'run-end', 'task-start', 'task-end', 'round-start', 'round-end']);
 const OUTCOMES = new Set(['finished', 'failed', 'abandoned']);
 const ID_RE = /^[A-Za-z0-9._-]+$/;
+// A generous upper bound on a review round number: real runs use small integers. This exists
+// solely so a round number can never make the summary's round-gap rendering unbounded work (a
+// span this wide could otherwise loop billions of times filling in "missing" rounds).
+const MAX_ROUND = 100000;
 
 // --- pure argument parsing (no IO) -------------------------------------------------------
 
@@ -68,7 +74,6 @@ export function parseEventArgs(argv) {
         critical: { type: 'string' },
         important: { type: 'string' },
         minor: { type: 'string' },
-        notes: { type: 'string' },
       },
     });
   } catch (err) {
@@ -92,6 +97,9 @@ export function parseEventArgs(argv) {
       return { ok: false, error: '--round <n> is required for this event kind and must be a non-negative integer' };
     }
     round = Number(v.round);
+    if (round > MAX_ROUND) {
+      return { ok: false, error: `--round must be at most ${MAX_ROUND}` };
+    }
   }
 
   let outcome = null;
@@ -117,15 +125,10 @@ export function parseEventArgs(argv) {
     severities[sev] = Number(v[sev]);
   }
 
-  // Property 4's reported namespace: "findings by severity, and short enumerated notes" (brief
-  // T-1). Comma-separated tags, not free text; nothing renders `notes` yet (that is T-2's job),
-  // but the field itself is part of AC-4's contract and is kept.
-  let notes = null;
-  if (v.notes !== undefined) {
-    notes = v.notes.split(',').map((s) => s.trim()).filter((s) => s.length > 0);
-  }
-
-  return { ok: true, kind, run: v.run, task: needsTask ? v.task : null, round, outcome, severities, notes };
+  // Property 4's reported namespace is numeric or enumerated only: findings by severity and the
+  // run outcome. No free-text field exists anywhere in this schema (NC-3): there is nothing for a
+  // secret, source, or prompt fragment to land in.
+  return { ok: true, kind, run: v.run, task: needsTask ? v.task : null, round, outcome, severities };
 }
 
 // --- machine reads: the recorder's own clock and git HEAD, never caller-supplied ---------
@@ -145,8 +148,26 @@ async function readHeadCommit(cwd) {
 // --- store location + tolerant reader -----------------------------------------------------
 
 // Outside any repository under work: under the user's home, in a dedicated directory (property 5).
-export function defaultStoreRoot() {
-  return path.join(os.homedir(), '.agent-sdlc-experiments', 'run-observability');
+// `cwd` names the repository under work (the same directory the caller runs git operations from).
+// If the user's home directory itself lies inside (or is) that repository, as some CI sandboxes
+// arrange by setting HOME to the workspace, the preferred path would resolve inside the repository
+// under work, which AC-5 forbids outright; fall back to the OS temp directory instead, which this
+// repository can never contain.
+export function defaultStoreRoot(cwd = process.cwd(), homeDir = os.homedir()) {
+  const preferred = path.resolve(path.join(homeDir, '.agent-sdlc-experiments', 'run-observability'));
+  const resolvedCwd = path.resolve(cwd);
+  const inside = (candidate) =>
+    candidate === resolvedCwd || candidate.startsWith(resolvedCwd + path.sep);
+  if (!inside(preferred)) return preferred;
+  // The home-based root would land inside the repository under work, so fall back to the system
+  // temporary directory. That fallback is checked too: TMPDIR can itself point inside the repo,
+  // which would put the store back exactly where it must never be.
+  const fallback = path.resolve(path.join(os.tmpdir(), '.agent-sdlc-experiments', 'run-observability'));
+  if (!inside(fallback)) return fallback;
+  throw new Error(
+    'experiment store: both the home and temporary roots resolve inside the repository under work; ' +
+      'set a store root outside it',
+  );
 }
 
 // One file per run identity.
@@ -178,7 +199,7 @@ export function readEvents(filePath) {
 
 export async function run(argv, opts = {}) {
   const cwd = opts.cwd ?? process.cwd();
-  const storeRoot = opts.storeRoot ?? defaultStoreRoot();
+  const storeRoot = opts.storeRoot ?? defaultStoreRoot(cwd);
   const stderr = opts.stderr ?? process.stderr;
 
   const parsed = parseEventArgs(argv);
@@ -206,7 +227,6 @@ export async function run(argv, opts = {}) {
     if ('important' in parsed.severities) reported.important = parsed.severities.important;
     if ('minor' in parsed.severities) reported.minor = parsed.severities.minor;
   }
-  if (parsed.notes !== null) reported.notes = parsed.notes;
 
   const event = {
     kind: parsed.kind,

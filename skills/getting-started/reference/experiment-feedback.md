@@ -43,9 +43,10 @@ those three, do not write the item.
 
 ## Where
 
-One markdown file per run, named by the run's identity, in a local directory outside any
-repository: never the repository under work, never any of its worktrees, never any path inside
-either. Never posted anywhere, never committed, and never mentioned in a commit message.
+One markdown file per run, named by the run's identity:
+`~/.agent-sdlc-experiments/run-observability/feedback/<run-id>.md`. Never the repository under
+work, never any of its worktrees, never any path inside either. Never posted anywhere, never
+committed, and never mentioned in a commit message.
 
 ## Writing nothing is expected
 

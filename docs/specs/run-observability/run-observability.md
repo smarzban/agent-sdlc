@@ -107,8 +107,10 @@ The bar is "can this answer the question without misleading us", not "is this a 
 - **AC-3**: Review rounds are recorded as their own start and end events, so a round's duration is
   derivable and not merely its count. *(Verification type: **test-backed**, unit.)*
 - **AC-4**: Machine-read fields (timestamp, head commit) and agent-reported fields (findings by
-  severity, notes about what happened) are stored in separate namespaces, and the recorder rejects a
-  caller-supplied value for any machine field. Changed lines and files are not read by the recorder:
+  severity) are stored in separate namespaces, and the recorder rejects a
+  caller-supplied value for any machine field. There is no free-text field anywhere in the schema:
+  reported fields are numeric or enumerated only, so nothing exists for a secret, source, or prompt
+  fragment to land in (NC-3). Changed lines and files are not read by the recorder:
   the summary derives them at read time from a pair of recorded head commits. *(Verification type: **test-backed**,
   unit.)*
 - **AC-5**: Writes are appends to a file outside the repository under work, and a malformed earlier

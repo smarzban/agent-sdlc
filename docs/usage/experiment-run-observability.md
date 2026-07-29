@@ -44,7 +44,6 @@ The table this prints, per task, has these columns:
 | Rounds | **Measured.** Each round's duration comes from its own start/end pair; a gap in the round numbering is shown as a missing round, never silently dropped. |
 | Between boundaries (lines/files) | **Measured**, from `git diff --shortstat` between the two head commits recorded at task-start and task-end. Named for what it measures: the diff between those two commits, not necessarily only the task's own change. |
 | Findings by severity | **Claimed.** The reviewer's own count, passed to the recorder by the build stage. |
-| Notes | **Claimed.** Free-form short notes an agent chose to record. |
 
 Every column carries its `[measured]` or `[claimed]` tag in the rendered table itself, not only in
 this page. A run that never recorded an end is shown as incomplete, never silently dropped from the
@@ -58,8 +57,10 @@ view.
   task's own commit lands. If two recorded head commits come out identical, that is a sign the
   ordering was skipped for that task, and the summary says so in place of a fabricated zero: it is
   a wiring fault, not a claim that nothing changed.
-- **The quality columns are self-reported.** Findings by severity and notes are the agent's word,
-  not something a clock or git measured, and are labelled `[claimed]` for exactly that reason.
+- **The quality column is self-reported.** Findings by severity are the agent's word,
+  not something a clock or git measured, and are labelled `[claimed]` for exactly that reason. There
+  is no free-text field anywhere in the recorded schema: reported fields are numeric or enumerated
+  only, so nothing exists for a secret, source, or prompt fragment to land in.
 
 ## How to remove it completely
 

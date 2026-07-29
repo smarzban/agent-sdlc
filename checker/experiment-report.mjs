@@ -12,8 +12,8 @@
 //   1. Per task: elapsed, round count AND each round's duration, lines/files between the
 //      recorded boundaries, findings by severity.
 //   2. Every rendered column, and every run, is marked measured or claimed IN THE TABLE ITSELF.
-//      Timings, head commits, and anything derived from them are measured; findings, notes, and a
-//      run's reported outcome are the agent's word, claimed.
+//      Timings, head commits, and anything derived from them are measured; findings and a run's
+//      reported outcome are the agent's word, claimed.
 //   3. Incomplete runs (no run-end, or outcome failed/abandoned) are counted and shown, never
 //      dropped; the view says so prominently. A run with no data at all, or one too ambiguous to
 //      classify, is shown too, but is a different fact, never folded into "did not finish".
@@ -93,6 +93,14 @@ function derivePairedDuration(starts, ends) {
   if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) {
     return { status: 'unsupported', reason: 'missing or unparseable timestamp on a recorded event' };
   }
+  if (endMs < startMs) {
+    // A clock step or mis-ordered boundary recording: never derivable, never rendered as a
+    // (nonsensical, negative) measured duration.
+    return {
+      status: 'unsupported',
+      reason: 'end timestamp precedes start timestamp: a clock step or mis-ordered boundary recording',
+    };
+  }
   return { status: 'measured', ms: endMs - startMs };
 }
 
@@ -110,13 +118,15 @@ function deriveRoundFindings(ends) {
   return { status: 'reported', values };
 }
 
-function buildRoundView(taskId, round, events) {
-  const starts = events.filter((e) => e.task === taskId && e.kind === 'round-start' && e.round === round);
-  const ends = events.filter((e) => e.task === taskId && e.kind === 'round-end' && e.round === round);
+// Takes the round's own events, already bucketed by the caller. Scanning the whole event list per
+// round is what made a many-round store quadratic: 20k rounds over 40k events is 800M comparisons,
+// which took a minute before the events were bucketed once up front.
+function buildRoundView(round, roundEvents) {
+  const starts = roundEvents.filter((e) => e.kind === 'round-start');
+  const ends = roundEvents.filter((e) => e.kind === 'round-end');
   const duration = derivePairedDuration(starts, ends);
   const findings = deriveRoundFindings(ends);
-  const notes = ends.length === 1 && Array.isArray(ends[0]?.reported?.notes) ? ends[0].reported.notes : [];
-  return { round, duration, findings, notes };
+  return { round, duration, findings };
 }
 
 // A gap in the round numbering (e.g. rounds 1 and 3 recorded but nothing recorded for 2) is a
@@ -124,11 +134,24 @@ function buildRoundView(taskId, round, events) {
 // handled by derivePairedDuration) and worth surfacing on its own (property 5's "a missing round
 // renders as such"). The count this produces (recorded rounds + gaps) is the round count used
 // everywhere else, so a gap never quietly shrinks the count.
+// Matches the recorder's own bound (see experiment-record.mjs's MAX_ROUND): a hand-edited or
+// malformed store line is not bound by the recorder's own validation, so this bound is enforced
+// again here, on the read side, so a huge round number can never make gap-filling unbounded work.
+const MAX_ROUND_SPAN = 100000;
+
 function findRoundGaps(sortedRounds) {
   if (sortedRounds.length === 0) return [];
+  const span = sortedRounds[sortedRounds.length - 1] - sortedRounds[0];
+  if (span > MAX_ROUND_SPAN) {
+    // Too wide to enumerate individually: this can only come from a hand-edited or malformed
+    // store line, since the recorder itself never emits a round past its own bound. Recorded
+    // rounds are still shown; gaps within this span are not.
+    return [];
+  }
+  const seen = new Set(sortedRounds);
   const gaps = [];
   for (let n = sortedRounds[0]; n <= sortedRounds[sortedRounds.length - 1]; n += 1) {
-    if (!sortedRounds.includes(n)) gaps.push(n);
+    if (!seen.has(n)) gaps.push(n);
   }
   return gaps;
 }
@@ -144,14 +167,19 @@ function buildTaskView(taskId, events) {
   const startSha = starts.length === 1 ? starts[0]?.machine?.headCommit ?? null : null;
   const endSha = ends.length === 1 ? ends[0]?.machine?.headCommit ?? null : null;
 
-  const roundNums = new Set();
+  // Bucket this task's round events by round number in ONE pass, then build each view from its own
+  // bucket. The previous form re-scanned every event for every round.
+  const byRound = new Map();
   for (const e of events) {
-    if (e.task === taskId && (e.kind === 'round-start' || e.kind === 'round-end') && typeof e.round === 'number') {
-      roundNums.add(e.round);
-    }
+    if (e.task !== taskId) continue;
+    if (e.kind !== 'round-start' && e.kind !== 'round-end') continue;
+    if (typeof e.round !== 'number') continue;
+    const bucket = byRound.get(e.round);
+    if (bucket) bucket.push(e);
+    else byRound.set(e.round, [e]);
   }
-  const sortedRounds = [...roundNums].sort((a, b) => a - b);
-  const rounds = sortedRounds.map((round) => buildRoundView(taskId, round, events));
+  const sortedRounds = [...byRound.keys()].sort((a, b) => a - b);
+  const rounds = sortedRounds.map((round) => buildRoundView(round, byRound.get(round)));
   const missingRounds = findRoundGaps(sortedRounds);
 
   // `changed` is filled in by buildReportModel (it needs git, i.e. IO); left null here so this
@@ -304,8 +332,8 @@ async function deriveChangedStats(repoCwd, shaA, shaB, gitDiffShortstat) {
 // --- IO glue: read the store file(s), run git, produce a plain-data model --------------------
 
 export async function buildReportModel(runIds, opts = {}) {
-  const storeRoot = opts.storeRoot ?? defaultStoreRoot();
   const repoCwd = opts.repoCwd ?? process.cwd();
+  const storeRoot = opts.storeRoot ?? defaultStoreRoot(repoCwd);
   const gitDiffShortstat = opts.gitDiffShortstat ?? defaultGitDiffShortstat;
 
   const runs = [];
@@ -332,10 +360,31 @@ export async function buildReportModel(runIds, opts = {}) {
 
 // --- rendering: pure, one table per run -------------------------------------------------------
 
+// Neutralizes characters that could otherwise forge a new physical output line (a fabricated table
+// row, a fabricated banner line, or a fabricated `[measured]`/`[claimed]` marker rendered on its
+// own line) out of a value read from the store file. A stored value is never validated to be a
+// single line: it may come from a hand-edited or malformed store line, not only from the recorder.
+// Escaped, never dropped, so the value's content still reaches the output, just never as a raw
+// control character.
+function sanitizeInline(text) {
+  // Escaping CR and LF alone is not enough: a terminal renders VT, FF, NEL, LS and PS as line
+  // breaks too, and a raw ESC can drive the cursor to a fresh line, so a stored value could still
+  // display a forged row or banner even though the emitted text held no newline. Escape every C0
+  // and C1 control plus the Unicode line separators, so what a terminal shows matches what the
+  // string is.
+  return String(text)
+    .replace(/\r\n/g, '\\n')
+    .replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g, (ch) => {
+      if (ch === '\n' || ch === '\r') return '\\n';
+      const code = ch.codePointAt(0).toString(16).padStart(4, '0');
+      return `\\u${code}`;
+    });
+}
+
 function escapeCell(text) {
-  // Only the pipe branch is reachable: cell text here is derived/formatted, never raw multi-line
-  // user text (notes come from a comma-split single CLI argument).
-  return String(text).replace(/\|/g, '\\|');
+  // Table cells additionally escape the column delimiter itself, so a stored value can never
+  // forge an extra column boundary.
+  return sanitizeInline(text).replace(/\|/g, '\\|');
 }
 
 function formatDuration(ms) {
@@ -351,10 +400,11 @@ function makeReasons() {
   const byText = new Map();
   return {
     mark(text) {
-      if (byText.has(text)) return byText.get(text);
+      const safe = sanitizeInline(text);
+      if (byText.has(safe)) return byText.get(safe);
       const marker = `[${String.fromCharCode(97 + (list.length % 26))}${list.length >= 26 ? list.length : ''}]`;
-      list.push({ marker, text });
-      byText.set(text, marker);
+      list.push({ marker, text: safe });
+      byText.set(safe, marker);
       return marker;
     },
     list,
@@ -403,20 +453,14 @@ function renderFindings(rounds) {
     .join('; ');
 }
 
-function renderNotes(rounds) {
-  const withNotes = rounds.filter((r) => r.notes.length > 0);
-  if (withNotes.length === 0) return '(none reported)';
-  return withNotes.map((r) => `r${r.round}: ${r.notes.join(', ')}`).join('; ');
-}
-
 function stateTag(run) {
-  if (run.readError) return `[could not read the store file: ${run.readError}]`;
+  if (run.readError) return `[could not read the store file: ${sanitizeInline(run.readError)}]`;
   if (run.state === 'finished' || run.state === 'failed' || run.state === 'abandoned') {
-    return `[claimed outcome: ${run.outcome}]`;
+    return `[claimed outcome: ${sanitizeInline(run.outcome)}]`;
   }
   if (run.state === 'no-end') return '[INCOMPLETE: no run-end recorded]';
   if (run.state === 'no-data') return '[no data for this run id]';
-  return `[cannot classify: ${run.detail}]`;
+  return `[cannot classify: ${sanitizeInline(run.detail)}]`;
 }
 
 function runHeading(run) {
@@ -425,8 +469,8 @@ function runHeading(run) {
   if (run.malformed > 0) bits.push(`${run.malformed} malformed line(s) skipped`);
   if (run.foreignEventsDropped > 0) bits.push(`${run.foreignEventsDropped} foreign event(s) dropped`);
   if (unpaired > 0) bits.push(`${unpaired} task(s) with unpaired boundaries`);
-  const note = run.startNote ? ` (note: ${run.startNote})` : '';
-  return `## ${run.runId} ${stateTag(run)}${note} (${bits.join(', ')})`;
+  const note = run.startNote ? ` (note: ${sanitizeInline(run.startNote)})` : '';
+  return `## ${sanitizeInline(run.runId)} ${stateTag(run)}${note} (${bits.join(', ')})`;
 }
 
 // Pure: takes the plain-data model buildReportModel() produces (or a hand-built one, for tests
@@ -446,7 +490,7 @@ export function render(model) {
 
   if (model.anyIncomplete) {
     const didNotFinish = model.runs.filter((r) => !r.readError && DID_NOT_FINISH_STATES.has(r.state));
-    const names = didNotFinish.map((r) => `${r.runId} (${r.detail})`).join('; ');
+    const names = didNotFinish.map((r) => `${sanitizeInline(r.runId)} (${sanitizeInline(r.detail)})`).join('; ');
     lines.push(
       `INCOMPLETE RUNS PRESENT: ${didNotFinish.length} of ${model.runs.length} run(s) shown did not cleanly ` +
         `finish: ${names}.`,
@@ -466,9 +510,9 @@ export function render(model) {
 
     lines.push(
       '| Task | Elapsed [measured] | Rounds [measured] | Between boundaries (lines/files) [measured] | ' +
-        'Findings by severity [claimed] | Notes [claimed] |',
+        'Findings by severity [claimed] |',
     );
-    lines.push('| --- | --- | --- | --- | --- | --- |');
+    lines.push('| --- | --- | --- | --- | --- |');
 
     for (const task of run.tasks) {
       const row = [
@@ -477,7 +521,6 @@ export function render(model) {
         escapeCell(renderRounds(task, reasons)),
         escapeCell(renderBetweenBoundaries(task.changed, reasons)),
         escapeCell(renderFindings(task.rounds)),
-        escapeCell(renderNotes(task.rounds)),
       ];
       lines.push(`| ${row.join(' | ')} |`);
     }
@@ -507,8 +550,8 @@ export async function run(argv, opts = {}) {
     return 1;
   }
 
-  const storeRoot = opts.storeRoot ?? defaultStoreRoot();
   const repoCwd = parsed.repo ?? opts.repoCwd ?? process.cwd();
+  const storeRoot = opts.storeRoot ?? defaultStoreRoot(repoCwd);
 
   const model = await buildReportModel(parsed.runIds, {
     storeRoot,

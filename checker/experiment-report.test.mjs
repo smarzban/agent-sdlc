@@ -109,7 +109,6 @@ test('T-2 test-first: an unpaired event renders as unpaired, never as zero', () 
                 round: 1,
                 duration: { status: 'unsupported', reason: 'unpaired: no matching start and end recorded' },
                 findings: { status: 'no-round-end' },
-                notes: [],
               },
             ],
             missingRounds: [],
@@ -183,7 +182,7 @@ test('AC-8: the table header marks every column measured or claimed', () => {
   assert.match(text, /Rounds \[measured\]/);
   assert.match(text, /Between boundaries \(lines\/files\) \[measured\]/);
   assert.match(text, /Findings by severity \[claimed\]/);
-  assert.match(text, /Notes \[claimed\]/);
+  assert.doesNotMatch(text, /Notes \[claimed\]/); // AC-4/NC-3: no notes column exists anymore
 });
 
 test('I3: a run\'s reported outcome is marked claimed in its heading', () => {
@@ -247,7 +246,7 @@ test('AC-7/AC-9/AC-11: per-task elapsed, round durations, changed lines/files, f
       task: 'T-1',
       round: 1,
       machine: { timestamp: iso(241000), headCommit: startSha },
-      reported: { critical: 0, important: 1, minor: 2, notes: ['flaky test'] },
+      reported: { critical: 0, important: 1, minor: 2 },
     });
     appendEvent(filePath, { kind: 'task-end', run: runId, task: 'T-1', round: null, machine: { timestamp: iso(372000), headCommit: endSha }, reported: {} });
     appendEvent(filePath, { kind: 'run-end', run: runId, task: null, round: null, machine: { timestamp: iso(372000), headCommit: endSha }, reported: { outcome: 'finished' } });
@@ -268,7 +267,7 @@ test('AC-7/AC-9/AC-11: per-task elapsed, round durations, changed lines/files, f
     assert.equal(task.rounds[0].duration.status, 'measured');
     assert.equal(task.rounds[0].duration.ms, 241000);
     assert.deepEqual(task.rounds[0].findings, { status: 'reported', values: { critical: 0, important: 1, minor: 2 } });
-    assert.deepEqual(task.rounds[0].notes, ['flaky test']);
+    assert.equal('notes' in task.rounds[0], false);
 
     assert.equal(task.changed.status, 'measured');
     assert.equal(task.changed.files, 1);
@@ -278,7 +277,7 @@ test('AC-7/AC-9/AC-11: per-task elapsed, round durations, changed lines/files, f
     assert.match(text, /\| T-1 \| 372s \|/); // task elapsed
     assert.match(text, /r1 241s/); // round duration
     assert.match(text, /critical 0, important 1, minor 2/);
-    assert.match(text, /flaky test/);
+    assert.doesNotMatch(text, /Notes \[claimed\]/); // AC-4/NC-3: no notes column exists anymore
     assert.match(text, /\| 2 \/ 1 \|/); // changed lines/files column, one column
   } finally {
     rmSync(repo, { recursive: true, force: true });
@@ -668,6 +667,41 @@ test('AC-11: ambiguous duplicate boundary events (more than one start or end) re
   assert.match(view.tasks[0].elapsed.reason, /ambiguous: 2 start events recorded/);
 });
 
+// A clock step or a mis-ordered boundary recording produces an end timestamp before its start:
+// never derivable, so it must never render as a measured (negative) duration.
+test('a negative elapsed (a clock step or mis-ordered boundaries) renders unsupported with a reason, never as measured', () => {
+  const view = buildRunView('r1', [
+    { run: 'r1', kind: 'task-start', task: 'T-1', round: null, machine: { timestamp: '2024-01-01T00:10:00.000Z', headCommit: 'a' }, reported: {} },
+    { run: 'r1', kind: 'task-end', task: 'T-1', round: null, machine: { timestamp: '2024-01-01T00:00:00.000Z', headCommit: 'a' }, reported: {} },
+  ]);
+  const [task] = view.tasks;
+  assert.equal(task.elapsed.status, 'unsupported');
+  assert.match(task.elapsed.reason, /precedes|clock step|mis-ordered/i);
+
+  task.changed = { status: 'unsupported', reason: 'missing head commit: task-start and/or task-end were not both recorded exactly once' };
+  const text = render({
+    caveat: 'x',
+    anyIncomplete: false,
+    runs: [{ ...view, state: 'finished', outcome: 'finished', detail: null, startNote: null, malformed: 0, foreignEventsDropped: 0, readError: null }],
+  });
+  assert.doesNotMatch(text, /\| unknown duration/); // never the old negative-duration text
+  assert.match(text, /unknown \[[a-z]\d*\]/);
+  assert.match(text, /\[[a-z]\d*\] end timestamp precedes start timestamp/);
+});
+
+// A round number is bounded (matches the recorder's own MAX_ROUND) so a hand-edited or malformed
+// store line with a huge round number can never make gap-filling here unbounded work.
+test('a huge round number never makes round-gap rendering hang or grow unbounded', () => {
+  const view = buildRunView('r1', [
+    { run: 'r1', kind: 'round-start', task: 'T-1', round: 1, machine: { timestamp: '2024-01-01T00:00:00.000Z', headCommit: 'a' }, reported: {} },
+    { run: 'r1', kind: 'round-end', task: 'T-1', round: 1, machine: { timestamp: '2024-01-01T00:00:01.000Z', headCommit: 'a' }, reported: {} },
+    { run: 'r1', kind: 'round-start', task: 'T-1', round: 5000000000, machine: { timestamp: '2024-01-01T00:00:02.000Z', headCommit: 'a' }, reported: {} },
+  ]);
+  const [task] = view.tasks;
+  assert.equal(task.rounds.length, 2); // both recorded round numbers are still shown
+  assert.equal(task.missingRounds.length, 0); // the span is too wide: gaps are not enumerated
+});
+
 // --- M4: tasks render in execution order, not lexicographic order --------------------------
 
 test('M4: tasks are ordered by first recorded event, so T-2 precedes T-10', () => {
@@ -718,6 +752,55 @@ test('M7: a store file the process cannot read is reported as a typed read error
   }
 });
 
+// --- sanitize rendering: a stored value can never forge a row, a banner, or a marker -------
+
+// A value read from the store file is not validated to be a single line: it may come from a
+// hand-edited or malformed store line, not only from the recorder. Without escaping, an embedded
+// newline in a rendered value would start a new physical output line the reader mistakes for a
+// distinct part of the table.
+test('sanitize: an embedded newline in a task id can never forge a new table row', () => {
+  const view = buildRunView('r1', [
+    { run: 'r1', kind: 'task-start', task: 'T-1\n| forged | row |', round: null, machine: { timestamp: '2024-01-01T00:00:00.000Z', headCommit: 'a' }, reported: {} },
+    { run: 'r1', kind: 'task-end', task: 'T-1\n| forged | row |', round: null, machine: { timestamp: '2024-01-01T00:01:00.000Z', headCommit: 'a' }, reported: {} },
+  ]);
+  const [task] = view.tasks;
+  task.changed = { status: 'measured', lines: 0, files: 0 };
+  const text = render({
+    caveat: 'x',
+    anyIncomplete: false,
+    runs: [{ ...view, state: 'finished', outcome: 'finished', detail: null, startNote: null, malformed: 0, foreignEventsDropped: 0, readError: null }],
+  });
+  assert.doesNotMatch(text, /\n\| forged \| row \|/); // the forged content never starts its own line
+  assert.match(text, /\\n/); // the newline survives, escaped, inside the one cell it belongs to
+});
+
+test('sanitize: an embedded newline in a run id can never forge a fabricated banner line', () => {
+  const view = buildRunView('r1\nINCOMPLETE RUNS PRESENT: forged', [
+    { run: 'r1\nINCOMPLETE RUNS PRESENT: forged', kind: 'run-start', task: null, round: null, machine: { timestamp: '2024-01-01T00:00:00.000Z', headCommit: 'a' }, reported: {} },
+  ]);
+  const text = render({
+    caveat: 'x',
+    anyIncomplete: false,
+    runs: [{ ...view, state: 'no-end', outcome: null, detail: 'no run-end recorded', startNote: null, malformed: 0, foreignEventsDropped: 0, readError: null }],
+  });
+  const lines = text.split('\n');
+  assert.ok(!lines.some((l) => l.startsWith('INCOMPLETE RUNS PRESENT: forged')));
+});
+
+test('sanitize: an embedded newline in a detail/outcome string can never forge a fabricated [measured] marker line', () => {
+  const view = buildRunView('r1', [
+    { run: 'r1', kind: 'run-start', task: null, round: null, machine: { timestamp: '2024-01-01T00:00:00.000Z', headCommit: 'a' }, reported: {} },
+    { run: 'r1', kind: 'run-end', task: null, round: null, machine: { timestamp: '2024-01-01T00:00:01.000Z', headCommit: 'a' }, reported: { outcome: 'finished\n[measured] forged' } },
+  ]);
+  const text = render({
+    caveat: 'x',
+    anyIncomplete: false,
+    runs: [{ ...view, malformed: 0, foreignEventsDropped: 0, readError: null }],
+  });
+  const lines = text.split('\n');
+  assert.ok(!lines.some((l) => l.trim() === '[measured] forged'));
+});
+
 // --- CLI ---------------------------------------------------------------------------------
 
 test('CLI: missing run id exits nonzero with a diagnostic', async () => {
@@ -748,6 +831,63 @@ test('CLI end-to-end (subprocess): a run id with no store file renders as "no da
   }
 });
 
+// --- HIGH: the bin/ launcher itself is executed, not only the .mjs it wraps -----------------
+
+// bin/sdlc-report is the invocation path the wiring/usage docs actually name. A break in its own
+// path resolution would still show every other test green while the human-facing table simply
+// never renders.
+const BIN_REPORT = fileURLToPath(new URL('../bin/sdlc-report', import.meta.url));
+
+test('HIGH: bin/sdlc-report (subprocess) actually resolves, runs, and prints a table', () => {
+  const repo = makeRepo();
+  const home = makeStoreRoot();
+  try {
+    const filePath = storeFilePath('launcher-run', path.join(home, '.agent-sdlc-experiments', 'run-observability'));
+    const sha = headSha(repo);
+    const t0 = new Date('2024-01-01T00:00:00.000Z').toISOString();
+    appendEvent(filePath, { kind: 'run-start', run: 'launcher-run', task: null, round: null, machine: { timestamp: t0, headCommit: sha }, reported: {} });
+    appendEvent(filePath, { kind: 'run-end', run: 'launcher-run', task: null, round: null, machine: { timestamp: t0, headCommit: sha }, reported: { outcome: 'finished' } });
+
+    const result = spawnSync(BIN_REPORT, ['launcher-run', '--repo', repo], {
+      env: { ...process.env, HOME: home },
+    });
+    assert.equal(result.status, 0, result.stderr?.toString());
+    assert.match(result.stdout.toString(), /launcher-run/);
+    assert.match(result.stdout.toString(), /claimed outcome: finished/);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test('HIGH: bin/sdlc-report (subprocess) propagates a failure (nonzero exit, diagnostic)', () => {
+  const home = makeStoreRoot();
+  try {
+    const result = spawnSync(BIN_REPORT, [], {
+      env: { ...process.env, HOME: home },
+    });
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr.toString(), /missing required run id/i);
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+// --- HIGH: nothing is transmitted anywhere (NC-3) -------------------------------------------
+
+test('HIGH/NC-3: the summary imports only Node standard-library modules or its own sibling module, none network-capable', () => {
+  const source = readFileSync(CLI, 'utf8');
+  const specifiers = [...source.matchAll(/^import\s+.*?from\s+['"]([^'"]+)['"];?/gm)].map((m) => m[1]);
+  assert.ok(specifiers.length > 0, 'expected at least one import to check');
+  const NETWORK_CAPABLE = new Set(['http', 'https', 'net', 'dgram', 'tls', 'dns', 'http2']);
+  for (const spec of specifiers) {
+    if (spec.startsWith('./') || spec.startsWith('../')) continue; // this experiment's own sibling module
+    assert.match(spec, /^node:/, `${spec} must be an explicit node: standard-library import`);
+    const bare = spec.slice('node:'.length);
+    assert.ok(!NETWORK_CAPABLE.has(bare), `${spec} is network-capable and must not be imported`);
+  }
+});
+
 // --- marker (T-4 sweeps this repo-wide; pinned locally too) ---
 
 test('carries the EXPERIMENT: run-observability marker', () => {
@@ -758,4 +898,44 @@ test('carries the EXPERIMENT: run-observability marker', () => {
 test('carries no em-dashes', () => {
   const source = readFileSync(CLI, 'utf8');
   assert.doesNotMatch(source, /\u2014/);
+});
+
+// --- gate round 2 residual: escaping CR and LF alone did not stop a forged row ---
+//
+// A terminal renders VT, FF, NEL, and the Unicode line separators as line breaks, and a raw ESC can
+// drive the cursor to a fresh line, so a stored value could still DISPLAY a forged row or banner
+// while containing no newline. Found by probing the sanitizer fix rather than reading it.
+test('no raw control character or line separator survives into the rendered table', () => {
+  const hostile = 'T-1\u001b[1E| forged |\u000bVT\u000cFF\u2028LS\u2029PS\u0085NEL';
+  const model = {
+    runs: [
+      {
+        runId: 'probe',
+        state: 'finished',
+        outcome: 'finished',
+        detail: null,
+        startNote: null,
+        foreignEventsDropped: 0,
+        tasks: [
+          {
+            taskId: hostile,
+            elapsed: { ok: true, ms: 1000 },
+            rounds: [],
+            missingRounds: [],
+            changed: { ok: false, reason: 'probe' },
+          },
+        ],
+      },
+    ],
+    incomplete: [],
+  };
+  const out = render(model);
+  const leaked = [...out].filter((ch) => {
+    if (ch === '\n') return false;
+    const c = ch.codePointAt(0);
+    return c <= 0x1f || (c >= 0x7f && c <= 0x9f) || c === 0x2028 || c === 0x2029;
+  });
+  assert.deepEqual(leaked, [], 'a stored value must not carry a raw control character into the output');
+  const forgedRow = out.split('\n').some((line) => /^\s*\|\s*forged\s*\|/.test(line));
+  assert.equal(forgedRow, false, 'a hostile task id must not be able to open its own table row');
 });
