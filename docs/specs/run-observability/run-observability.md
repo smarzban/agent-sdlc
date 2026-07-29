@@ -106,9 +106,10 @@ The bar is "can this answer the question without misleading us", not "is this a 
   *(Verification type: **test-backed**, unit.)*
 - **AC-3**: Review rounds are recorded as their own start and end events, so a round's duration is
   derivable and not merely its count. *(Verification type: **test-backed**, unit.)*
-- **AC-4**: Machine-read fields (timestamp, head commit, changed lines and files) and agent-reported
-  fields (findings by severity, notes about what happened) are stored in separate namespaces, and the
-  recorder rejects a caller-supplied value for any machine field. *(Verification type: **test-backed**,
+- **AC-4**: Machine-read fields (timestamp, head commit) and agent-reported fields (findings by
+  severity, notes about what happened) are stored in separate namespaces, and the recorder rejects a
+  caller-supplied value for any machine field. Changed lines and files are not read by the recorder:
+  the summary derives them at read time from a pair of recorded head commits. *(Verification type: **test-backed**,
   unit.)*
 - **AC-5**: Writes are appends to a file outside the repository under work, and a malformed earlier
   line never prevents a later append or crashes the reader. *(Verification type: **test-backed**,
@@ -120,7 +121,9 @@ The bar is "can this answer the question without misleading us", not "is this a 
 ### The summary (test-backed)
 
 - **AC-7**: The summary renders, per task: elapsed, review-round count and each round's duration,
-  changed lines and files, and findings by severity. *(Verification type: **test-backed**, unit.)*
+  changed lines and files (derived by the summary itself from a pair of recorded head commits, not
+  read from the recorder's events), and findings by severity. *(Verification type: **test-backed**,
+  unit.)*
 - **AC-8**: Every rendered column is marked measured or claimed, in the rendering itself and not only
   in the underlying file. *(Verification type: **test-backed**, unit.)*
 - **AC-9**: Runs that did not finish are counted and shown, never dropped. A summary over runs where
@@ -184,10 +187,11 @@ the repo: the checker verifies the chain, this observes a run, and neither consu
 
 ### Components
 
-1. **recorder**: appends one event per invocation. Owns the clock and the git reads, keeps reported
-   fields separate from machine fields. Kind: a zero-dependency command-line script.
-2. **summary**: reads the file and prints a table, marking each column measured or claimed and naming
-   what the numbers cannot see. Kind: a pure read-only command-line script.
+1. **recorder**: appends one event per invocation. Owns the clock and its own head-commit read, keeps
+   reported fields separate from machine fields. Kind: a zero-dependency command-line script.
+2. **summary**: reads the file, derives changed lines and files from pairs of recorded head commits
+   via git, and prints a table, marking each column measured or claimed and naming what the numbers
+   cannot see. Kind: a read-only command-line script (reads the file and reads git; writes nothing).
 3. **feedback note**: the short instruction describing when to write a note about the pipeline
    itself. Kind: instruction text.
 
@@ -203,8 +207,10 @@ the repo: the checker verifies the chain, this observes a run, and neither consu
 line, or a non-zero exit with a diagnostic and nothing written. Rejects caller-supplied machine
 values. Writes only outside the repository under work.
 
-**summary.** In: the file. Out: a rendered table plus a completeness line and a caveat line. Pure,
-read-only, derives nothing it cannot support.
+**summary.** In: the file. Out: a rendered table plus a completeness line and a caveat line.
+Read-only (it may run `git diff --shortstat` between two recorded head commits, but writes nothing
+and consults no other source), and derives nothing it cannot support: an unresolvable commit pair
+renders as unknown, never as a fabricated zero.
 
 ### Data flow and key state
 
@@ -281,9 +287,10 @@ wired.
   *Advances:* AC-1, AC-2, AC-3, AC-4, AC-5, AC-6. *Component:* recorder. *Deps:* none.
 - **T-2 - The summary.** Per-task table with round durations, every column marked measured or claimed,
   incomplete runs counted and shown, the wall-clock caveat rendered every time, nothing derived that
-  cannot be supported. Files: `checker/experiment-report.mjs` (new),
-  `checker/experiment-report.test.mjs` (new). Test-first: an unpaired event renders as unpaired, never
-  as zero.
+  cannot be supported. Derives changed lines and files itself, from `git diff --shortstat` between
+  each pair of recorded head commits (moved here from the recorder; see AC-4's amendment). Files:
+  `checker/experiment-report.mjs` (new), `checker/experiment-report.test.mjs` (new). Test-first: an
+  unpaired event renders as unpaired, never as zero.
   *Advances:* AC-7, AC-8, AC-9, AC-10, AC-11. *Component:* summary. *Deps:* T-1.
 - **T-3 - Wiring and the feedback note.** Boundary and round recording in the three stages that bound
   a run, each stating the announce-and-proceed behaviour when the recorder is absent, plus the
