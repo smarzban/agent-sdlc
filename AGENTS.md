@@ -62,6 +62,13 @@ Zero runtime dependencies; Node ≥22, ESM.
 **Authoring (match the existing skills):**
 - Frontmatter: `name` (matches the directory) + a rich `description` ending with explicit
   `Use AFTER … BEFORE …` and `Triggers: …` (+ trigger-scope qualifiers). Strict-YAML parseable.
+- **Frontmatter limits are the open standard's, and they are enforced by test**
+  (`checker/skill-frontmatter.test.mjs`): `description` **max 1024 characters**, `name` max 64,
+  lowercase alphanumeric with single hyphens, matching its directory. Length is measured on the
+  folded value a harness sees, not on the source lines. A validating harness (pi does this) only
+  **warns** and still loads the skill, so an over-long description degrades activation quietly in
+  someone else's repo: that is why it is a red bar here rather than a convention. Leave headroom;
+  a description at 1020 is one edit from being over.
 - Body sections, in order: one-paragraph intent; `<HARD-GATE>`; the method (`## Checklist` /
   `## The X bar`); `## Principles`; `## Rationalizations` (excuse→rebuttal table); `## Red flags`;
   `## Done when`; `## The artifact (output)`; `## Conventions`.
