@@ -86,10 +86,13 @@ branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
 4. **For each task `T-N`, in dependency order** (before the first dispatch, **read
    [reference/subagent-loop.md](reference/subagent-loop.md) now** — the brief contents, the
    fix-cycle bound, the file hand-off mechanics, and the death sequence live ONLY there; a loop
-   run from this body alone improvises all four). **Experiment recording
-   (`EXPERIMENT: run-observability`): record task-start now, before dispatching the implementer in
-   4a** (details, including the invocation, are in the recording block after 4g below; this pointer
-   exists so task-start fires before the first dispatch, not after it).
+   run from this body alone improvises all four):
+
+   **Experiment recording (`EXPERIMENT: run-observability`): record task-start now, before
+   dispatching the implementer in 4a** (details, including the invocation, are in the recording
+   block after 4g below; this pointer exists so task-start fires before the first dispatch, not
+   after it).
+
    a. Dispatch the **implementer** subagent with a file brief for `T-N` only.
    b. Dispatch the **reviewer** subagent on the resulting diff.
    c. If the reviewer finds Critical/Important issues, dispatch a **fixer** and re-review (bounded).
