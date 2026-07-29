@@ -6,7 +6,7 @@ cut with a plugin-scoped tag (`agent-sdlc-vX.Y.Z`). This file is the one-line in
 
 - **[0.18.0](https://github.com/smarzban/agent-sdlc/releases/tag/agent-sdlc-v0.18.0)** (2026-07-29) —
   **a temporary measurement experiment, and skill frontmatter limits enforced by test.** The
-  experiment (`EXPERIMENT: run-observability`) records what a run costs to a **local file under your
+  experiment (carrying a greppable removal marker in every file it touches) records what a run costs to a **local file under your
   home directory** and renders it as a table: stage, task and review-round boundaries, findings by
   severity, and changes between boundaries. **It is on by default and records automatically when a
   pipeline stage runs.** Nothing is transmitted anywhere and no file contents, prompts, or secrets

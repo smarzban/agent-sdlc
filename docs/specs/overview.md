@@ -56,8 +56,8 @@ lists, so a parenthetical annotates instead of fabricating a link, which forced 
 weaker relations explicitly is the recorded follow-up, rejected for scope and not on merit
 (`adr/ADR-0002`).
 
-`run-observability` shipped 2026-07-29, and is **deliberately temporary**: an experiment, marked
-`EXPERIMENT: run-observability` in every file it touches, that records what a run costs (stage and
+`run-observability` shipped 2026-07-29, and is **deliberately temporary**: an experiment, carrying a greppable
+removal marker in every file it touches, that records what a run costs (stage and
 task and review-round boundaries, findings by severity, changes between boundaries) to a local file
 outside the repository, and renders it as a table. It exists to answer one question on a handful of
 real runs, whether elapsed time goes to task size or to review rounds, and is then deleted by the
