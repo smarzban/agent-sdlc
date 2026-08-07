@@ -55,6 +55,19 @@ Canonical vocabulary for this repo's spec chain. Glossary only, no implementatio
 - **scratch visual**: the visual aid rendered as a standalone page the user opens, for
   comparisons a spec diagram cannot express: throwaway, never committed, and offered for consent
   before first use because it spends tokens and sends the user out of the terminal.
+- **continued agent session**: the exact subagent session identity returned by an earlier dispatch,
+  resumed in place rather than replaced by a fresh agent with the same role or model.
+- **remediation round**: one bounded cycle after a blocking task-review finding, consisting of a fix
+  followed by a decision on whether that finding is closed.
+- **remediation diff**: the task-scoped difference between the immutable state seen by one reviewer
+  pass and the post-fix state submitted to the next pass.
+- **finding-scoped re-review**: a follow-up review limited to prior blocking findings and regressions
+  introduced by their remediation, distinct from the initial review of the complete task change.
+- **independently reviewable vertical slice**: a plan task that leaves the repository green, produces
+  useful behaviour or a complete artifact, and can be accepted and reverted independently while
+  carrying the supporting work needed only by that slice.
+- **microtask**: a proposed task with no useful independent review boundary, split from an adjacent
+  task only by file, layer, setup step, or another implementation detail.
 <!-- EXPERIMENT: run-observability. The four glossary entries below (run record, stage boundary,
      harvested signal, feedback item) are this experiment's throwaway vocabulary, not permanent
      terms. Delete all four when the experiment is removed. -->

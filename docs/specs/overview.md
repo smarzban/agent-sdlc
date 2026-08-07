@@ -67,6 +67,9 @@ column is marked measured or claimed, and the summary states on its face that wa
 idleness. Two pre-build consultations cut it from a durable product to this after finding that the
 larger design would have shipped and produced a confidently wrong conclusion.
 
+`build-loop-efficiency` is in progress: a focused reduction in repeated model work during planning
+and task remediation, preserving every existing verification and traceability boundary.
+
 `handoff-skill` shipped 2026-07-28: a fifth standalone skill for the working copy's live-state doc,
 the counterpart to the spec chain (a chain hands a FEATURE forward, `HANDOFF.md` hands the WORKING
 COPY forward). Ignored by default so it can be written frankly, with one litmus deciding placement

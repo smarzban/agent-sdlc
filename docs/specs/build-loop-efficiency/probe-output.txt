@@ -1,0 +1,32 @@
+Probe: temporary-index review snapshots
+Time box: 5 minutes
+git version 2.50.1 (Apple Git-155)
+HEAD unchanged: 071570dab4ae93ef46c12a3cbd72a5d7be498d60
+Real index before: unrelated.txt
+Real index after: unrelated.txt
+Review tree before fix: 935fb867e78bc8cd76106d2639dab1aa12efca51
+Review tree after fix: a9b12349bc05822c0865913484d7aa0cb9cc6e91
+Working-tree state before snapshot:
+ M task.txt
+A  unrelated.txt
+?? extra.txt
+Working-tree state after snapshot:
+ M task.txt
+A  unrelated.txt
+?? extra.txt
+Remediation diff:
+diff --git a/extra.txt b/extra.txt
+index cbf6d24..66727da 100644
+--- a/extra.txt
++++ b/extra.txt
+@@ -1 +1 @@
+-new file before fix
++new file after fix
+diff --git a/task.txt b/task.txt
+index 1464326..d6b0b1f 100644
+--- a/task.txt
++++ b/task.txt
+@@ -1 +1 @@
+-implementation
++implementation fixed
+RESULT: PASS, alternate-index trees produced a task-scoped remediation diff while HEAD and the real index stayed unchanged.
