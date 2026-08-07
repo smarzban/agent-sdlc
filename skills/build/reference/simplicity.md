@@ -1,7 +1,8 @@
 # Simplicity — vertical slices and Rule-0 (implementer discipline)
 
-Keep each task's change small, complete, and reversible. The plan already sized tasks to leave the
-repo green; this discipline keeps the implementer honest while building one.
+Keep each task's change complete, useful, and reversible. The plan sized each task as an
+independently reviewable vertical slice that leaves the repository green; this discipline keeps the
+implementer honest while building one.
 
 ## Rule 0: simplicity first
 
@@ -28,12 +29,13 @@ the first that works:
 Earlier rungs win because they add the least to own forever. Jumping straight to rung 6 — writing
 fresh code when rung 1 or 2 already held the answer — is the most common over-build.
 
-## Vertical slices, not horizontal layers
+## Independently reviewable vertical slices, not horizontal layers
 
-Build one complete path through the system, not a layer at a time. A task should leave a thin,
-working slice end-to-end (the bit of schema + the bit of API + the bit of UI that one behaviour
-needs), each step green — not "all the schema", then "all the API". The plan's task ordering already
-expresses this; honour it.
+Build one complete path through the system, not a layer at a time. A task must leave the repository
+green, produce useful behaviour or a complete artifact, and be accepted and reverted independently.
+Carry the supporting tests, configuration, setup, and documentation needed only by that behaviour.
+Do not split a task by file, layer, or implementation step alone, and do not batch unrelated
+behaviours. The plan's task ordering already expresses this; honour it.
 
 ## Scope discipline
 
@@ -49,8 +51,8 @@ expresses this; honour it.
 - Keep the repo green after the increment — that is what makes the commit a safe save-point.
 - Prefer changes that are easy to revert. One atomic commit per task means the worst case is dropping
   one increment, never untangling several.
-- Where a behaviour is half-built across tasks and would otherwise break the build, guard it (a flag,
-  a default) so every commit stays shippable.
+- Where a later independently reviewable slice would otherwise break an earlier green commit, guard
+  it (a flag, a default) so every commit stays shippable.
 
 ## Mark the ceilings
 

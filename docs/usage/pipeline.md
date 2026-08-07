@@ -20,7 +20,7 @@ that picks your entry stage and states the shared rules every stage obeys.
 | 2 | [`acceptance-criteria`](../../skills/acceptance-criteria/SKILL.md) | you review | `## Acceptance Criteria` — the contract (`AC-N`) |
 | 3 | [`architecture-design`](../../skills/architecture-design/SKILL.md) | you, agent proposes | `## Design` (`C-N`) — feature; `## Architecture` — project |
 | 4 | [`techstack`](../../skills/techstack/SKILL.md) | you, agent proposes | `## Tech Stack` — products per kind, probe-verified where load-bearing |
-| 5 | [`plan`](../../skills/plan/SKILL.md) | agent | `## Plan` — atomic tasks (`T-N`), each naming its files and its failing test |
+| 5 | [`plan`](../../skills/plan/SKILL.md) | agent | `## Plan` with `T-N` tasks at independently reviewable vertical slice boundaries: useful, green tasks that can be accepted and reverted independently, each naming its files and failing test |
 | — | [`gate`](../../skills/gate/SKILL.md) | automated, read-only | `gate-report.md` — the ready-to-build verdict |
 | 6 | [`build`](../../skills/build/SKILL.md) | agent | product code (a green branch) + `build-report.md` |
 | 7 | [`ship`](../../skills/ship/SKILL.md) | agent | a reviewed PR + `verification-report.md` |

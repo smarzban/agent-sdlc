@@ -1,14 +1,15 @@
 ---
 name: plan
-description: "Turn settled criteria, design, and techstack into an implementation plan an agent can execute autonomously: dependency-ordered atomic tasks, each naming exact files, the failing test to write first, and the criterion and component it advances. Use AFTER techstack and BEFORE build. Triggers: 'plan', 'break this down', 'task breakdown', 'write the implementation plan', or any time the design and techstack are settled and you need executable tasks. Scope: only within an Agent SDLC run (a spec chain exists), not on the bare word alone. This is the agent-owned stage; the plan must be followable with no extra context."
+description: "Turn settled criteria, design, and techstack into an implementation plan an agent can execute autonomously: dependency-ordered tasks at independently reviewable vertical slice boundaries, each naming exact files, the failing test to write first, and the criterion and component it advances. Use AFTER techstack and BEFORE build. Triggers: 'plan', 'break this down', 'task breakdown', 'write the implementation plan', or any time the design and techstack are settled and you need executable tasks. Scope: only within an Agent SDLC run (a spec chain exists), not on the bare word alone. This is the agent-owned stage; the plan must be followable with no extra context."
 ---
 
 # Plan: break the shape into tasks an agent can execute alone
 
 Turn the settled criteria, design, and techstack into a plan an agent can execute without you in
-the loop. Each task is the smallest change that leaves the repo green, names the exact files, and
-carries the failing test to write first. The plan is complete enough for an agent with no project
-context to follow. This is the one stage the agent owns end to end.
+the loop. Each task is one independently reviewable vertical slice: it leaves the repository green,
+produces useful behaviour or a complete artifact, and can be accepted and reverted independently.
+It names the exact files and carries the failing test to write first. The plan is complete enough
+for an agent with no project context to follow. This is the one stage the agent owns end to end.
 
 <HARD-GATE>
 Input is the `## Acceptance Criteria`, `## Design`, and `## Tech Stack` sections of
@@ -27,13 +28,15 @@ gate.
 
 A task is done being written only when:
 
-1. **Atomic.** It is the smallest change that leaves the repo green — including the *compile fallout*
-   of the change. A change with non-local compile consequences (a new enum variant against an
-   exhaustive match; a new required interface/trait method; a new non-optional field or parameter)
-   must satisfy those consequences in the same task. **Measure the blast radius before sizing it:**
-   grep the changed surface's consumers (match sites, implementors, construction/call sites) and
-   let the count decide one task vs a split — at plan time, not mid-build. If it cannot finish
-   green in one go, split it.
+1. **Independently reviewable vertical slice.** It leaves the repository green, produces useful
+   behaviour or a complete artifact, and can be accepted and reverted independently. Include the
+   *compile fallout* of the change in the same task: a new enum variant against an exhaustive match,
+   a new required interface/trait method, or a new non-optional field or parameter carries its match
+   sites, implementors, or call sites. Fold supporting tests, configuration, setup, and documentation
+   needed only by that behaviour into its carrying behaviour task. Do not split by file, layer, or
+   implementation step alone, and do not batch unrelated behaviours. Do not use a line, time, or
+   criterion-count threshold to size tasks. If a candidate cannot remain green, split it only at an
+   independently reviewable vertical slice boundary.
 2. **Exact files.** It names the precise files to create or change. No "update the relevant
    module".
 3. **Test-first.** It states the failing test to write first (the red of red-green), or the
@@ -48,17 +51,25 @@ A task is done being written only when:
 1. **Load inputs** read the `## Acceptance Criteria`, `## Design`, and `## Tech Stack` sections of
    `docs/specs/<feature>/<feature>.md`, root `CONTEXT.md`, and `constitution.md`. If they contradict each
    other, loop back to the owning stage or run the gate first.
-2. **Derive tasks from the design** walk the components and their contracts; for each, produce the
-   smallest tasks that build it up, test-first.
-3. **Order by dependency** a task may depend only on tasks before it. Foundations (contracts,
-   schemas) before the code that uses them.
-4. **Specify each task** exact files, the failing test to write first, the `AC-N` advanced, the
+2. **Derive candidate vertical slices from the design** walk the components and their contracts;
+   for each, group the behaviour and its carrying support work, test-first.
+3. **Order candidate vertical slices by dependency.** A task may depend only on candidates before
+   it. A contract or schema is an earlier foundation task only when it independently leaves the
+   repository green, produces useful behaviour or a complete artifact, and can be accepted and
+   reverted independently. Otherwise it stays in the behaviour slice that needs it.
+4. **Run the adjacent-pair sanity check to a fixed point.** Inspect every adjacent candidate pair in
+   dependency order. Combine the pair when both advance the same behaviour, share the primary
+   verification, and neither leaves a useful independently reviewable state. Preserve separate tasks
+   when either can be accepted or reverted independently, has a distinct failure or review boundary,
+   or represents unrelated behaviour. After each combination, repeat the check until a complete pass
+   makes no combination. Only then assign final `T-N` identities.
+5. **Specify each task** exact files, the failing test to write first, the `AC-N` advanced, the
    component touched, and its dependencies.
-5. **Check coverage both ways** every `AC-N` is advanced by at least one task (no gap), and every
+6. **Check coverage both ways** every `AC-N` is advanced by at least one task (no gap), and every
    task traces to a criterion (no gold-plating).
-6. **Constitution Check** confirm no task implies a violation of a MUST principle.
-7. **Write the `## Plan` section** the ordered task list plus the task-to-criterion coverage map.
-8. **Hand off** the plan goes to the gate, then build. A human "go" is optional;
+7. **Constitution Check** confirm no task implies a violation of a MUST principle.
+8. **Write the `## Plan` section** the ordered task list plus the task-to-criterion coverage map.
+9. **Hand off** the plan goes to the gate, then build. A human "go" is optional;
    the gate is the real checkpoint. If Linear sync is enabled in `.agent-sdlc/config.json`, also
    perform this stage's action via the `linear-sync` skill.
 
@@ -68,9 +79,10 @@ A task is done being written only when:
   testing: the plan must leave nothing to their discretion.
 - **Test-first, always.** Every task names its failing test before any code. Tasks written without
   a test get the test added or get cut.
-- **Atomic and green between tasks.** The repo compiles and passes after every task — including the
-  compile fallout of each change (match arms, interface impls, call sites updated in the same task,
-  not deferred to a later one).
+- **Independently reviewable and green between tasks.** Every task is a useful vertical slice that
+  can be accepted and reverted independently, and the repo compiles and passes after it. Include the
+  compile fallout of each change (match arms, interface impls, call sites) in that same task, not a
+  later one.
 - **Traceability is the spine.** Task -> criterion -> component. The gate walks it;
   keep it intact.
 - **YAGNI and DRY.** Build only what a criterion needs; do not repeat what a prior task built.
@@ -81,7 +93,7 @@ A task is done being written only when:
 | Excuse | Rebuttal |
 | --- | --- |
 | "I'll figure out the test during build." | The plan must be executable without thinking. Name the failing test now. |
-| "This task is big but cohesive." | Cohesive is not atomic. Split until each finishes green on its own. |
+| "This task is big but cohesive." | Keep it together only when it is one useful behaviour with one primary verification, and split at independently reviewable boundaries. |
 | "Skip the AC reference, it's obvious." | The gate walks task -> criterion. An unreferenced task is invisible to it. |
 | "Add this nice-to-have while we're in here." | Not in any criterion means not a task. That is the definition of gold-plating. |
 | "Exact file paths are overkill." | The agent has no project context. Vague paths are where autonomous runs derail. |
@@ -90,16 +102,19 @@ A task is done being written only when:
 
 - A task with no exact file path.
 - A task with no test or verification named.
+- A task split from its adjacent behaviour only by file, layer, setup, or implementation step.
+- A task that leaves no useful independently reviewable state, or batches unrelated behaviours.
 - A task that traces to no criterion, or a criterion advanced by no task.
 - Tasks out of dependency order, or a task depending on a later one.
 - A task that compiles or passes only after a *later* task lands — a test needing a not-yet-built
   consumer, or an exhaustive match broken by a half-added variant. Fold the consequence into this
   task, or declare the missing piece as an earlier dependency.
-- A task too large to finish green in a single pass.
+- A task too large to finish green as one useful independently reviewable vertical slice.
 
 ## Done when
 
-- Every task is atomic, with exact files, a test-first step, an `AC-N`, and a component.
+- Every task is an independently reviewable vertical slice, with exact files, a test-first step, an
+  `AC-N`, and a component.
 - Tasks are dependency-ordered.
 - Every criterion is covered by at least one task; no task is uncovered by a criterion.
 - The Constitution Check passes.
@@ -108,8 +123,9 @@ A task is done being written only when:
 ## The artifact (output)
 
 The `## Plan` section of `docs/specs/<feature>/<feature>.md`, containing only:
-- **Tasks** ordered, each with: ID (`T-1`, `T-2`, ...), title, exact files, the failing test to
-  write first, the `AC-N` advanced, the component touched, and dependencies.
+- **Tasks** ordered, each with: ID (`T-1`, `T-2`, ...) assigned only after the fixed-point
+  adjacent-pair sanity check, title, exact files, the failing test to write first, the `AC-N`
+  advanced, the component touched, and dependencies.
 - **Task-to-criterion coverage map** `AC-N` -> the tasks that advance it, so coverage is visible.
 - **Notes** any sequencing or setup caveats the build agent needs.
 
@@ -162,7 +178,8 @@ links parse as zero (the retro that motivated this: a plan written to this skill
   record, apart from the repo's product documentation pages.
 - Reads the `## Acceptance Criteria`, `## Design`, and `## Tech Stack` sections of the same file;
   references `AC-N` IDs and design component names.
-- Task IDs (`T-N`) are stable handles the gate and build reference.
+- Task IDs (`T-N`) are stable handles the gate and build reference. Assign them only after the
+  fixed-point adjacent-pair sanity check.
 - `## Plan` may carry a **provenance-marked mid-build amendment** — when reality diverges from the plan,
   build materializes the delta back into this section (through the plan method, gated inline) with a
   `<!-- source: mid-build amendment (<why>) · ingested YYYY-MM-DD -->` marker (canonical provenance
