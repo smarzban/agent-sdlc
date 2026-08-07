@@ -1,8 +1,8 @@
-# Subagent loop — dispatch mechanics for the build conductor
+# Subagent loop: dispatch mechanics for the build conductor
 
 How the conductor runs the per-task loop: workspace isolation, the three subagent roles and their
-file hand-offs, the bounded fix cycle, model selection, and ledger recovery. The conductor reads this;
-the disciplines the subagents follow are in the sibling reference files.
+file hand-offs, the three-round remediation protocol, model selection, and ledger recovery. The
+conductor reads this; the disciplines the subagents follow are in the sibling reference files.
 
 ## Workspace isolation (step 2 of the loop)
 
@@ -18,64 +18,67 @@ the disciplines the subagents follow are in the sibling reference files.
 4. **Provenance for cleanup.** Note whether you created the worktree (`.worktrees/`) or inherited it.
    ship preserves the worktree on the PR path; only an explicitly created, finished one is cleaned.
 
-## File hand-offs — the rule
+## File hand-offs and review snapshots
 
-Artifacts move as files in BOTH directions. A brief is written to a file (e.g.
-`.agent-sdlc/briefs/<feature>/T-N.md` in the workspace — so two features never resolve the same
+Artifacts move as files in BOTH directions. A brief is written to a file (for example,
+`.agent-sdlc/briefs/<feature>/T-N.md` in the workspace, so two features never resolve the same
 task id to the same file) and the subagent is told to read it. The dispatch prompt is one or two
 lines ("Implement task T-N. Read your brief at <path>. Follow the disciplines it names."). Never
-paste the plan, the session history, or other tasks into the prompt. The same rule governs what
-comes BACK: reports and findings land in files beside the brief; a subagent's final message is a
-short status, never the artifact itself. And the conductor produces the reviewer's diff file
-**blind**, and **scoped to the task's own files**:
+paste the plan, session history, or other tasks into a prompt. The same rule governs what comes
+back: the implementer writes `T-N-implementer-report.md`, each reviewer writes a round-specific
+findings file, and the conductor writes snapshot and diff files beside the brief. A final message is
+short status, never the artifact itself.
+
+The conductor produces every review diff **blind** and **scoped to the task's exact files**. Start
+with the plan's named files, then add a task-created path only when the implementer's returned
+status or a name-only `git status --porcelain -- <task directories>` identifies it. Filter the list
+to paths that exist and are not ignored. A plan-named file that was not created remains a review
+finding, not a reason to omit the whole hand-off. Never use a repo-wide pathspec: unrelated staged
+or untracked work must not enter the review.
+
+### Initial full-review snapshot
+
+The initial review receives the complete task-scoped diff, never a partial or finding-scoped diff,
+and completes before remediation can begin. Create the initial immutable tree snapshot after the
+implementer reports and before initial-review dispatch. Write its tree id to `T-N-initial.tree`, then create
+`T-N-review.diff` with `git diff HEAD "$initial_tree" -- "${task_paths[@]}"`. Assert that this
+initial diff is non-empty before dispatching the reviewer. On empty, reconcile the exact task paths
+with the plan and name-only status output, then regenerate; do not send a blank review.
+
+### Temporary-index tree snapshots
+
+A snapshot uses a **temporary index**, not the real index. It loads `HEAD` into that private index,
+stages only the exact task paths there, and writes an immutable tree object. Create the temporary
+index once for the task, remove the empty file before Git initializes it, and clean it up on exit:
 
 ```
-existing=$(for f in <T-N's files>; do [ -e "$f" ] && ! git check-ignore -q "$f" && printf '%s\n' "$f"; done)
-[ -n "$existing" ] && git add -N -- $existing
-git diff -- <T-N's files> > .agent-sdlc/briefs/<feature>/T-N-review.diff
-git reset -q -- <T-N's files>
+tmp_index=$(mktemp "${TMPDIR:-/tmp}/agent-sdlc-review-index.XXXXXX")
+rm -f "$tmp_index"
+trap 'rm -f "$tmp_index" "$tmp_index.lock"' EXIT
+
+snapshot_task_tree() {
+  GIT_INDEX_FILE="$tmp_index" git read-tree HEAD || return
+  GIT_INDEX_FILE="$tmp_index" git add -- "$@" || return
+  GIT_INDEX_FILE="$tmp_index" git write-tree
+}
+
+initial_tree=$(snapshot_task_tree "${task_paths[@]}") || stop_and_ask "initial review snapshot failed"
+printf '%s\n' "$initial_tree" > .agent-sdlc/briefs/<feature>/T-N-initial.tree
+git diff HEAD "$initial_tree" -- "${task_paths[@]}" > .agent-sdlc/briefs/<feature>/T-N-review.diff
 ```
 
-The paths are not a judgment call: the plan names every task's exact files, so the scope is already
-written down. `git add -N -- <paths>` is all-or-nothing: one path the task never touched (a
-plan-named file it did not reach, or a gitignored one) makes the whole command fail, and under a
-bare `&&` chain that aborts the diff entirely and leaves a stale or missing `T-N-review.diff`
-behind for the reviewer. Filter to paths that actually exist and are not gitignored before adding:
-a plan-named path the task never created is a finding for the reviewer's contract check, not a
-reason to abort the hand-off; a gitignored path is never force-added (`-f`), an ignored artifact
-does not belong in a review diff either way. `git diff`/`git reset` still take the full plan-named
-list, the paths that were never added simply produce no diff lines, which is correct.
+For the next snapshot, call the same function after the remediation, write its id to
+`T-N-remediation-round-<N>.tree`, and create the remediation-only diff with:
 
-A file the task created that the plan did not foresee is added by path too. The conductor is blind
-by construction, so it learns that path from a named channel, never by reading the diff itself: the
-Implementer's returned status names "the files touched" (see Implementer, below), or a name-only
-`git status --porcelain -- <the task's directories>` scoped to where the task was allowed to write.
-Listing names is not reading the diff, so either is fair game. Add the discovered path(s) to the
-filter-and-add list above before generating the diff.
+```
+git diff "$previous_tree" "$next_tree" -- "${task_paths[@]}" > .agent-sdlc/briefs/<feature>/T-N-remediation-round-<N>.diff
+```
 
-**Never scope it repo-wide** (`git add -N .`, with or without a `':(exclude)…'` pathspec). A
-repo-wide intent-to-add sweeps every untracked file in the tree into the reviewer's diff: a scratch
-note, another feature's leftovers, anything the working copy deliberately keeps untracked. That is
-the same failure the repo-wide `git add -A` ban exists to prevent, and it hands the reviewer
-material that has nothing to do with `T-N`, on the one input its verdict rests on.
-
-Intent-to-add comes first, so NEW files (a TDD task's first artifact) appear in the diff. The
-trailing reset is scoped to the same paths, matching the add: a mixed reset over just `T-N`'s files,
-so the working tree is untouched and any unrelated work staged from elsewhere survives untouched
-too. The diff runs before step 4d stages anything (a resumed tree with a task already staged
-resolves that first, by committing or unstaging deliberately). The reset is REQUIRED: a lingering
-intent-to-add entry not really staged at commit time makes step 4d's stash fail with `Entry not
-uptodate. Cannot merge.`
-
-**Before dispatching the reviewer, assert the diff file is non-empty.** A 0-byte `T-N-review.diff`
-is far likelier to mean the scope was wrong (a drifted or mistyped path) than that the task was a
-genuine no-op: one blank file must never go silently to the reviewer. On empty, re-check the
-task's files against what actually changed (`git status --porcelain -- <the task's directories>`)
-and fix the path list before regenerating; do not dispatch a reviewer against an empty diff.
-
-Never produce the diff by reading it into the conductor's own context first: the reviewer is the
-diff's reader, the conductor is its courier. Context bloat in the conductor is the failure
-subagent-driven development exists to avoid.
+The temporary index procedure leaves the **real index, working tree, HEAD, and branch unchanged**.
+It never uses `git add -N`, `git reset`, `git stash`, or a checkout against the real index. A
+snapshot command failure, a missing tree id, or an empty claimed fix (`$previous_tree` equals
+`$next_tree`) stops re-review dispatch and raises the task. The conductor does not read either diff:
+the reviewer is its reader and the conductor is its courier.
 
 ## The three roles
 
@@ -88,42 +91,72 @@ subagent-driven development exists to avoid.
 - Which disciplines to follow: `tdd.md` (red-green-refactor), `source-driven.md` (verify framework
   APIs against official docs before using them), `simplicity.md` (one vertical slice, Rule-0).
 
-**Returns:** a short status — which test now passes, the files touched, any concern — never the
-diff itself: the working tree already holds it, and pasting it back into the conductor defeats
-the isolation. Before returning, the implementer runs the project's formatter and linter so the diff is already
-format-clean and lint-clean — the conductor's green-bar check is the authoritative gate, not a
-surprise. The implementer does **not** commit — the conductor commits after review, so the commit
-reflects reviewed code.
+**Returns:** a short status: which test now passes, the files touched, any concern. Write the
+same facts to `T-N-implementer-report.md`; never paste the diff itself because the working tree
+already holds it. Before returning, run the project's formatter and linter so the diff is
+format-clean and lint-clean. The conductor's green-bar check is the authoritative gate. The
+implementer does **not** commit: the conductor commits after review, so the commit reflects
+reviewed code.
 
-### Reviewer
+### Initial reviewer
 
-**Brief contains:** the diff file (produced blind — see the hand-off rule), the task's contract
-(the `AC-N`, the named files, the test it had to make pass), and the bearing global constraints.
-The reviewer **reads, it does not re-run**: it reads the diff, the changed files, and their
-call-sites, and returns spec-met (does the diff satisfy `T-N`'s contract?) plus quality findings
-rated Critical / Important / Minor — the findings written to a file beside the brief
-(`.agent-sdlc/briefs/<feature>/T-N-findings.md`), verdict and counts in the return message. The
-conductor's own green-bar run (SKILL step 4d) is the loop's authoritative execution — a reviewer
-re-running the suite duplicates it and buys nothing; it may run a *focused* check only for a
-specific doubt its reading raised, naming the doubt and what it ran in its findings. One axis is
-always in scope: **over-build** — an abstraction, indirection, layer, or dependency the `AC-N`
-did not call for, where a simpler form passes the same test. Flag it like any other finding; the
-cheapest code to review is the code that was never written.
+**Brief contains:** the complete `T-N-review.diff` (produced blind), the task's contract (the
+`AC-N`, named files, and test it had to make pass), and the bearing global constraints. The initial
+reviewer reads the complete task-scoped diff, changed files, and their call-sites. It returns
+spec-met plus Critical / Important / Minor quality findings in
+`T-N-findings-round-0.md`, with verdict and counts in the short status. This is the only full-task
+review for the task.
 
-**Never tell the reviewer what not to flag.** "Treat X as minor", "don't worry about Y" — pre-judging
-disqualifies the review. State the contract and let it judge. Optionally add a **doubt lens**: a
-second, adversarial pass that assumes the implementer was overconfident and hunts for what is wrong
-rather than confirming what is right — useful for non-trivial or security-sensitive tasks, bounded so
-it does not loop.
+The reviewer reads, it does not re-run. The conductor's own green-bar run (SKILL step 4d) is the
+authoritative execution. A reviewer may run a focused check only for a specific doubt, naming the
+doubt and command in its findings. One axis is always in scope: **over-build**, an abstraction,
+indirection, layer, or dependency the `AC-N` did not call for where a simpler form passes the same
+test. Never tell the reviewer what not to flag. A bounded doubt lens is allowed for non-trivial or
+security-sensitive tasks.
 
-### Fixer (only when the reviewer finds Critical/Important)
+### Finding-scoped re-reviewer
 
-**Brief contains:** the findings file and the diff file. The fixer follows `tdd.md` (a fix gets a guarding
-test) and `debugging.md` (stop-the-line: root cause, not symptom). Regenerate the diff file (same blind,
-filter-and-scope command; a fix that adds a file names it back the same way: the fixer's own returned
-status, or a scoped `git status --porcelain` name-listing), then re-review after each fix. **Bound
-the cycle to ~2–3 rounds**; if it still fails, the task is blocked — record it and raise it, do not
-grind.
+Every remediation reviewer receives the original task contract, the previous blocking findings,
+the remediation diff, and focused test evidence. It checks whether the remediation closes the
+prior blockers and whether the remediation surface introduces regressions. It does **not** repeat
+the complete task review, reread the settled task diff, or extend its scope to other code.
+
+For **each prior blocking finding**, write a disposition in the round findings file as exactly
+`ADDRESSED` or `NOT ADDRESSED`, with a short reason. New Critical or Important findings may arise
+only from **new breakage in the remediation diff**. An observation entirely outside the remediation
+diff is recorded as an **outside remediation diff, non-blocking** observation and cannot start or
+extend remediation. The reviewer returns verdict and counts in a short status, while the full
+findings stay in `T-N-findings-round-<N>.md`.
+
+### Remediation dispatch
+
+A remediation round starts only after the preceding review reports a Critical or Important finding.
+Before every round, assemble a durable file handoff: the original brief, implementer report, prior
+findings, prior review diff, and the latest remediation diff. The conductor does not paste artifacts
+into a prompt. It writes a one-line prompt that names the round and tells the recipient to read that
+handoff.
+
+**Remediation rounds 1 and 2:** continue the exact original implementer session to address the
+prior blocking findings. Snapshot its result, set `next_tree` from that snapshot, create the
+remediation-only diff from `previous_tree` to `next_tree`, and stop if the claimed fix is empty.
+Then continue the exact original reviewer session for the finding-scoped re-review. After the
+review, set `previous_tree=$next_tree` before the next round.
+
+If continuation is unavailable or a continued session is dead, announce a fresh-agent fallback in
+`build-report.md` before dispatch: identify the round, role, reason, and pinned replacement. The
+pinned fresh agent receives the same durable file handoff: brief, implementer report, findings, and
+diff files. This fallback is visible to the reviewer and human, not a silent substitution. A fresh
+fallback that dies after dispatch follows the subagent-death policy below.
+
+**Remediation round 3:** do not continue either original session. Dispatch a fresh fixer with the
+durable file handoff, snapshot the result, create the remediation-only diff, then dispatch a fresh
+reviewer for the same finding-scoped contract. This fresh pair breaks anchoring after two
+unsuccessful continued rounds.
+
+After a passing remediation review, proceed to the unchanged conductor-owned staged-snapshot green
+bar and atomic commit. After round 3, if any Critical or Important finding remains, mark the task
+blocked in `build-report.md`, retain the final findings and diffs, raise it, and make no fourth
+remediation dispatch.
 
 ## Subagent death (a dispatch that dies mid-task)
 

@@ -38,11 +38,15 @@ of the same promises, fail-closed. Anything unmapped surfaces before code, not d
 ## build and ship, briefly
 
 - **`build` is a conductor.** It never writes product code itself: per task it dispatches a fresh
-  implementer subagent (test-first), a reviewer, and a fixer if needed; verifies the green bar by
-  running it itself; commits one atomic `feat(T-N): …` commit per task; and records the run in
-  `build-report.md` — the resumable ledger it trusts over memory after a compaction. Disciplines
-  (TDD, subagent loop, debugging, plan amendments, plan ingestion) live in
-  [`skills/build/reference/`](../../skills/build/reference/).
+  implementer subagent (test-first) and reviewer. The initial independent review reads the complete
+  task-scoped diff. Blocking findings enter at most three remediation rounds: rounds one and two
+  continue the original sessions when supported, and are finding-scoped to prior blockers plus the
+  remediation diff; an unavailable or dead continuation visibly falls back to a fresh agent with
+  the file handoff. Round three uses a fresh fixer-reviewer pair, then remaining Critical or
+  Important findings block the task. Build still verifies the green bar itself, commits one atomic
+  `feat(T-N): …` commit per task, and records the run in `build-report.md`, the resumable ledger it
+  trusts over memory after a compaction. Disciplines (TDD, subagent loop, debugging, plan
+  amendments, plan ingestion) live in [`skills/build/reference/`](../../skills/build/reference/).
 - **`ship`** verifies green → writes, checker-verifies, and commits the `verification-report.md`
   AC→proof map (all before any PR exists) → pushes → opens a PR synthesized from the spec → hands
   the PR to the [Empanel](https://github.com/smarzban/empanel) gate (`/empanel:merge-gate`) when

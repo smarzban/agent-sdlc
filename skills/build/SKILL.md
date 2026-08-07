@@ -84,18 +84,28 @@ branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
    nothing here: this step never creates it, presence is the only opt-in.
 
 4. **For each task `T-N`, in dependency order** (before the first dispatch, **read
-   [reference/subagent-loop.md](reference/subagent-loop.md) now** — the brief contents, the
-   fix-cycle bound, the file hand-off mechanics, and the death sequence live ONLY there; a loop
-   run from this body alone improvises all four):
+   [reference/subagent-loop.md](reference/subagent-loop.md) now**: the brief contents, initial
+   full-review snapshot, three-round remediation protocol, file hand-off mechanics, and death
+   sequence live ONLY there; a loop run from this body alone improvises them):
 
    **Experiment recording (`EXPERIMENT: run-observability`): record task-start now, before
    dispatching the implementer in 4a** (details, including the invocation, are in the recording
    block after 4g below; this pointer exists so task-start fires before the first dispatch, not
    after it).
 
-   a. Dispatch the **implementer** subagent with a file brief for `T-N` only.
-   b. Dispatch the **reviewer** subagent on the resulting diff.
-   c. If the reviewer finds Critical/Important issues, dispatch a **fixer** and re-review (bounded).
+   a. Dispatch the **implementer** subagent with a file brief for `T-N` only. Keep its session
+      available until the task is ratified or blocked.
+   b. Create the **initial full-review snapshot** and its complete task-scoped review diff, then
+      dispatch the **reviewer** subagent on that complete diff. Keep its session available too.
+      This initial review is never finding-scoped or partial.
+   c. If the initial review finds Critical/Important issues, follow the finding-scoped remediation
+      protocol in the reference. **Remediation rounds 1 and 2 continue the original implementer
+      session and continue the original reviewer session** when the harness supports continuation.
+      A missing or dead continuation visibly announces a pinned fresh-agent fallback with its
+      durable file handoff. **Remediation round 3 dispatches a fresh fixer and a fresh reviewer.**
+      After remediation round 3, remaining Critical or Important findings mark the task blocked
+      **without a fourth dispatch**. No remediation pass changes the conductor-owned staged-snapshot
+      green-bar verification or one-atomic-commit boundary below.
    d. Verify the **green bar on the staged snapshot** — after the reviewer passes, the **conductor
       itself** stages the task's changes and runs the full declared set (compile, test, lint,
       format-check) once against exactly what will be committed: `git stash --keep-index
@@ -128,9 +138,9 @@ branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
 
    **Experiment recording (`EXPERIMENT: run-observability`, removed with the rest of the experiment).**
    `task-start` fires above, before 4a. Bracket each reviewer pass with round-start/round-end (4b,
-   and again around each fixer + re-review iteration in 4c), numbering rounds from 1 within the task,
-   one number per reviewer pass: a fix cycle is the next round, never a repeat of the number before
-   it. Pass the reviewer's findings counts to round-end's `--critical`/`--important`/`--minor` flags
+   and again around each remediation round in 4c), numbering rounds from 1 within the task,
+   one number per reviewer pass: each remediation round is the next round, never a repeat of the
+   number before it. Pass the reviewer's findings counts to round-end's `--critical`/`--important`/`--minor` flags
    so the summary's findings column carries real numbers. Record task-end only after the task's
    commit exists (4d's commit-first form, or 4e; whichever actually lands the commit), never before:
    the summary's between-boundaries column is derived from this pair of recorded head commits, and
@@ -164,7 +174,7 @@ branch handed to `/agent-sdlc:ship`. Do NOT open the PR — that is ship's job.
    announced degraded fallback recorded in `build-report.md`. Only once corroborated (or the
    degraded fallback is recorded): report "branch ready, run `/agent-sdlc:ship`".
 
-The dispatch mechanics, the three subagent briefs, the bounded fix cycle, and ledger recovery are in
+The dispatch mechanics, the three subagent briefs, the three-round remediation protocol, and ledger recovery are in
 [reference/subagent-loop.md](reference/subagent-loop.md). The disciplines the subagents follow are in
 [reference/tdd.md](reference/tdd.md), [reference/source-driven.md](reference/source-driven.md),
 [reference/simplicity.md](reference/simplicity.md), and [reference/debugging.md](reference/debugging.md).
