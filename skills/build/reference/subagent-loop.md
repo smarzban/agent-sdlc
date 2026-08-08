@@ -378,7 +378,7 @@ if ! write_artifact "$initial_diff_file" controlled_git diff --no-ext-diff --no-
   stop_and_ask "failed initial review diff artifact"
   exit 1
 fi
-if [ ! -s "$initial_diff_file" ]; then
+if [ ! -s "$repo_root/$initial_diff_file" ]; then
   stop_and_ask "empty initial-review diff"
   exit 1
 fi

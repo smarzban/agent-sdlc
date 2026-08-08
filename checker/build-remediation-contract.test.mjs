@@ -352,6 +352,53 @@ test('build remediation artifact helper anchors writes to the repository root fr
   }
 });
 
+function initialDiffSizeCheckSource() {
+  const check = loopReference.match(/(if \[ ! -s "[^\"]+" \]; then[\s\S]*?\nfi)/);
+  assert.ok(check, 'the documented initial diff size check must be executable Bash');
+  return check[1];
+}
+
+test('build remediation initial diff check anchors reads at the repository root from a nested CWD', () => {
+  const check = initialDiffSizeCheckSource();
+  const repo = mkdtempSync(path.join(tmpdir(), 'build-remediation-initial-diff-root-'));
+  const nestedCwd = path.join(repo, 'nested', 'cwd');
+  const relativeDiff = '.agent-sdlc/briefs/build-loop-efficiency/T-8-review.diff';
+  const rootDiff = path.join(repo, relativeDiff);
+  const lookalikeDiff = path.join(nestedCwd, relativeDiff);
+  try {
+    mkdirSync(path.dirname(rootDiff), { recursive: true });
+    mkdirSync(path.dirname(lookalikeDiff), { recursive: true });
+    writeFileSync(rootDiff, '');
+    writeFileSync(lookalikeDiff, 'lookalike review diff\n');
+    assert.equal(readFileSync(rootDiff, 'utf8'), '', 'the authoritative review diff must be empty');
+    assert.notEqual(readFileSync(lookalikeDiff, 'utf8').length, 0, 'the lookalike must be nonempty');
+
+    const script = `
+repo_root=$1
+initial_diff_file=$3
+stop_and_ask() { printf '%s\\n' "$1"; }
+cd "$2"
+${check}
+printf 'reviewer-dispatched\\n'
+`;
+    assert.throws(
+      () =>
+        execFileSync('bash', ['-c', script, 'initial-diff-fixture', repo, nestedCwd, relativeDiff], {
+          cwd: repo,
+          encoding: 'utf8',
+        }),
+      'an empty root-anchored review diff must stop dispatch despite a nonempty nested lookalike',
+    );
+    assert.match(
+      check,
+      /\$repo_root\/\$initial_diff_file/,
+      'the size check must read the artifact beneath the held repository root',
+    );
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
 test('build remediation artifact helper preserves all bytes and fails on a zero write', () => {
   const helper = artifactHelperSource();
   const repo = mkdtempSync(path.join(tmpdir(), 'build-remediation-bytes-'));
