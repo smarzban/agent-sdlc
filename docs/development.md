@@ -12,8 +12,11 @@ cd agent-sdlc
 
 That's the whole setup. The repo has no package dependencies, install step, or build step. The
 skills are plain Markdown; the only executable code is the checker, a single ESM file run by bare
-**Node ≥ 22**. Build-host prerequisites are Node ≥ 22 and Python 3, available as `node` and
-`python3`; the artifact helper uses the Python 3 standard library at build runtime.
+**Node ≥ 22**. Build-host prerequisites are a POSIX host with POSIX filesystem semantics, Bash, Git, Node ≥ 22, and Python 3,
+available as `bash`, `node`, `git`, and `python3`; the descriptor-held
+artifact helper and controlled Git snapshot function use Bash, POSIX directory handles, and the
+Python 3 standard library at build runtime. The helper and its contract tests depend on those Bash,
+POSIX, Git, and Python 3 capabilities, while package dependencies remain zero.
 
 ## Run the tests
 

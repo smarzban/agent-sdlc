@@ -105,11 +105,77 @@ test('build remediation contract uses a fresh final round and then blocks', () =
   assert.match(loopReference, /durable (?:file )?handoff[\s\S]*brief[\s\S]*findings[\s\S]*diff/i);
 });
 
+test('build remediation contract isolates Git snapshot and diff commands from repository execution hooks', () => {
+  assert.match(loopReference, /controlled Git environment/i);
+  assert.match(loopReference, /controlled_git(?:_env)?/i);
+  assert.match(loopReference, /GIT_CONFIG=\/dev\/null/i);
+  assert.match(loopReference, /GIT_CONFIG_NOSYSTEM=1/i);
+  assert.match(loopReference, /GIT_CONFIG_GLOBAL=\/dev\/null/i);
+  assert.match(loopReference, /GIT_CONFIG_SYSTEM=\/dev\/null/i);
+  assert.match(loopReference, /GIT_ATTR_NOSYSTEM=1/i);
+  assert.match(loopReference, /GIT_EXTERNAL_DIFF=/i);
+  assert.match(loopReference, /--no-ext-diff/);
+  assert.match(loopReference, /--no-textconv/);
+  assert.match(loopReference, /repository-local configuration[\s\S]*disabled/i);
+  assert.match(loopReference, /controlled_git read-tree HEAD/i);
+  assert.match(loopReference, /controlled_git hash-object --no-filters -w --/i);
+  assert.match(loopReference, /controlled_git update-index --add --cacheinfo/i);
+  assert.match(loopReference, /controlled_git write-tree/i);
+  assert.match(loopReference, /controlled_git diff/i);
+});
+
+function controlledGitSource() {
+  const helper = loopReference.match(/(controlled_git\(\) \{[\s\S]*?\n\})\n```/);
+  assert.ok(helper, 'the documented controlled Git helper must be executable Bash');
+  return helper[1];
+}
+
+test('build remediation contract executes the controlled Git helper under Bash', () => {
+  assert.match(loopReference, /uses Bash arrays[\s\S]*run it with Bash/i);
+  assert.match(developmentGuide, /prerequisites.*Bash/i);
+  assert.match(contributingGuide, /prerequisites.*Bash/i);
+  execFileSync('bash', ['-c', `${controlledGitSource()}\ncontrolled_git --version >/dev/null`], {
+    encoding: 'utf8',
+  });
+});
+
+test('build remediation snapshot staging bypasses repository and Git-info conversion attributes', () => {
+  const repo = mkdtempSync(path.join(tmpdir(), 'build-remediation-attributes-'));
+  const tempIndex = path.join(repo, 'temporary-index');
+  try {
+    execFileSync('git', ['init', '-q', '-b', 'main'], { cwd: repo });
+    execFileSync('git', ['config', 'user.email', 'fixture@example.com'], { cwd: repo });
+    execFileSync('git', ['config', 'user.name', 'Fixture'], { cwd: repo });
+    writeFileSync(path.join(repo, 'subject.txt'), 'before\n');
+    execFileSync('git', ['add', '--', 'subject.txt'], { cwd: repo });
+    execFileSync('git', ['commit', '-q', '-m', 'subject'], { cwd: repo });
+    writeFileSync(path.join(repo, '.gitattributes'), '*.txt working-tree-encoding=UTF-16LE\n');
+    execFileSync('git', ['add', '--', '.gitattributes'], { cwd: repo });
+    execFileSync('git', ['commit', '-q', '-m', 'attributes'], { cwd: repo });
+    writeFileSync(path.join(repo, '.git', 'info', 'attributes'), '*.txt working-tree-encoding=UTF-16LE\n');
+    writeFileSync(path.join(repo, 'subject.txt'), 'captured without conversion\n');
+
+    const script = `${controlledGitSource()}
+GIT_INDEX_FILE="$1" controlled_git read-tree HEAD
+blob=$(GIT_INDEX_FILE="$1" controlled_git hash-object --no-filters -w -- subject.txt)
+GIT_INDEX_FILE="$1" controlled_git update-index --add --cacheinfo "100644,$blob,subject.txt"
+GIT_INDEX_FILE="$1" controlled_git cat-file blob "$blob"
+`;
+    const captured = execFileSync('bash', ['-c', script, 'attribute-fixture', tempIndex], {
+      cwd: repo,
+      encoding: 'utf8',
+    });
+    assert.equal(captured, 'captured without conversion\n');
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
 test('build remediation contract creates remediation-only snapshot diffs without touching the real index', () => {
   assert.match(loopReference, /temporary index/i);
-  assert.match(loopReference, /GIT_INDEX_FILE=.*git read-tree HEAD/);
-  assert.match(loopReference, /GIT_INDEX_FILE=.*git add --/);
-  assert.match(loopReference, /GIT_INDEX_FILE=.*git write-tree/);
+  assert.match(loopReference, /GIT_INDEX_FILE=.*controlled_git read-tree HEAD/);
+  assert.match(loopReference, /controlled_git (?:hash-object|update-index)/i);
+  assert.match(loopReference, /GIT_INDEX_FILE=.*controlled_git write-tree/);
   assert.match(loopReference, /git diff .*previous_tree.*next_tree/);
   assert.match(loopReference, /real\s+index,\s+working\s+tree,\s+HEAD,\s+(?:and|or)\s+branch[\s\S]*unchanged/i);
   assert.match(loopReference, /remediation-only diff/i);
@@ -131,6 +197,38 @@ test('build remediation contract records every remediation round', () => {
   );
 });
 
+test('build remediation contract scopes a root-level plan file to its exact path', () => {
+  assert.match(
+    loopReference,
+    /root-level file[\s\S]*exact plan-named root file[\s\S]*(?:never the repository root|never authorizes the repository root)/i,
+  );
+  const repo = mkdtempSync(path.join(tmpdir(), 'build-remediation-root-scope-'));
+  try {
+    execFileSync('git', ['init', '-q', '-b', 'main'], { cwd: repo });
+    execFileSync('git', ['config', 'user.email', 'fixture@example.com'], { cwd: repo });
+    execFileSync('git', ['config', 'user.name', 'Fixture'], { cwd: repo });
+    writeFileSync(path.join(repo, 'README.md'), 'before\n');
+    execFileSync('git', ['add', '--', 'README.md'], { cwd: repo });
+    execFileSync('git', ['commit', '-q', '-m', 'fixture'], { cwd: repo });
+    writeFileSync(path.join(repo, 'README.md'), 'after\n');
+    writeFileSync(path.join(repo, 'unrelated-root.txt'), 'must stay out\n');
+    const status = execFileSync('git', ['status', '--porcelain', '--', 'README.md'], {
+      cwd: repo,
+      encoding: 'utf8',
+    });
+    assert.match(status, /README\.md/);
+    assert.doesNotMatch(status, /unrelated-root\.txt/);
+    const diff = execFileSync('git', ['diff', '--', 'README.md'], {
+      cwd: repo,
+      encoding: 'utf8',
+    });
+    assert.match(diff, /README\.md/);
+    assert.doesNotMatch(diff, /unrelated-root\.txt/);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
 test('build remediation contract confines snapshot paths and preserves deleted task files', () => {
   assert.match(
     loopReference,
@@ -144,7 +242,8 @@ test('build remediation contract confines snapshot paths and preserves deleted t
     loopReference,
     /deleted tracked task files[\s\S]*temporary-index\s+snapshots[\s\S]*stage their removals/i,
   );
-  assert.match(loopReference, /git add -- .*validated_task_paths/i);
+  assert.match(loopReference, /validated_task_paths/i);
+  assert.match(loopReference, /literal[\s\n]+argument/i);
   assert.match(
     loopReference,
     /approved task roots derive\s+exclusively from the plan(?:'s|’s) exact named paths/i,
@@ -152,6 +251,10 @@ test('build remediation contract confines snapshot paths and preserves deleted t
   assert.match(
     loopReference,
     /implementer(?:'s|’s) status[\s\S]*only discover(?:s)? files already beneath those roots/i,
+  );
+  assert.match(
+    loopReference,
+    /plan-named root file[\s\S]*(?:exact file|only itself|only approved root)[\s\S]*(?:not|never)[\s\S]*repository root/i,
   );
 });
 
@@ -380,11 +483,54 @@ test('build remediation artifact helper rejects unsafe destinations and existing
   }
 });
 
+test('build remediation artifact helper rejects special leaves without timing out', () => {
+  const helper = artifactHelperSource();
+  assert.match(loopReference, /special files?[\s\S]*normal nonzero/i);
+  const repo = mkdtempSync(path.join(tmpdir(), 'build-remediation-special-artifact-'));
+  const artifactDirectory = path.join(
+    repo,
+    '.agent-sdlc',
+    'briefs',
+    'build-loop-efficiency',
+  );
+  const destination = path.join(
+    '.agent-sdlc',
+    'briefs',
+    'build-loop-efficiency',
+    'T-6-special-artifact',
+  );
+  const stagedOutput = path.join(repo, 'staged-artifact');
+  try {
+    mkdirSync(artifactDirectory, { recursive: true });
+    writeFileSync(stagedOutput, 'must not block\n');
+    execFileSync('mkfifo', [path.join(artifactDirectory, 'T-6-special-artifact')], {
+      cwd: repo,
+    });
+    let failure;
+    try {
+      execFileSync('python3', ['-', repo, destination, stagedOutput], {
+        cwd: repo,
+        input: helper,
+        encoding: 'utf8',
+        timeout: 1000,
+      });
+    } catch (error) {
+      failure = error;
+    }
+    assert.ok(failure, 'a FIFO destination must be rejected');
+    assert.notEqual(failure.code, 'ETIMEDOUT', 'FIFO rejection must not time out');
+    assert.equal(failure.signal, null, 'FIFO rejection must not be signal-terminated');
+    assert.equal(failure.status, 1, 'FIFO rejection must be a normal nonzero helper exit');
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
 test('build remediation contract declares the artifact helper runtime', () => {
   assert.match(loopReference, /python3 - .*staged_output/i);
-  assert.match(developmentGuide, /build-host prerequisites.*Python 3/i);
+  assert.match(developmentGuide, /build-host prerequisites[\s\S]*Python 3/i);
   assert.match(developmentGuide, /`python3`/i);
-  assert.match(contributingGuide, /build-host prerequisites.*Python 3/i);
+  assert.match(contributingGuide, /build-host prerequisites[\s\S]*Python 3/i);
   assert.match(contributingGuide, /`python3`/i);
   assert.doesNotMatch(packageManifest, /"(?:dependencies|devDependencies)"\s*:/i);
 });
@@ -504,14 +650,15 @@ function createSnapshotFixture() {
   execFileSync('git', ['add', '.'], { cwd: repo });
   execFileSync('git', ['commit', '-q', '-m', 'fixture'], { cwd: repo });
 
+  writeFileSync(path.join(repo, 'unrelated.txt'), 'unrelated staged\n');
+  execFileSync('git', ['add', '--', 'unrelated.txt'], { cwd: repo });
   unlinkSync(path.join(repo, 'tasks', 'deleted.txt'));
   writeFileSync(path.join(repo, 'tasks', 'changed.txt'), 'after\n');
   writeFileSync(path.join(repo, 'tasks', 'created.txt'), 'created\n');
-  writeFileSync(path.join(repo, 'unrelated.txt'), 'unrelated after\n');
   return repo;
 }
 
-test('build remediation snapshot fixture preserves task scope and real-index isolation', () => {
+test('build remediation snapshot fixture preserves pre-existing staged changes', () => {
   assert.match(loopReference, /throwaway-repository fixture/i);
   assert.match(loopReference, /real index, HEAD, and worktree remain unchanged/i);
 
@@ -522,6 +669,7 @@ test('build remediation snapshot fixture preserves task scope and real-index iso
     const before = {
       head: git(repo, ['rev-parse', 'HEAD']),
       index: git(repo, ['write-tree']),
+      stagedUnrelated: git(repo, ['show', ':unrelated.txt']),
       status: git(repo, ['status', '--porcelain']),
       worktree: git(repo, ['diff', '--binary']),
     };
@@ -549,6 +697,7 @@ test('build remediation snapshot fixture preserves task scope and real-index iso
     assert.doesNotMatch(taskDiff, /unrelated\.txt/);
     assert.equal(git(repo, ['rev-parse', 'HEAD']), before.head);
     assert.equal(git(repo, ['write-tree']), before.index);
+    assert.equal(git(repo, ['show', ':unrelated.txt']), before.stagedUnrelated);
     assert.equal(git(repo, ['status', '--porcelain']), before.status);
     assert.equal(git(repo, ['diff', '--binary']), before.worktree);
   } finally {

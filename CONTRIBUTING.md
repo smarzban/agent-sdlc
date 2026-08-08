@@ -7,8 +7,10 @@ light — but the conventions below are real: the repo's own checker enforces so
 
 See [docs/development.md](docs/development.md). The short version:
 
-Build-host prerequisites are Node ≥ 22 and Python 3 as `node` and `python3`. Python 3 is used
-by the descriptor-held safe-artifact helper; the project keeps zero package dependencies.
+Build-host prerequisites are a POSIX host with POSIX filesystem semantics, Bash, Git, Node ≥ 22,
+and Python 3 as `bash`, `node`, `git`, and `python3`. Bash arrays drive the controlled Git snapshot
+function; Python 3 and POSIX directory-handle semantics drive the descriptor-held safe-artifact
+helper and their contract tests. The project keeps zero package dependencies.
 
 ```bash
 git clone https://github.com/smarzban/agent-sdlc.git

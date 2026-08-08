@@ -31,23 +31,28 @@ short status, never the artifact itself.
 
 The conductor produces every review diff **blind** and **scoped to the task's exact files**. Start
 with the plan's named files, then add a task-created path only when the implementer's returned
-status or a name-only `git status --porcelain -- <task directories>` identifies it. Filter the list
-to paths that exist and are not ignored. A plan-named file that was not created remains a review
-finding, not a reason to omit the whole hand-off. Never use a repo-wide pathspec: unrelated staged
-or untracked work must not enter the review.
+status or a name-only `git status --porcelain -- <discovery paths>` identifies it. Derive each
+discovery path from one exact plan path: use its containing directory when the plan path contains a
+slash, but use the exact plan-named path for a root-level file, never the repository root or `.`.
+Filter the list to paths that exist and are not ignored. A plan-named file that was not created remains
+a review finding, not a reason to omit the whole hand-off. Never use a repo-wide pathspec: unrelated
+staged or untracked work must not enter the review.
 
 ### Path and artifact validation
 
 Validate task-derived paths as literal repository-relative files under approved task roots. The
 resulting validated task paths are literal repository-relative files. Approved task roots derive
 exclusively from the plan's exact named paths: use the containing directory of each plan-named file
-(or the repository root for a plan-named root file). The implementer's status or scoped name-only
-status only discovers files already beneath those roots; it never adds an approved root. Validate
-the raw path before any Git call: reject traversal, dot paths, absolute paths, directory paths, and
-Git magic pathspecs (including `:(...)`, `:(glob)`, and `:(exclude)`). Accept a regular file or a
-deleted tracked task file, never a directory or a path that only becomes safe after normalization.
-Keep only the validated paths in `validated_task_paths`, then pass them as literal arguments with
-`git add -- "${validated_task_paths[@]}"`. Preserve deleted tracked task files in temporary-index
+that contains a slash, but use the exact plan-named root file as its only approved root. A root file
+never authorizes the repository root or unrelated root paths. The implementer's status or scoped
+name-only status only discovers files already beneath those roots; it never adds an approved root.
+Validate the raw path before any Git call: reject traversal, dot paths, absolute paths, directory paths,
+and Git magic pathspecs (including `:(...)`, `:(glob)`, and `:(exclude)`). Accept a regular
+file or a deleted tracked task file, never a directory or a path that only becomes safe after
+normalization. Keep only the validated paths in `validated_task_paths`, and pass each as a literal
+argument to the controlled Git plumbing below. Do not use `controlled_git add --` on the real
+worktree: repository `.gitattributes` and `$GIT_DIR/info/attributes` can select conversions even
+when system attributes are disabled. Preserve deleted tracked task files in temporary-index
 snapshots and stage their removals there. A deleted tracked task file remains in that set instead
 of dropping it from the review.
 
@@ -74,7 +79,9 @@ It rejects absolute paths, empty components, `.`, `..`, Git magic pathspecs, and
 `.agent-sdlc/briefs/<feature>/`. Starting at the trusted repository-root handle, it runs
 `openat(parent_fd, component, O_RDONLY|O_DIRECTORY|O_NOFOLLOW)` for every root and child ancestor,
 retaining each returned descriptor. It first runs a no-follow `fstatat`-equivalent check for the leaf
-relative to the held parent, rejecting any existing leaf without opening it. For a missing leaf it
+relative to the held parent, rejecting any existing leaf without opening it. This rejects regular,
+symlink, hard-link, and special leaves, including FIFOs, with a normal nonzero helper exit before
+any open, so a FIFO can never block or require a timeout. For a missing leaf it
 runs `openat(held_parent_fd, leaf, O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW, 0o600)`, then checks the new
 held descriptor with `fstat` before copying the staged bytes. It closes the leaf and all retained
 ancestor descriptors in `finally`. A helper without directory-relative open and held ancestor
@@ -86,9 +93,49 @@ The initial review receives the complete task-scoped diff, never a partial or fi
 and completes before remediation can begin. Create the initial immutable tree snapshot after the
 implementer reports and before initial-review dispatch. Validate the task paths and every artifact
 destination first. Write its tree id to `T-N-initial.tree`, then create `T-N-review.diff` with
-`git diff HEAD "$initial_tree" -- "${validated_task_paths[@]}"`. Assert that the initial-review diff
-is non-empty before dispatching the reviewer. An empty initial-review diff is a failure: stop
-reviewer dispatch and raise the task, do not send a blank review.
+`controlled_git diff --no-ext-diff --no-textconv HEAD "$initial_tree" --
+"${validated_task_paths[@]}"`. Assert that the initial-review diff is non-empty before dispatching
+the reviewer. An empty initial-review diff is a failure: stop reviewer dispatch and raise the task,
+do not send a blank review.
+
+### Controlled Git environment
+
+Every Git command that creates a snapshot or writes a snapshot/diff artifact runs through one
+controlled environment. Do not call bare `git` for these operations. This helper uses Bash arrays,
+so the conductor must run it with Bash, not a generic POSIX `sh`. `env -i` removes inherited Git
+configuration and execution hooks, `GIT_CONFIG=/dev/null` replaces repository-local configuration,
+so repository-local configuration is disabled, and the explicit system/global settings make the
+isolation visible. The empty external-diff setting, cleared diff options, and explicit diff flags
+disable external diffs and text conversions. `GIT_ATTR_NOSYSTEM=1` disables system attributes, but
+it does not disable repository `.gitattributes` or `$GIT_DIR/info/attributes`. Snapshot staging
+therefore uses raw `controlled_git hash-object --no-filters -w -- "$path"` plus literal
+`controlled_git update-index --cacheinfo` instead of `controlled_git add --`: `--no-filters` prevents
+clean filters and attribute-selected working-tree conversions. Preserve the
+temporary index needed by the snapshot:
+
+```bash
+# Run this function from Bash, for example with `bash -c` or a Bash conductor.
+controlled_git() {
+  local -a git_environment=(
+    "PATH=$PATH"
+    "GIT_CONFIG=/dev/null"
+    "GIT_CONFIG_NOSYSTEM=1"
+    "GIT_CONFIG_GLOBAL=/dev/null"
+    "GIT_CONFIG_SYSTEM=/dev/null"
+    "GIT_ATTR_NOSYSTEM=1"
+    "GIT_EXTERNAL_DIFF="
+    "GIT_DIFF_OPTS="
+    "GIT_PAGER=cat"
+    "GIT_OPTIONAL_LOCKS=0"
+  )
+  for variable in GIT_DIR GIT_OBJECT_DIRECTORY GIT_WORK_TREE GIT_INDEX_FILE; do
+    if [ "${!variable+x}" = x ]; then
+      git_environment+=("$variable=${!variable}")
+    fi
+  done
+  env -i "${git_environment[@]}" git "$@"
+}
+```
 
 ### Temporary-index tree snapshots
 
@@ -102,11 +149,32 @@ tmp_index=$(mktemp "${TMPDIR:-/tmp}/agent-sdlc-review-index.XXXXXX")
 rm -f "$tmp_index"
 trap 'rm -f "$tmp_index" "$tmp_index.lock"' EXIT
 
+snapshot_task_tree_path() {
+  local path=$1
+  local mode blob
+  if [ -f "$path" ]; then
+    if ! IFS=' ' read -r mode _ < <(controlled_git ls-files --stage -- "$path"); then
+      if [ -x "$path" ]; then mode=100755; else mode=100644; fi
+    fi
+    [ -n "$mode" ] || return 1
+    blob=$(controlled_git hash-object --no-filters -w -- "$path") || return
+    controlled_git update-index --add --cacheinfo "$mode,$blob,$path"
+    return
+  fi
+  if controlled_git ls-files --error-unmatch -- "$path" >/dev/null 2>&1; then
+    controlled_git update-index --remove -- "$path"
+    return
+  fi
+  return 1
+}
+
 snapshot_task_tree() {
   [ "${#validated_task_paths[@]}" -gt 0 ] || return 1
-  GIT_INDEX_FILE="$tmp_index" git read-tree HEAD || return
-  GIT_INDEX_FILE="$tmp_index" git add -- "${validated_task_paths[@]}" || return
-  GIT_INDEX_FILE="$tmp_index" git write-tree
+  GIT_INDEX_FILE="$tmp_index" controlled_git read-tree HEAD || return
+  for path in "${validated_task_paths[@]}"; do
+    GIT_INDEX_FILE="$tmp_index" snapshot_task_tree_path "$path" || return
+  done
+  GIT_INDEX_FILE="$tmp_index" controlled_git write-tree
 }
 
 if ! initial_tree=$(snapshot_task_tree); then
@@ -114,7 +182,7 @@ if ! initial_tree=$(snapshot_task_tree); then
 fi
 require_tree_id "$initial_tree" || stop_and_ask "initial snapshot has no valid tree id"
 previous_tree=$initial_tree
-if ! repo_root=$(git rev-parse --show-toplevel); then
+if ! repo_root=$(controlled_git rev-parse --show-toplevel); then
   stop_and_ask "failed to resolve the repository root"
 fi
 [ -n "$repo_root" ] || stop_and_ask "repository root is empty"
@@ -199,9 +267,18 @@ PY
 }
 initial_tree_file=.agent-sdlc/briefs/<feature>/T-N-initial.tree
 initial_diff_file=.agent-sdlc/briefs/<feature>/T-N-review.diff
-write_artifact "$initial_tree_file" printf '%s\n' "$initial_tree"
-write_artifact "$initial_diff_file" git diff HEAD "$initial_tree" -- "${validated_task_paths[@]}"
-[ -s "$initial_diff_file" ] || stop_and_ask "empty initial-review diff"
+if ! write_artifact "$initial_tree_file" printf '%s\n' "$initial_tree"; then
+  stop_and_ask "failed initial tree artifact"
+  exit 1
+fi
+if ! write_artifact "$initial_diff_file" controlled_git diff --no-ext-diff --no-textconv HEAD "$initial_tree" -- "${validated_task_paths[@]}"; then
+  stop_and_ask "failed initial review diff artifact"
+  exit 1
+fi
+if [ ! -s "$initial_diff_file" ]; then
+  stop_and_ask "empty initial-review diff"
+  exit 1
+fi
 ```
 
 A tree id is valid only when it is non-empty and resolves to a tree object. A snapshot command failure
@@ -221,8 +298,14 @@ fi
 require_tree_id "$next_tree" || stop_and_ask "remediation snapshot has no valid tree id"
 round_tree_file=.agent-sdlc/briefs/<feature>/T-N-remediation-round-<N>.tree
 round_diff_file=.agent-sdlc/briefs/<feature>/T-N-remediation-round-<N>.diff
-write_artifact "$round_tree_file" printf '%s\n' "$next_tree"
-write_artifact "$round_diff_file" git diff "$previous_tree" "$next_tree" -- "${validated_task_paths[@]}"
+if ! write_artifact "$round_tree_file" printf '%s\n' "$next_tree"; then
+  stop_and_ask "failed remediation tree artifact"
+  exit 1
+fi
+if ! write_artifact "$round_diff_file" controlled_git diff --no-ext-diff --no-textconv "$previous_tree" "$next_tree" -- "${validated_task_paths[@]}"; then
+  stop_and_ask "failed remediation diff artifact"
+  exit 1
+fi
 ```
 
 The temporary-index procedure leaves the **real index, working tree, HEAD, and branch unchanged**.
@@ -232,9 +315,12 @@ and raise the task. The conductor does not read either diff: the reviewer is its
 conductor is its courier.
 
 Guard every artifact write, including findings, handoffs, reports, tree ids, and diffs, with the
-validated destination and `write_artifact`. A failed artifact or diff write fails closed, records
-the task failure, and stops reviewer dispatch before a stale, missing, or empty artifact can be
-handed to a reviewer. The initial diff's non-empty assertion is also guarded with `stop_and_ask`.
+validated destination and `write_artifact`. Every call is terminal on failure: if `write_artifact`
+returns nonzero, call `stop_and_ask`, exit the conductor, and do not run a size check, consume the
+artifact, hand it to a reviewer, or dispatch a reviewer. A failed artifact or diff write fails
+closed, records the task failure, and stops reviewer dispatch before a stale, missing, or empty
+artifact can be handed to a reviewer. The initial diff's non-empty assertion is also guarded with
+`stop_and_ask` and `exit 1`.
 
 Contract-test every failure branch above, including an unsafe artifact destination, a failed
 snapshot command, a missing tree id, an empty initial-review diff, and an unchanged claimed fix.
