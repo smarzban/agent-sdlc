@@ -703,6 +703,7 @@ function createSnapshotFixture() {
   mkdirSync(path.join(repo, 'tasks'), { recursive: true });
   writeFileSync(path.join(repo, 'tasks', 'deleted.txt'), 'tracked before\n');
   writeFileSync(path.join(repo, 'tasks', 'changed.txt'), 'before\n');
+  writeFileSync(path.join(repo, 'root-task.txt'), 'root before\n');
   writeFileSync(path.join(repo, 'unrelated.txt'), 'unrelated before\n');
   execFileSync('git', ['add', '.'], { cwd: repo });
   execFileSync('git', ['commit', '-q', '-m', 'fixture'], { cwd: repo });
@@ -711,6 +712,7 @@ function createSnapshotFixture() {
   execFileSync('git', ['add', '--', 'unrelated.txt'], { cwd: repo });
   unlinkSync(path.join(repo, 'tasks', 'deleted.txt'));
   writeFileSync(path.join(repo, 'tasks', 'changed.txt'), 'after\n');
+  writeFileSync(path.join(repo, 'root-task.txt'), 'root after\n');
   writeFileSync(path.join(repo, 'tasks', 'created.txt'), 'created\n');
   return repo;
 }
@@ -780,6 +782,55 @@ fi
     rmSync(indexDir, { recursive: true, force: true });
     rmSync(repo, { recursive: true, force: true });
     rmSync(outsideDirectory, { recursive: true, force: true });
+  }
+});
+
+test('build remediation snapshot and diff paths anchor at the repository root from a nested CWD', () => {
+  const source = documentedSnapshotSource();
+  const repo = createSnapshotFixture();
+  const nestedCwd = path.join(repo, 'nested', 'conductor');
+  const indexDir = mkdtempSync(path.join(tmpdir(), 'build-remediation-index-'));
+  const tempIndex = path.join(indexDir, 'index');
+  try {
+    mkdirSync(nestedCwd, { recursive: true });
+    const script = `${controlledGitSource()}\n${source}
+repo_root=$1
+nested_cwd=$2
+tmp_index=$3
+cd "$nested_cwd"
+exec 9<"$repo_root"
+repo_root_fd=9
+validated_task_paths=(root-task.txt)
+initial_tree=$(snapshot_task_tree) || exit 1
+printf 'INITIAL\\n'
+controlled_git diff --no-ext-diff --no-textconv HEAD "$initial_tree" -- "\${validated_task_paths[@]}"
+printf 'END_INITIAL\\n'
+printf 'root remediation\\n' >> "$repo_root/root-task.txt"
+next_tree=$(snapshot_task_tree) || exit 1
+printf 'REMEDIATION\\n'
+controlled_git diff --no-ext-diff --no-textconv "$initial_tree" "$next_tree" -- "\${validated_task_paths[@]}"
+printf 'END_REMEDIATION\\n'
+`;
+    const output = execFileSync(
+      'bash',
+      ['-c', script, 'nested-cwd-fixture', repo, nestedCwd, tempIndex],
+      { cwd: repo, encoding: 'utf8' },
+    );
+    const initialDiff = output.match(/INITIAL\n([\s\S]*?)\nEND_INITIAL\n/);
+    const remediationDiff = output.match(/REMEDIATION\n([\s\S]*?)\nEND_REMEDIATION\n/);
+    assert.ok(
+      initialDiff,
+      `the initial diff must be emitted from the nested CWD, output: ${JSON.stringify(output)}`,
+    );
+    assert.ok(
+      remediationDiff,
+      `the remediation diff must be emitted from the nested CWD, output: ${JSON.stringify(output)}`,
+    );
+    assert.match(initialDiff[1], /root-task\.txt/);
+    assert.match(remediationDiff[1], /root-task\.txt/);
+  } finally {
+    rmSync(indexDir, { recursive: true, force: true });
+    rmSync(repo, { recursive: true, force: true });
   }
 });
 

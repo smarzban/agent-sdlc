@@ -140,18 +140,27 @@ controlled_git() {
       git_environment+=("$variable=${!variable}")
     fi
   done
-  env -i "${git_environment[@]}" git "$@"
+  if [ -n "${repo_root:-}" ]; then
+    env -i "${git_environment[@]}" git -C "$repo_root" "$@"
+  else
+    env -i "${git_environment[@]}" git "$@"
+  fi
 }
 ```
 
 ### Temporary-index tree snapshots
 
-A snapshot uses a **temporary index**, not the real index. It loads `HEAD` into that private index,
+A snapshot uses a **temporary index**, not the real index. Once `repo_root` is resolved, every
+controlled Git invocation runs with `git -C "$repo_root"`, so literal pathspecs remain rooted at the
+repository even when the conductor starts in a nested CWD. It loads `HEAD` into that private index,
 stages only the exact validated task paths there, including removals for deleted tracked task files,
 and writes an immutable tree object. Create the temporary index once for the task, remove the empty
 file before Git initializes it, and clean it up on exit:
 
 ```
+if ! repo_root=$(pwd -P); then
+  stop_and_ask "failed to resolve the starting directory"
+fi
 if ! repo_root=$(controlled_git rev-parse --show-toplevel); then
   stop_and_ask "failed to resolve the repository root"
 fi
