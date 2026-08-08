@@ -429,17 +429,38 @@ needed by the helper and its contract tests.
 
 *Advances:* AC-1, AC-5, AC-7. *Component:* Build remediation protocol. *Deps:* T-5.
 
+<!-- source: mid-build amendment (repair final merge-gate blockers) · ingested 2026-08-08 -->
+
+**T-7: Make snapshot task paths no-follow and test the documented procedure**
+
+Modify `checker/build-remediation-contract.test.mjs` and
+`skills/build/reference/subagent-loop.md`.
+
+Write these failing tests first:
+
+- `build remediation snapshot rejects symlinked task paths outside the repository`
+- `build remediation snapshot fixture executes the documented snapshot procedure`
+
+Then reject task files that are symlinks before the raw-blob snapshot helper can read them, preserving
+normal changed, created, and deleted regular task files. The rejection must be fail-closed before a
+snapshot tree or review artifact is produced. Replace the fixture's hand-written older `git add`
+snapshot with execution of the authoritative documented snapshot procedure, or extract a single
+explicit executable helper from that procedure, so tests exercise the controlled Git and raw-blob
+path actually handed to conductors.
+
+*Advances:* AC-1, AC-5, AC-7. *Component:* Build remediation protocol. *Deps:* T-6.
+
 ### Task-to-criterion coverage map
 
 | Criterion | Advanced by |
 | --- | --- |
-| AC-1 | T-1, T-3, T-4, T-5, T-6 |
+| AC-1 | T-1, T-3, T-4, T-5, T-6, T-7 |
 | AC-2 | T-1, T-5 |
 | AC-3 | T-1, T-5 |
 | AC-4 | T-1 |
-| AC-5 | T-1, T-3, T-4, T-5, T-6 |
+| AC-5 | T-1, T-3, T-4, T-5, T-6, T-7 |
 | AC-6 | T-1, T-5 |
-| AC-7 | T-1, T-3, T-4, T-5, T-6 |
+| AC-7 | T-1, T-3, T-4, T-5, T-6, T-7 |
 | AC-8 | T-1, T-5 |
 | AC-9 | T-2 |
 | AC-10 | T-2 |

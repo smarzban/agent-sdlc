@@ -37,6 +37,7 @@ exit 0
 | T-4 | done | `748bbc6` | AC-1, AC-5, AC-7 | successor to blocked T-3; initial review: 0 Critical, 2 Important, 0 Minor; finding-scoped remediation passed: 0 Critical, 0 Important, 0 Minor |
 | T-5 | done | `bbff089` | AC-1, AC-2, AC-3, AC-5, AC-6, AC-7, AC-8 | merge-gate corrective task; initial review: 0 Critical, 0 Important, 2 Minor; spec-met |
 | T-6 | done | `4af070e` | AC-1, AC-5, AC-7 | merge-gate corrective task; initial review: 0 Critical, 3 Important, 0 Minor; finding-scoped remediation passed: 0 Critical, 0 Important, 0 Minor |
+| T-7 | done | `9486712` | AC-1, AC-5, AC-7 | merge-gate corrective task; initial review: 0 Critical, 1 Important, 0 Minor; finding-scoped remediation passed: 0 Critical, 0 Important, 0 Minor |
 
 ## Green-bar evidence
 
@@ -139,6 +140,24 @@ exit 0
 
 Verification form: exact commands above, each exit code read directly from captured output;
 `node:test` machine summary reports 311 tests, 311 pass, 0 fail.
+
+### T-7 (@ `9486712`)
+
+```text
+$ node --check checker/sdlc-check.mjs
+exit 0
+$ node --test checker/*.test.mjs
+✔ build remediation snapshot rejects symlinked task paths outside the repository
+✔ build remediation snapshot rejects symlinked ancestor directories outside the repository
+✔ build remediation snapshot fixture executes the documented snapshot procedure
+ℹ tests 313
+ℹ pass 313
+ℹ fail 0
+exit 0
+```
+
+Verification form: exact commands above, each exit code read directly from captured output;
+`node:test` machine summary reports 313 tests, 313 pass, 0 fail.
 
 ## Deviations
 

@@ -8,8 +8,8 @@ Fresh ship verification:
 $ node --check checker/sdlc-check.mjs
 exit 0
 $ node --test checker/*.test.mjs
-ℹ tests 311
-ℹ pass 311
+ℹ tests 313
+ℹ pass 313
 ℹ fail 0
 exit 0
 ```
@@ -18,11 +18,11 @@ exit 0
 
 | Criterion | Type | Proof |
 | --- | --- | --- |
-| AC-1 | test-backed | build remediation contract keeps the initial review complete, build remediation contract confines snapshot paths and preserves deleted task files |
+| AC-1 | test-backed | build remediation contract keeps the initial review complete, build remediation snapshot rejects symlinked task paths outside the repository |
 | AC-2 | test-backed | build remediation contract resumes the original agents for two finding-scoped rounds, build remediation contract tests the authoritative remediation dispatch protocol |
 | AC-3 | test-backed | build remediation contract resumes the original agents for two finding-scoped rounds, build remediation contract tests the authoritative remediation dispatch protocol |
 | AC-4 | test-backed | build remediation contract resumes the original agents for two finding-scoped rounds |
-| AC-5 | test-backed | build remediation contract refreshes task paths and initializes remediation trees, build remediation artifact helper rejects unsafe destinations and existing leaf types, build remediation contract isolates Git snapshot and diff commands from repository execution hooks |
+| AC-5 | test-backed | build remediation contract refreshes task paths and initializes remediation trees, build remediation contract isolates Git snapshot and diff commands from repository execution hooks, build remediation snapshot fixture executes the documented snapshot procedure |
 | AC-6 | test-backed | build remediation contract uses a fresh final round and then blocks, build remediation contract tests the authoritative remediation dispatch protocol |
 | AC-7 | test-backed | build remediation contract uses a fresh final round and then blocks, build remediation contract tests the authoritative remediation dispatch protocol, build remediation artifact helper rejects special leaves without timing out |
 | AC-8 | test-backed | build remediation contract uses a fresh final round and then blocks, build remediation contract tests the authoritative remediation dispatch protocol |
