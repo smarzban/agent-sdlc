@@ -50,9 +50,16 @@ Validate the raw path before any Git call: reject traversal, dot paths, absolute
 and Git magic pathspecs (including `:(...)`, `:(glob)`, and `:(exclude)`). Accept a regular
 file or a deleted tracked task file, never a directory or a path that only becomes safe after
 normalization. Keep only the validated paths in `validated_task_paths`, and pass each as a literal
-argument to the controlled Git plumbing below. Do not use `controlled_git add --` on the real
-worktree: repository `.gitattributes` and `$GIT_DIR/info/attributes` can select conversions even
-when system attributes are disabled. Preserve deleted tracked task files in temporary-index
+argument to the controlled Git plumbing below. Validation is not a use-time guarantee:
+`snapshot_task_tree_path` is the final no-follow check, rejects a symlink or special file, opens the
+current regular file with `O_NOFOLLOW`, and holds that descriptor while copying its bytes to a
+private source. If a path changes between validation and snapshotting, the helper fails closed
+rather than following it. Do not use `controlled_git add --` on the real worktree: repository
+`.gitattributes` and `$GIT_DIR/info/attributes` can select conversions even when system attributes
+are disabled. Snapshot staging therefore hashes the held, raw private source with
+`controlled_git hash-object --no-filters -w --` plus literal `controlled_git update-index
+--cacheinfo` instead of `controlled_git add --`: `--no-filters` prevents clean filters and
+attribute-selected working-tree conversions. Preserve deleted tracked task files in temporary-index
 snapshots and stage their removals there. A deleted tracked task file remains in that set instead
 of dropping it from the review.
 
@@ -145,27 +152,127 @@ and writes an immutable tree object. Create the temporary index once for the tas
 file before Git initializes it, and clean it up on exit:
 
 ```
+if ! repo_root=$(controlled_git rev-parse --show-toplevel); then
+  stop_and_ask "failed to resolve the repository root"
+fi
+[ -n "$repo_root" ] || stop_and_ask "repository root is empty"
+exec 9<"$repo_root" || stop_and_ask "failed to hold the repository root"
+repo_root_fd=9
+
 tmp_index=$(mktemp "${TMPDIR:-/tmp}/agent-sdlc-review-index.XXXXXX")
 rm -f "$tmp_index"
 trap 'rm -f "$tmp_index" "$tmp_index.lock"' EXIT
 
 snapshot_task_tree_path() {
   local path=$1
-  local mode blob
-  if [ -f "$path" ]; then
-    if ! IFS=' ' read -r mode _ < <(controlled_git ls-files --stage -- "$path"); then
-      if [ -x "$path" ]; then mode=100755; else mode=100644; fi
-    fi
-    [ -n "$mode" ] || return 1
-    blob=$(controlled_git hash-object --no-filters -w -- "$path") || return
-    controlled_git update-index --add --cacheinfo "$mode,$blob,$path"
-    return
+  local mode blob safe_source state
+  safe_source=$(mktemp "${TMPDIR:-/tmp}/agent-sdlc-snapshot-source.XXXXXX") || return 1
+  rm -f "$safe_source"
+  if ! state=$(python3 - "$repo_root_fd" "$path" "$safe_source" <<'PY'
+import os
+import stat
+import sys
+
+
+root_fd_number, source_path, destination = sys.argv[1:]
+root_fd = int(root_fd_number)
+parts = source_path.split('/')
+if not parts or any(part in ('', '.', '..') for part in parts):
+    raise SystemExit('unsafe task path')
+parent_fd = os.dup(root_fd)
+source_fd = None
+destination_fd = None
+try:
+    for component in parts[:-1]:
+        try:
+            next_fd = os.open(
+                component,
+                os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+                dir_fd=parent_fd,
+            )
+        except FileNotFoundError:
+            print('missing')
+            raise SystemExit(0)
+        except OSError as error:
+            raise SystemExit(f'unsafe task path: {error}')
+        os.close(parent_fd)
+        parent_fd = next_fd
+
+    leaf = parts[-1]
+    try:
+        initial = os.lstat(leaf, dir_fd=parent_fd)
+    except FileNotFoundError:
+        print('missing')
+        raise SystemExit(0)
+    if stat.S_ISLNK(initial.st_mode) or not stat.S_ISREG(initial.st_mode):
+        raise SystemExit('unsafe task path')
+    try:
+        source_fd = os.open(
+            leaf,
+            os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW,
+            dir_fd=parent_fd,
+        )
+    except OSError as error:
+        raise SystemExit(f'unsafe task path: {error}')
+    source_stat = os.fstat(source_fd)
+    if not stat.S_ISREG(source_stat.st_mode):
+        raise SystemExit('task path changed to a non-regular file')
+    destination_fd = os.open(
+        destination,
+        os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+        0o600,
+    )
+    while True:
+        chunk = os.read(source_fd, 1024 * 1024)
+        if not chunk:
+            break
+        remaining = memoryview(chunk)
+        while remaining:
+            written = os.write(destination_fd, remaining)
+            if written <= 0:
+                raise OSError('snapshot copy made no progress')
+            remaining = remaining[written:]
+    print('100755' if source_stat.st_mode & 0o111 else '100644')
+finally:
+    if destination_fd is not None:
+        os.close(destination_fd)
+    if source_fd is not None:
+        os.close(source_fd)
+    os.close(parent_fd)
+PY
+  ); then
+    rm -f "$safe_source"
+    return 1
   fi
-  if controlled_git ls-files --error-unmatch -- "$path" >/dev/null 2>&1; then
-    controlled_git update-index --remove -- "$path"
-    return
-  fi
-  return 1
+  case "$state" in
+    missing)
+      rm -f "$safe_source"
+      if controlled_git ls-files --error-unmatch -- "$path" >/dev/null 2>&1; then
+        controlled_git update-index --remove -- "$path"
+        return
+      fi
+      return 1
+      ;;
+    100644|100755)
+      if IFS=' ' read -r mode _ < <(controlled_git ls-files --stage -- "$path"); then
+        :
+      else
+        mode=$state
+      fi
+      [ -n "$mode" ] || { rm -f "$safe_source"; return 1; }
+      blob=$(controlled_git hash-object --no-filters -w -- "$safe_source") || {
+        rm -f "$safe_source"
+        return 1
+      }
+      rm -f "$safe_source"
+      controlled_git update-index --add --cacheinfo "$mode,$blob,$path"
+      return
+      ;;
+    *)
+      rm -f "$safe_source"
+      return 1
+      ;;
+esac
 }
 
 snapshot_task_tree() {
@@ -182,10 +289,6 @@ if ! initial_tree=$(snapshot_task_tree); then
 fi
 require_tree_id "$initial_tree" || stop_and_ask "initial snapshot has no valid tree id"
 previous_tree=$initial_tree
-if ! repo_root=$(controlled_git rev-parse --show-toplevel); then
-  stop_and_ask "failed to resolve the repository root"
-fi
-[ -n "$repo_root" ] || stop_and_ask "repository root is empty"
 write_artifact() {
   local destination=$1
   shift

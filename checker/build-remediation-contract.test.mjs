@@ -638,6 +638,16 @@ function git(repo, args) {
   return execFileSync('git', args, { cwd: repo, encoding: 'utf8' }).trim();
 }
 
+function documentedSnapshotSource() {
+  const pathHelper = loopReference.match(
+    /(snapshot_task_tree_path\(\) \{[\s\S]*?\n\})\n\n(snapshot_task_tree\(\) \{)/,
+  );
+  assert.ok(pathHelper, 'the documented snapshot path helper must be executable Bash');
+  const treeHelper = loopReference.match(/(snapshot_task_tree\(\) \{[\s\S]*?\n\})/);
+  assert.ok(treeHelper, 'the documented snapshot tree helper must be executable Bash');
+  return `${pathHelper[1]}\n${treeHelper[1]}`;
+}
+
 function createSnapshotFixture() {
   const repo = mkdtempSync(path.join(tmpdir(), 'build-remediation-snapshot-'));
   execFileSync('git', ['init', '-q', '-b', 'main'], { cwd: repo });
@@ -658,7 +668,75 @@ function createSnapshotFixture() {
   return repo;
 }
 
-test('build remediation snapshot fixture preserves pre-existing staged changes', () => {
+test('build remediation snapshot rejects symlinked task paths outside the repository', () => {
+  const source = documentedSnapshotSource();
+  const repo = createSnapshotFixture();
+  const outsideDirectory = mkdtempSync(path.join(tmpdir(), 'build-remediation-symlink-'));
+  const indexDir = mkdtempSync(path.join(tmpdir(), 'build-remediation-index-'));
+  const tempIndex = path.join(indexDir, 'index');
+  const symlinkPath = path.join(repo, 'tasks', 'symlinked.txt');
+  try {
+    writeFileSync(path.join(outsideDirectory, 'outside.txt'), 'outside bytes\\n');
+    symlinkSync(path.join(outsideDirectory, 'outside.txt'), symlinkPath);
+    const script = `${controlledGitSource()}\n${source}
+repo_root=$(pwd)
+exec 9<"$repo_root"
+repo_root_fd=9
+tmp_index="$1"
+validated_task_paths=(tasks/symlinked.txt)
+if snapshot_task_tree >/dev/null 2>&1; then
+  printf 'accepted\\n'
+else
+  printf 'rejected\\n'
+fi
+`;
+    const result = execFileSync('bash', ['-c', script, 'symlink-fixture', tempIndex], {
+      cwd: repo,
+      encoding: 'utf8',
+    });
+    assert.equal(result, 'rejected\n');
+  } finally {
+    rmSync(indexDir, { recursive: true, force: true });
+    rmSync(repo, { recursive: true, force: true });
+    rmSync(outsideDirectory, { recursive: true, force: true });
+  }
+});
+
+test('build remediation snapshot rejects symlinked ancestor directories outside the repository', () => {
+  const source = documentedSnapshotSource();
+  const repo = createSnapshotFixture();
+  const outsideDirectory = mkdtempSync(path.join(tmpdir(), 'build-remediation-symlink-'));
+  const indexDir = mkdtempSync(path.join(tmpdir(), 'build-remediation-index-'));
+  const tempIndex = path.join(indexDir, 'index');
+  const linkedDirectory = path.join(repo, 'tasks', 'linked-directory');
+  try {
+    writeFileSync(path.join(outsideDirectory, 'outside.txt'), 'outside bytes\\n');
+    symlinkSync(outsideDirectory, linkedDirectory);
+    const script = `${controlledGitSource()}\n${source}
+repo_root=$(pwd)
+exec 9<"$repo_root"
+repo_root_fd=9
+tmp_index="$1"
+validated_task_paths=(tasks/linked-directory/outside.txt)
+if snapshot_task_tree >/dev/null 2>&1; then
+  printf 'accepted\\n'
+else
+  printf 'rejected\\n'
+fi
+`;
+    const result = execFileSync('bash', ['-c', script, 'symlink-fixture', tempIndex], {
+      cwd: repo,
+      encoding: 'utf8',
+    });
+    assert.equal(result, 'rejected\n');
+  } finally {
+    rmSync(indexDir, { recursive: true, force: true });
+    rmSync(repo, { recursive: true, force: true });
+    rmSync(outsideDirectory, { recursive: true, force: true });
+  }
+});
+
+test('build remediation snapshot fixture executes the documented snapshot procedure', () => {
   assert.match(loopReference, /throwaway-repository fixture/i);
   assert.match(loopReference, /real index, HEAD, and worktree remain unchanged/i);
 
@@ -673,25 +751,22 @@ test('build remediation snapshot fixture preserves pre-existing staged changes',
       status: git(repo, ['status', '--porcelain']),
       worktree: git(repo, ['diff', '--binary']),
     };
-    execFileSync('git', ['read-tree', 'HEAD'], {
-      cwd: repo,
-      env: { ...process.env, GIT_INDEX_FILE: tempIndex },
-    });
-    execFileSync(
-      'git',
-      ['add', '--', 'tasks/deleted.txt', 'tasks/changed.txt', 'tasks/created.txt'],
-      { cwd: repo, env: { ...process.env, GIT_INDEX_FILE: tempIndex } },
-    );
-    const snapshot = execFileSync('git', ['write-tree'], {
+    const script = `${controlledGitSource()}\n${documentedSnapshotSource()}
+repo_root=$(pwd)
+exec 9<"$repo_root"
+repo_root_fd=9
+tmp_index="$1"
+validated_task_paths=(tasks/deleted.txt tasks/changed.txt tasks/created.txt)
+snapshot=$(snapshot_task_tree) || exit 1
+printf 'TREE=%s\\n' "$snapshot"
+controlled_git diff --no-ext-diff --no-textconv HEAD "$snapshot" -- "\${validated_task_paths[@]}"
+`;
+    const output = execFileSync('bash', ['-c', script, 'snapshot-fixture', tempIndex], {
       cwd: repo,
       encoding: 'utf8',
-      env: { ...process.env, GIT_INDEX_FILE: tempIndex },
-    }).trim();
-    const taskDiff = execFileSync(
-      'git',
-      ['diff', 'HEAD', snapshot, '--', 'tasks/deleted.txt', 'tasks/changed.txt', 'tasks/created.txt'],
-      { cwd: repo, encoding: 'utf8' },
-    );
+    });
+    assert.match(output, /^TREE=[0-9a-f]{40}\n/);
+    const taskDiff = output.slice(output.indexOf('\n') + 1);
     assert.match(taskDiff, /deleted file mode/);
     assert.match(taskDiff, /tasks\/created\.txt/);
     assert.doesNotMatch(taskDiff, /unrelated\.txt/);
