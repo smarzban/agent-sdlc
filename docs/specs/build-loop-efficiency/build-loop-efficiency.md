@@ -256,11 +256,13 @@ None.
 
 ### Existing-stack decision
 
-**No new products: reuses the declared stack.** The feature changes Markdown instruction contracts
-and uses the repository's existing zero-dependency Node test harness plus its existing Git CLI. No
-dependency or manifest changes are permitted. The project-level stack remains Node 22 or newer plus
-`node:test`, declared in `docs/specs/overview.md` and checked there on 2026-07-02. The snapshot
-procedure uses Git 2.50.1 (Apple Git-155), checked 2026-08-07 against the official
+**Declared helper runtime: reuses the declared stack plus Python 3.** The feature changes Markdown
+instruction contracts and uses the repository's existing zero-dependency Node test harness, its
+existing Git CLI, and the Python 3 standard library for the descriptor-held safe-artifact helper.
+No package or manifest changes are permitted. The project-level stack remains Node 22 or newer plus
+`node:test`, declared in `docs/specs/overview.md` and checked there on 2026-07-02. `python3` is a
+required build-host command when the conductor writes remediation artifacts. The snapshot procedure
+uses Git 2.50.1 (Apple Git-155), checked 2026-08-07 against the official
 [`git-read-tree`](https://git-scm.com/docs/git-read-tree),
 [`git-write-tree`](https://git-scm.com/docs/git-write-tree), and
 [`git-diff`](https://git-scm.com/docs/git-diff) documentation.
@@ -276,9 +278,9 @@ node --test checker/*.test.mjs
 
 | Component kind | Product | Version | Checked |
 | --- | --- | --- | --- |
-| Build remediation protocol | Existing Agent SDLC Markdown skill tree plus Git CLI | 0.18.0; Git 2.50.1 (Apple Git-155) | 2026-08-07 |
+| Build remediation protocol | Existing Agent SDLC Markdown skill tree plus Git CLI and Python 3 standard library | 0.18.0; Git 2.50.1 (Apple Git-155); Python 3 | 2026-08-08 |
 | Task-sizing policy | Existing Agent SDLC Markdown skill tree | 0.18.0 | 2026-08-07 |
-| Instruction-contract tests | Existing Node test runner | Node 22 or newer | 2026-08-07 |
+| Instruction-contract tests | Existing Node test runner plus Python 3 helper fixture | Node 22 or newer; Python 3 | 2026-08-08 |
 
 ### Load-bearing claims
 
@@ -380,18 +382,42 @@ T-3 partial contract and fixture coverage in this one atomic successor task.
 
 *Advances:* AC-1, AC-5, AC-7. *Component:* Build remediation protocol. *Deps:* T-1, T-2.
 
+<!-- source: mid-build amendment (repair merge-gate blockers) · ingested 2026-08-08 -->
+
+**T-5: Close remediation-protocol merge-gate blockers**
+
+Modify `checker/build-remediation-contract.test.mjs`,
+`skills/build/reference/subagent-loop.md`, `docs/development.md`, and `CONTRIBUTING.md`.
+
+Write these failing tests first:
+
+- `build remediation contract tests the authoritative remediation dispatch protocol`
+- `build remediation artifact helper rejects unsafe destinations and existing leaf types`
+- `build remediation contract declares the artifact helper runtime`
+
+Then add section-scoped assertions for the authoritative remediation dispatch procedure, covering
+continued implementer and reviewer sessions in rounds one and two, announced fallback, the fresh
+round-three pair, and the no-fourth-dispatch terminal state. Execute the artifact helper against
+unsafe task paths and leaf/ancestor symlinks, then prove it fails closed without outside writes.
+Change the helper to reject all pre-existing artifact leaves before opening them, so hard links and
+special files cannot be truncated or block the conductor. Declare the Python 3 standard-library
+helper requirement in contributor and development prerequisites, while keeping package and manifest
+dependencies at zero.
+
+*Advances:* AC-1, AC-2, AC-3, AC-5, AC-6, AC-7, AC-8. *Component:* Build remediation protocol. *Deps:* T-4.
+
 ### Task-to-criterion coverage map
 
 | Criterion | Advanced by |
 | --- | --- |
-| AC-1 | T-1, T-3, T-4 |
-| AC-2 | T-1 |
-| AC-3 | T-1 |
+| AC-1 | T-1, T-3, T-4, T-5 |
+| AC-2 | T-1, T-5 |
+| AC-3 | T-1, T-5 |
 | AC-4 | T-1 |
-| AC-5 | T-1, T-3, T-4 |
-| AC-6 | T-1 |
-| AC-7 | T-1, T-3, T-4 |
-| AC-8 | T-1 |
+| AC-5 | T-1, T-3, T-4, T-5 |
+| AC-6 | T-1, T-5 |
+| AC-7 | T-1, T-3, T-4, T-5 |
+| AC-8 | T-1, T-5 |
 | AC-9 | T-2 |
 | AC-10 | T-2 |
 

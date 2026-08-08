@@ -35,6 +35,7 @@ exit 0
 | T-2 | done | `ee0c5d5` | AC-9, AC-10 | initial review: 0 Critical, 2 Important, 1 Minor; finding-scoped remediation passed: 0 Critical, 0 Important, 0 Minor |
 | T-3 | superseded | — | AC-1, AC-5, AC-7 | terminal after three remediation dispatches, then superseded by T-4; no T-3 commit |
 | T-4 | done | `748bbc6` | AC-1, AC-5, AC-7 | successor to blocked T-3; initial review: 0 Critical, 2 Important, 0 Minor; finding-scoped remediation passed: 0 Critical, 0 Important, 0 Minor |
+| T-5 | done | `bbff089` | AC-1, AC-2, AC-3, AC-5, AC-6, AC-7, AC-8 | merge-gate corrective task; initial review: 0 Critical, 0 Important, 2 Minor; spec-met |
 
 ## Green-bar evidence
 
@@ -102,8 +103,31 @@ exit 0
 Verification form: exact commands above, each exit code read directly from captured output;
 `node:test` machine summary reports 303 tests, 303 pass, 0 fail.
 
+### T-5 (@ `bbff089`)
+
+```text
+$ node --check checker/sdlc-check.mjs
+exit 0
+$ node --test checker/*.test.mjs
+✔ build remediation contract tests the authoritative remediation dispatch protocol
+✔ build remediation artifact helper rejects unsafe destinations and existing leaf types
+✔ build remediation contract declares the artifact helper runtime
+ℹ tests 306
+ℹ pass 306
+ℹ fail 0
+exit 0
+```
+
+Verification form: exact commands above, each exit code read directly from captured output;
+`node:test` machine summary reports 306 tests, 306 pass, 0 fail.
+
 ## Deviations
 
+- **T-5 implementer recovery:** the initial `implementer` session exhausted its turn limit after
+  changing planned files but before writing its required report. The conductor captured the partial
+  work and dispatched the one permitted fresh retry with the same brief. The retry inspected,
+  completed, and reported the work; workspace isolation remained intact. The task then received its
+  ordinary independent review and staged-snapshot green bar.
 - **T-3 remediation round 1 implementer fallback:** the original implementer was dispatched through
 a foreground harness call that returned no resumable session id. The conductor recorded the fallback
 before dispatching the pinned `implementer` replacement. The replacement receives the original
@@ -159,6 +183,7 @@ $ node checker/sdlc-check.mjs docs/specs/build-loop-efficiency/build-loop-effici
 exit 0
 ```
 
-The checker reported all checks passed with 0 findings and 0 notes. T-1, T-2, and T-4 have
+The checker reported all checks passed with 0 findings and 0 notes. T-1, T-2, T-4, and T-5 have
 reachable task-scoped commits and conductor-captured evidence. T-3 is terminally blocked and
-superseded by T-4. Branch ready for the user's requested next verification direction.
+superseded by T-4. The build-complete green bar reported 306 tests, 306 pass, and 0 fail. Branch
+ready for ship verification and the requested corrective merge gate.
