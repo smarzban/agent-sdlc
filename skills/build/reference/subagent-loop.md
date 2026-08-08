@@ -36,20 +36,68 @@ to paths that exist and are not ignored. A plan-named file that was not created 
 finding, not a reason to omit the whole hand-off. Never use a repo-wide pathspec: unrelated staged
 or untracked work must not enter the review.
 
+### Path and artifact validation
+
+Validate task-derived paths as literal repository-relative files under approved task roots. The
+resulting validated task paths are literal repository-relative files. Approved task roots derive
+exclusively from the plan's exact named paths: use the containing directory of each plan-named file
+(or the repository root for a plan-named root file). The implementer's status or scoped name-only
+status only discovers files already beneath those roots; it never adds an approved root. Validate
+the raw path before any Git call: reject traversal, dot paths, absolute paths, directory paths, and
+Git magic pathspecs (including `:(...)`, `:(glob)`, and `:(exclude)`). Accept a regular file or a
+deleted tracked task file, never a directory or a path that only becomes safe after normalization.
+Keep only the validated paths in `validated_task_paths`, then pass them as literal arguments with
+`git add -- "${validated_task_paths[@]}"`. Preserve deleted tracked task files in temporary-index
+snapshots and stage their removals there. A deleted tracked task file remains in that set instead
+of dropping it from the review.
+
+Every tree, diff, findings, handoff, report, and other review artifact destination is validated as a
+literal repository-relative path below `.agent-sdlc/briefs/<feature>/` before it is opened. An
+existing destination must be a regular file. A new artifact leaf is safe only when it does not exist
+yet, is validated lexically, and every existing ancestor is a non-symlink directory under the
+approved artifact root. This creates the leaf atomically with no-follow and exclusive-create semantics,
+without following a symlink. Create the leaf without following a symlink. Validation and opening
+must be one helper operation, not validation followed
+by opening the destination pathname. The helper starts from a trusted repository-root directory
+handle. It opens and holds trusted artifact-root ancestors as directory handles with
+`O_DIRECTORY|O_NOFOLLOW`, and resolves every child component relative to the held parent handle,
+without following links. It keeps
+all ancestor handles open until the write finishes. It opens an existing final leaf relative to the
+held parent directory handle with `O_WRONLY|O_NOFOLLOW`, verifies the held descriptor is a regular
+file, then truncates that descriptor. It creates a new final leaf relative to the held parent with
+`O_CREAT|O_EXCL|O_NOFOLLOW`. Never use a path-based Node open after validation: Node's `openSync`
+receives a pathname, not a held parent directory handle. If the helper, `dir_fd`/`openat` operation,
+trusted root handle, or no-follow guarantee is unavailable, reject an unsafe artifact destination,
+fail closed, record the task failure, and stop reviewer dispatch. Do not let a destination, pathspec,
+symlink, or parent directory escape the approved artifact root.
+
+The smallest concrete helper procedure is a POSIX directory-handle helper invoked from `write_artifact`.
+It rejects absolute paths, empty components, `.`, `..`, Git magic pathspecs, and destinations outside
+`.agent-sdlc/briefs/<feature>/`. Starting at the trusted repository-root handle, it runs
+`openat(parent_fd, component, O_RDONLY|O_DIRECTORY|O_NOFOLLOW)` for every root and child ancestor,
+retaining each returned descriptor. It then runs `openat(held_parent_fd, leaf, O_WRONLY|O_NOFOLLOW)`
+for an existing leaf, checks `fstat(fd)` for a regular file, and uses `ftruncate(fd, 0)` before copying
+the staged bytes to that descriptor. For a missing leaf it instead runs
+`openat(held_parent_fd, leaf, O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW, 0o600)`. It closes the leaf and
+all retained ancestor descriptors in `finally`. A helper without directory-relative open and held
+ancestor descriptors cannot provide this guarantee and must return failure before reviewer dispatch.
+
 ### Initial full-review snapshot
 
 The initial review receives the complete task-scoped diff, never a partial or finding-scoped diff,
 and completes before remediation can begin. Create the initial immutable tree snapshot after the
-implementer reports and before initial-review dispatch. Write its tree id to `T-N-initial.tree`, then create
-`T-N-review.diff` with `git diff HEAD "$initial_tree" -- "${task_paths[@]}"`. Assert that this
-initial diff is non-empty before dispatching the reviewer. On empty, reconcile the exact task paths
-with the plan and name-only status output, then regenerate; do not send a blank review.
+implementer reports and before initial-review dispatch. Validate the task paths and every artifact
+destination first. Write its tree id to `T-N-initial.tree`, then create `T-N-review.diff` with
+`git diff HEAD "$initial_tree" -- "${validated_task_paths[@]}"`. Assert that the initial-review diff
+is non-empty before dispatching the reviewer. An empty initial-review diff is a failure: stop
+reviewer dispatch and raise the task, do not send a blank review.
 
 ### Temporary-index tree snapshots
 
 A snapshot uses a **temporary index**, not the real index. It loads `HEAD` into that private index,
-stages only the exact task paths there, and writes an immutable tree object. Create the temporary
-index once for the task, remove the empty file before Git initializes it, and clean it up on exit:
+stages only the exact validated task paths there, including removals for deleted tracked task files,
+and writes an immutable tree object. Create the temporary index once for the task, remove the empty
+file before Git initializes it, and clean it up on exit:
 
 ```
 tmp_index=$(mktemp "${TMPDIR:-/tmp}/agent-sdlc-review-index.XXXXXX")
@@ -57,28 +105,150 @@ rm -f "$tmp_index"
 trap 'rm -f "$tmp_index" "$tmp_index.lock"' EXIT
 
 snapshot_task_tree() {
+  [ "${#validated_task_paths[@]}" -gt 0 ] || return 1
   GIT_INDEX_FILE="$tmp_index" git read-tree HEAD || return
-  GIT_INDEX_FILE="$tmp_index" git add -- "$@" || return
+  GIT_INDEX_FILE="$tmp_index" git add -- "${validated_task_paths[@]}" || return
   GIT_INDEX_FILE="$tmp_index" git write-tree
 }
 
-initial_tree=$(snapshot_task_tree "${task_paths[@]}") || stop_and_ask "initial review snapshot failed"
-printf '%s\n' "$initial_tree" > .agent-sdlc/briefs/<feature>/T-N-initial.tree
-git diff HEAD "$initial_tree" -- "${task_paths[@]}" > .agent-sdlc/briefs/<feature>/T-N-review.diff
+if ! initial_tree=$(snapshot_task_tree); then
+  stop_and_ask "initial review snapshot failed"
+fi
+require_tree_id "$initial_tree" || stop_and_ask "initial snapshot has no valid tree id"
+previous_tree=$initial_tree
+if ! repo_root=$(git rev-parse --show-toplevel); then
+  stop_and_ask "failed to resolve the repository root"
+fi
+[ -n "$repo_root" ] || stop_and_ask "repository root is empty"
+write_artifact() {
+  local destination=$1
+  shift
+  local staged_output
+  staged_output=$(mktemp "${TMPDIR:-/tmp}/agent-sdlc-artifact.XXXXXX") || {
+    stop_and_ask "failed artifact staging: $destination"
+    return 1
+  }
+  if ! "$@" > "$staged_output"; then
+    rm -f "$staged_output"
+    stop_and_ask "failed artifact or diff write: $destination"
+    return 1
+  fi
+  if ! python3 - "$repo_root" "$destination" "$staged_output" <<'PY'
+import os
+import stat
+import sys
+
+
+repo_root, destination, staged_output = sys.argv[1:]
+parts = destination.split('/')
+if (
+    not destination.startswith('.agent-sdlc/briefs/')
+    or len(parts) != 4
+    or any(part in ('', '.', '..') for part in parts)
+    or any(part.startswith(':(') for part in parts)
+):
+    raise SystemExit('unsafe artifact destination')
+
+ancestor_fds = []
+leaf_fd = None
+try:
+    current_fd = os.open(repo_root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    ancestor_fds.append(current_fd)
+    for component in parts[:-1]:
+        current_fd = os.open(
+            component,
+            os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+            dir_fd=current_fd,
+        )
+        ancestor_fds.append(current_fd)
+    try:
+        leaf_fd = os.open(
+            parts[-1],
+            os.O_WRONLY | os.O_NOFOLLOW,
+            dir_fd=current_fd,
+        )
+        if not stat.S_ISREG(os.fstat(leaf_fd).st_mode):
+            raise SystemExit('artifact destination is not a regular file')
+        os.ftruncate(leaf_fd, 0)
+    except FileNotFoundError:
+        leaf_fd = os.open(
+            parts[-1],
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+            0o600,
+            dir_fd=current_fd,
+        )
+    with open(staged_output, 'rb') as source:
+        while chunk := source.read(1024 * 1024):
+            remaining = memoryview(chunk)
+            while remaining:
+                try:
+                    written = os.write(leaf_fd, remaining)
+                except OSError as error:
+                    raise OSError('artifact write failed') from error
+                if written <= 0:
+                    raise OSError('artifact write made no progress')
+                remaining = remaining[written:]
+finally:
+    if leaf_fd is not None:
+        os.close(leaf_fd)
+    for fd in reversed(ancestor_fds):
+        os.close(fd)
+PY
+  then
+    rm -f "$staged_output"
+    stop_and_ask "failed artifact or diff write: $destination"
+    return 1
+  fi
+  rm -f "$staged_output"
+}
+initial_tree_file=.agent-sdlc/briefs/<feature>/T-N-initial.tree
+initial_diff_file=.agent-sdlc/briefs/<feature>/T-N-review.diff
+write_artifact "$initial_tree_file" printf '%s\n' "$initial_tree"
+write_artifact "$initial_diff_file" git diff HEAD "$initial_tree" -- "${validated_task_paths[@]}"
+[ -s "$initial_diff_file" ] || stop_and_ask "empty initial-review diff"
 ```
 
-For the next snapshot, call the same function after the remediation, write its id to
-`T-N-remediation-round-<N>.tree`, and create the remediation-only diff with:
+A tree id is valid only when it is non-empty and resolves to a tree object. A snapshot command failure
+or a missing tree id is a failure: stop reviewer dispatch and raise the task.
+
+Initialize `previous_tree` from the initial snapshot before any remediation. After every
+remediation, the conductor refreshes the validated task path set from the plan and the scoped names
+reported by that remediation. Re-validate every candidate under the approved task roots, reject any
+unsafe candidate, and refresh `validated_task_paths` before taking the next snapshot or writing its
+diff. Then call the same function, write its id to `T-N-remediation-round-<N>.tree`, and create the
+remediation-only diff with:
 
 ```
-git diff "$previous_tree" "$next_tree" -- "${task_paths[@]}" > .agent-sdlc/briefs/<feature>/T-N-remediation-round-<N>.diff
+if ! next_tree=$(snapshot_task_tree); then
+  stop_and_ask "remediation snapshot command failed"
+fi
+require_tree_id "$next_tree" || stop_and_ask "remediation snapshot has no valid tree id"
+round_tree_file=.agent-sdlc/briefs/<feature>/T-N-remediation-round-<N>.tree
+round_diff_file=.agent-sdlc/briefs/<feature>/T-N-remediation-round-<N>.diff
+write_artifact "$round_tree_file" printf '%s\n' "$next_tree"
+write_artifact "$round_diff_file" git diff "$previous_tree" "$next_tree" -- "${validated_task_paths[@]}"
 ```
 
-The temporary index procedure leaves the **real index, working tree, HEAD, and branch unchanged**.
-It never uses `git add -N`, `git reset`, `git stash`, or a checkout against the real index. A
-snapshot command failure, a missing tree id, or an empty claimed fix (`$previous_tree` equals
-`$next_tree`) stops re-review dispatch and raises the task. The conductor does not read either diff:
-the reviewer is its reader and the conductor is its courier.
+The temporary-index procedure leaves the **real index, working tree, HEAD, and branch unchanged**.
+It never uses `git add -N`, `git reset`, `git stash`, or a checkout against the real index. An
+unchanged claimed fix (`$previous_tree` equals `$next_tree`) is a failure: stop re-review dispatch
+and raise the task. The conductor does not read either diff: the reviewer is its reader and the
+conductor is its courier.
+
+Guard every artifact write, including findings, handoffs, reports, tree ids, and diffs, with the
+validated destination and `write_artifact`. A failed artifact or diff write fails closed, records
+the task failure, and stops reviewer dispatch before a stale, missing, or empty artifact can be
+handed to a reviewer. The initial diff's non-empty assertion is also guarded with `stop_and_ask`.
+
+Contract-test every failure branch above, including an unsafe artifact destination, a failed
+snapshot command, a missing tree id, an empty initial-review diff, and an unchanged claimed fix.
+Also contract-test positive remediation-round recording, including the round findings file, tree
+ids, refreshed task paths, reviewer verdict and counts, and the remediation-only diff.
+
+The repository proof is a throwaway-repository fixture: include a deleted tracked task file, a new
+and changed task file, and an unrelated changed file. Assert that the task-scoped snapshot diff
+contains only the task paths and that the real index, HEAD, and worktree remain unchanged after
+snapshot creation. The fixture must remove its temporary index and repository in cleanup.
 
 ## The three roles
 
@@ -137,10 +307,13 @@ into a prompt. It writes a one-line prompt that names the round and tells the re
 handoff.
 
 **Remediation rounds 1 and 2:** continue the exact original implementer session to address the
-prior blocking findings. Snapshot its result, set `next_tree` from that snapshot, create the
-remediation-only diff from `previous_tree` to `next_tree`, and stop if the claimed fix is empty.
-Then continue the exact original reviewer session for the finding-scoped re-review. After the
-review, set `previous_tree=$next_tree` before the next round.
+prior blocking findings. After each remediation, refresh and validate the task path set, snapshot
+its result, set `next_tree` from that snapshot, create the remediation-only diff from
+`previous_tree` to `next_tree`, and stop if the claimed fix is empty. For each successful round,
+record every remediation round in `build-report.md` and its round findings file with the refreshed
+paths, tree ids, remediation-only diff destination, reviewer verdict, and Critical / Important /
+Minor counts. Then continue the exact original reviewer session for the finding-scoped re-review.
+After the review, set `previous_tree=$next_tree` before the next round.
 
 If continuation is unavailable or a continued session is dead, announce a fresh-agent fallback in
 `build-report.md` before dispatch: identify the round, role, reason, and pinned replacement. The
@@ -149,9 +322,11 @@ diff files. This fallback is visible to the reviewer and human, not a silent sub
 fallback that dies after dispatch follows the subagent-death policy below.
 
 **Remediation round 3:** do not continue either original session. Dispatch a fresh fixer with the
-durable file handoff, snapshot the result, create the remediation-only diff, then dispatch a fresh
-reviewer for the same finding-scoped contract. This fresh pair breaks anchoring after two
-unsuccessful continued rounds.
+durable file handoff, refresh and validate the task path set, snapshot the result, create the
+remediation-only diff, then dispatch a fresh reviewer for the same finding-scoped contract. Record
+the successful remediation round with its round findings file, refreshed paths, tree ids, diff
+destination, verdict, and counts. This fresh pair breaks anchoring after two unsuccessful continued
+rounds.
 
 After a passing remediation review, proceed to the unchanged conductor-owned staged-snapshot green
 bar and atomic commit. After round 3, if any Critical or Important finding remains, mark the task

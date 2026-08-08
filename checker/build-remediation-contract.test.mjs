@@ -1,8 +1,19 @@
-// Instruction-contract tests for T-1: bounded, finding-scoped remediation must retain the
-// initial independent review and the conductor's verification and commit boundaries.
+// Instruction-contract tests for T-1 and T-3: bounded, finding-scoped remediation must retain
+// the initial independent review and the conductor's verification and commit boundaries.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import {
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoFile = (relativePath) => fileURLToPath(new URL(`../${relativePath}`, import.meta.url));
@@ -88,4 +99,353 @@ test('build remediation contract records every remediation round', () => {
     /each fixer \+ re-review iteration in 4c|a fix cycle is the next round/i,
     'continued rounds are remediation rounds, not fixer-only fix cycles',
   );
+});
+
+test('build remediation contract confines snapshot paths and preserves deleted task files', () => {
+  assert.match(
+    loopReference,
+    /validate task-derived paths as literal repository-relative files under approved task roots/i,
+  );
+  assert.match(loopReference, /reject(?:s)? traversal/i);
+  assert.match(loopReference, /reject(?:s)?[\s\S]*dot paths?/i);
+  assert.match(loopReference, /reject(?:s)?[\s\S]*directory paths?/i);
+  assert.match(loopReference, /reject(?:s)?[\s\S]*Git magic pathspecs?/i);
+  assert.match(
+    loopReference,
+    /deleted tracked task files[\s\S]*temporary-index\s+snapshots[\s\S]*stage their removals/i,
+  );
+  assert.match(loopReference, /git add -- .*validated_task_paths/i);
+  assert.match(
+    loopReference,
+    /approved task roots derive\s+exclusively from the plan(?:'s|’s) exact named paths/i,
+  );
+  assert.match(
+    loopReference,
+    /implementer(?:'s|’s) status[\s\S]*only discover(?:s)? files already beneath those roots/i,
+  );
+});
+
+test('build remediation contract permits safe new artifact leaves', () => {
+  assert.match(
+    loopReference,
+    /new artifact leaf[\s\S]*does not exist\s+yet[\s\S]*validate(?:d)? lexically/i,
+  );
+  assert.match(
+    loopReference,
+    /every existing ancestor[\s\S]*non-symlink directory[\s\S]*approved artifact root/i,
+  );
+  assert.match(
+    loopReference,
+    /create the leaf[\s\S]*without following a symlink/i,
+  );
+});
+
+function artifactHelperSource() {
+  const helper = loopReference.match(
+    /python3 - (?:"\$repo_root" )?"\$destination" "\$staged_output" <<'PY'\n([\s\S]*?)\nPY/,
+  );
+  assert.ok(helper, 'the documented safe-artifact helper must be executable Python');
+  return helper[1];
+}
+
+test('build remediation artifact helper accepts the normal task destination', () => {
+  const helper = artifactHelperSource();
+  const repo = mkdtempSync(path.join(tmpdir(), 'build-remediation-artifact-'));
+  const artifactDirectory = path.join(repo, '.agent-sdlc', 'briefs', 'build-loop-efficiency');
+  const destination = path.join(
+    '.agent-sdlc',
+    'briefs',
+    'build-loop-efficiency',
+    'T-4-normal-artifact.md',
+  );
+  const stagedOutput = path.join(repo, 'staged-artifact');
+  try {
+    mkdirSync(artifactDirectory, { recursive: true });
+    writeFileSync(stagedOutput, 'normal artifact\n');
+    execFileSync('python3', ['-', repo, destination, stagedOutput], {
+      cwd: repo,
+      input: helper,
+      encoding: 'utf8',
+    });
+    assert.equal(
+      readFileSync(path.join(repo, destination), 'utf8'),
+      'normal artifact\n',
+      'the helper must write the artifact at the documented task destination',
+    );
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test('build remediation artifact helper anchors writes to the repository root from a nested CWD', () => {
+  const helper = artifactHelperSource();
+  const repo = mkdtempSync(path.join(tmpdir(), 'build-remediation-root-'));
+  const nestedCwd = path.join(repo, 'nested', 'cwd');
+  const artifactDirectory = path.join(repo, '.agent-sdlc', 'briefs', 'build-loop-efficiency');
+  const lookalikeDirectory = path.join(
+    nestedCwd,
+    '.agent-sdlc',
+    'briefs',
+    'build-loop-efficiency',
+  );
+  const destination = path.join(
+    '.agent-sdlc',
+    'briefs',
+    'build-loop-efficiency',
+    'T-4-nested-cwd-artifact.md',
+  );
+  const stagedOutput = path.join(repo, 'staged-artifact');
+  try {
+    mkdirSync(artifactDirectory, { recursive: true });
+    mkdirSync(lookalikeDirectory, { recursive: true });
+    writeFileSync(stagedOutput, 'repository-root artifact\n');
+    execFileSync('python3', ['-', repo, destination, stagedOutput], {
+      cwd: nestedCwd,
+      input: helper,
+      encoding: 'utf8',
+    });
+    assert.equal(
+      readFileSync(path.join(repo, destination), 'utf8'),
+      'repository-root artifact\n',
+      'the helper must resolve the artifact beneath the held repository root',
+    );
+    assert.equal(
+      existsSync(path.join(lookalikeDirectory, 'T-4-nested-cwd-artifact.md')),
+      false,
+      'a nested-CWD lookalike must not receive the artifact',
+    );
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test('build remediation artifact helper preserves all bytes and fails on a zero write', () => {
+  const helper = artifactHelperSource();
+  const repo = mkdtempSync(path.join(tmpdir(), 'build-remediation-bytes-'));
+  const artifactDirectory = path.join(repo, '.agent-sdlc', 'briefs', 'build-loop-efficiency');
+  const destination = path.join(
+    '.agent-sdlc',
+    'briefs',
+    'build-loop-efficiency',
+    'T-4-byte-artifact.bin',
+  );
+  const failingDestination = path.join(
+    '.agent-sdlc',
+    'briefs',
+    'build-loop-efficiency',
+    'T-4-zero-write.bin',
+  );
+  const stagedOutput = path.join(repo, 'staged-artifact');
+  try {
+    mkdirSync(artifactDirectory, { recursive: true });
+    const expected = Buffer.from(Array.from({ length: 1024 * 1024 + 137 }, (_, index) => index % 251));
+    writeFileSync(stagedOutput, expected);
+    const shortWriteHelper = helper.replace(
+      'import os\n',
+      [
+        'import os',
+        '_real_write = os.write',
+        '',
+        'def short_write(fd, data):',
+        '    return _real_write(fd, data[:max(1, len(data) // 2)])',
+        '',
+        'os.write = short_write',
+        '',
+      ].join('\n'),
+    );
+    execFileSync('python3', ['-', repo, destination, stagedOutput], {
+      cwd: repo,
+      input: shortWriteHelper,
+      encoding: 'utf8',
+    });
+    assert.deepEqual(
+      readFileSync(path.join(repo, destination)),
+      expected,
+      'the helper must preserve every staged byte despite short writes',
+    );
+
+    const zeroWriteHelper = helper.replace(
+      'import os\n',
+      ['import os', 'os.write = lambda fd, data: 0', ''].join('\n'),
+    );
+    assert.throws(
+      () =>
+        execFileSync('python3', ['-', repo, failingDestination, stagedOutput], {
+          cwd: repo,
+          input: zeroWriteHelper,
+          encoding: 'utf8',
+        }),
+      'a zero-byte write must fail the artifact helper',
+    );
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test('build remediation contract creates artifact leaves atomically without following symlinks', () => {
+  assert.match(
+    loopReference,
+    /artifact leaf[\s\S]*atomic[\s\S]*no-follow[\s\S]*exclusive-create/i,
+  );
+  assert.match(loopReference, /O_NOFOLLOW/);
+  assert.match(loopReference, /O_EXCL/);
+  assert.match(loopReference, /O_CREAT/);
+  assert.match(
+    loopReference,
+    /open(?:Sync)?[\s\S]*O_CREAT[\s\S]*O_EXCL[\s\S]*O_NOFOLLOW/i,
+  );
+});
+
+test('build remediation contract protects every artifact path component from replacement races', () => {
+  assert.match(
+    loopReference,
+    /open(?:s|ing)? and holds?[\s\S]*trusted artifact-root ancestors?[\s\S]*directory handles/i,
+  );
+  assert.match(
+    loopReference,
+    /resolv(?:e|es|ing) every child component[\s\S]*without following links/i,
+  );
+  assert.match(loopReference, /openat|dir_fd/i);
+  assert.match(loopReference, /dir_fd\s*=\s*current_fd/);
+  assert.doesNotMatch(loopReference, /openSync\(\s*destination/);
+  assert.match(loopReference, /O_DIRECTORY[\s\S]*O_NOFOLLOW/i);
+  assert.match(
+    loopReference,
+    /final leaf[\s\S]*relative to[\s\S]*(?:held|trusted) parent directory handle/i,
+  );
+  assert.match(
+    loopReference,
+    /fail closed[\s\S]*helper[\s\S]*(?:unavailable|cannot provide)/i,
+  );
+});
+
+test('build remediation contract refreshes task paths and initializes remediation trees', () => {
+  assert.match(loopReference, /initialize `previous_tree` from the initial snapshot/i);
+  assert.match(
+    loopReference,
+    /after every\s+remediation[\s\S]*refresh(?:es|ed)? the validated task path set/i,
+  );
+  assert.match(
+    loopReference,
+    /refresh(?:es|ed)? the validated task path set[\s\S]*before .*snapshot/i,
+  );
+  assert.match(
+    loopReference,
+    /record(?:s|ing)? every remediation round[\s\S]*round findings file[\s\S]*remediation-only diff/i,
+  );
+  assert.match(loopReference, /T-N-remediation-round-<N>\.tree/);
+  assert.match(loopReference, /previous_tree=\$next_tree/);
+});
+
+test('build remediation contract guards every artifact write and diff command', () => {
+  assert.match(
+    loopReference,
+    /write_artifact\(\)[\s\S]*if ! "\$@" > "\$staged_output"; then[\s\S]*stop_and_ask/i,
+  );
+  assert.doesNotMatch(loopReference, /"\$@" > "\$destination"/);
+  assert.match(
+    loopReference,
+    /write_artifact[\s\S]*initial_tree_file[\s\S]*initial_diff_file[\s\S]*round_diff_file/i,
+  );
+  assert.match(
+    loopReference,
+    /initial_diff_file[\s\S]*-s[\s\S]*stop_and_ask/i,
+  );
+  assert.match(
+    loopReference,
+    /failed artifact or diff write[\s\S]*stop(?:s)? reviewer dispatch/i,
+  );
+});
+
+test('build remediation contract fails closed for unsafe artifacts and invalid snapshots', () => {
+  assert.match(
+    loopReference,
+    /unsafe artifact\s+destination[\s\S]*fail closed[\s\S]*stop(?:s)?\s+(?:re-)?review(?:er)? dispatch/i,
+  );
+  assert.match(
+    loopReference,
+    /snapshot command failure[\s\S]*stop(?:s)?\s+(?:re-)?review(?:er)? dispatch/i,
+  );
+  assert.match(
+    loopReference,
+    /missing tree id[\s\S]*stop(?:s)?\s+(?:re-)?review(?:er)? dispatch/i,
+  );
+  assert.match(
+    loopReference,
+    /empty initial-review diff[\s\S]*stop(?:s)?\s+review(?:er)? dispatch/i,
+  );
+  assert.match(
+    loopReference,
+    /unchanged claimed fix[\s\S]*stop(?:s)?\s+(?:re-)?review(?:er)? dispatch/i,
+  );
+  assert.match(loopReference, /(?:each|every) failure branch[\s\S]*contract-test/i);
+});
+
+function git(repo, args) {
+  return execFileSync('git', args, { cwd: repo, encoding: 'utf8' }).trim();
+}
+
+function createSnapshotFixture() {
+  const repo = mkdtempSync(path.join(tmpdir(), 'build-remediation-snapshot-'));
+  execFileSync('git', ['init', '-q', '-b', 'main'], { cwd: repo });
+  execFileSync('git', ['config', 'user.email', 'fixture@example.com'], { cwd: repo });
+  execFileSync('git', ['config', 'user.name', 'Fixture'], { cwd: repo });
+  mkdirSync(path.join(repo, 'tasks'), { recursive: true });
+  writeFileSync(path.join(repo, 'tasks', 'deleted.txt'), 'tracked before\n');
+  writeFileSync(path.join(repo, 'tasks', 'changed.txt'), 'before\n');
+  writeFileSync(path.join(repo, 'unrelated.txt'), 'unrelated before\n');
+  execFileSync('git', ['add', '.'], { cwd: repo });
+  execFileSync('git', ['commit', '-q', '-m', 'fixture'], { cwd: repo });
+
+  unlinkSync(path.join(repo, 'tasks', 'deleted.txt'));
+  writeFileSync(path.join(repo, 'tasks', 'changed.txt'), 'after\n');
+  writeFileSync(path.join(repo, 'tasks', 'created.txt'), 'created\n');
+  writeFileSync(path.join(repo, 'unrelated.txt'), 'unrelated after\n');
+  return repo;
+}
+
+test('build remediation snapshot fixture preserves task scope and real-index isolation', () => {
+  assert.match(loopReference, /throwaway-repository fixture/i);
+  assert.match(loopReference, /real index, HEAD, and worktree remain unchanged/i);
+
+  const repo = createSnapshotFixture();
+  const indexDir = mkdtempSync(path.join(tmpdir(), 'build-remediation-index-'));
+  const tempIndex = path.join(indexDir, 'index');
+  try {
+    const before = {
+      head: git(repo, ['rev-parse', 'HEAD']),
+      index: git(repo, ['write-tree']),
+      status: git(repo, ['status', '--porcelain']),
+      worktree: git(repo, ['diff', '--binary']),
+    };
+    execFileSync('git', ['read-tree', 'HEAD'], {
+      cwd: repo,
+      env: { ...process.env, GIT_INDEX_FILE: tempIndex },
+    });
+    execFileSync(
+      'git',
+      ['add', '--', 'tasks/deleted.txt', 'tasks/changed.txt', 'tasks/created.txt'],
+      { cwd: repo, env: { ...process.env, GIT_INDEX_FILE: tempIndex } },
+    );
+    const snapshot = execFileSync('git', ['write-tree'], {
+      cwd: repo,
+      encoding: 'utf8',
+      env: { ...process.env, GIT_INDEX_FILE: tempIndex },
+    }).trim();
+    const taskDiff = execFileSync(
+      'git',
+      ['diff', 'HEAD', snapshot, '--', 'tasks/deleted.txt', 'tasks/changed.txt', 'tasks/created.txt'],
+      { cwd: repo, encoding: 'utf8' },
+    );
+    assert.match(taskDiff, /deleted file mode/);
+    assert.match(taskDiff, /tasks\/created\.txt/);
+    assert.doesNotMatch(taskDiff, /unrelated\.txt/);
+    assert.equal(git(repo, ['rev-parse', 'HEAD']), before.head);
+    assert.equal(git(repo, ['write-tree']), before.index);
+    assert.equal(git(repo, ['status', '--porcelain']), before.status);
+    assert.equal(git(repo, ['diff', '--binary']), before.worktree);
+  } finally {
+    rmSync(indexDir, { recursive: true, force: true });
+    rmSync(repo, { recursive: true, force: true });
+  }
 });

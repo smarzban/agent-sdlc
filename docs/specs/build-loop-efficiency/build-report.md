@@ -33,6 +33,8 @@ exit 0
 | --- | --- | --- | --- | --- |
 | T-1 | done | `4b1413f` | AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-7, AC-8 | initial review: 0 Critical, 1 Important, 2 Minor; finding-scoped remediation passed: 0 Critical, 0 Important, 1 new Minor; original implementer fallback recorded below |
 | T-2 | done | `ee0c5d5` | AC-9, AC-10 | initial review: 0 Critical, 2 Important, 1 Minor; finding-scoped remediation passed: 0 Critical, 0 Important, 0 Minor |
+| T-3 | blocked | — | AC-1, AC-5, AC-7 | initial review: 0 Critical, 3 Important, 0 Minor; round 1 re-review: 0 Critical, 1 Important, 0 Minor; round 2 re-review: 0 Critical, 1 Important, 0 Minor; fresh round 3 review: 0 Critical, 1 Important, 0 Minor; terminal per three-round limit |
+| T-4 | in progress | — | AC-1, AC-5, AC-7 | successor to blocked T-3; initial review: 0 Critical, 2 Important, 0 Minor; remediation round 1 re-review pending |
 
 ## Green-bar evidence
 
@@ -76,6 +78,40 @@ Verification form: exact commands above, each exit code read directly from its c
 
 ## Deviations
 
+- **T-3 remediation round 1 implementer fallback:** the original implementer was dispatched through
+a foreground harness call that returned no resumable session id. The conductor recorded the fallback
+before dispatching the pinned `implementer` replacement. The replacement receives the original
+brief, implementer report, initial findings, and initial review diff through the durable file handoff.
+Workspace isolation remains intact.
+- **T-4 remediation round 1 implementer fallback:** the original T-4 implementer was a foreground
+harness dispatch with no resumable session id. The conductor recorded the fallback before
+dispatching the pinned fresh `implementer`. The replacement receives the original brief, implementer
+report, initial findings, and initial review diff through the durable file handoff. Workspace
+isolation remains intact.
+- **T-4 remediation round 1 reviewer fallback:** the original T-4 reviewer was a foreground harness
+dispatch with no resumable session id. The conductor recorded the fallback before dispatching the
+pinned fresh `reviewer`. The replacement receives the original contract, initial findings, initial
+review diff, remediation report, and remediation diff through the durable file handoff. Workspace
+isolation remains intact.
+- **T-3 terminal block:** the fresh round 3 reviewer closed the prior parent-symlink race but found
+one new Important regression: the documented safe-artifact helper rejects the normal four-component
+artifact destinations its own callers construct. The three-remediation-dispatch limit is exhausted;
+no fourth fixer or reviewer was dispatched. Full verification and commit were not run.
+- **T-3 remediation round 2 implementer fallback:** the original implementer and its round 1
+replacement were foreground dispatches with no resumable session id. The conductor recorded the
+fallback before dispatching the pinned fresh `implementer`. The replacement receives the original
+brief, round 1 findings, and the latest remediation diff through the durable file handoff. Workspace
+isolation remains intact.
+- **T-3 remediation round 2 reviewer fallback:** the original reviewer and its round 1 replacement
+were foreground dispatches with no resumable session id. The conductor recorded the fallback before
+dispatching the pinned fresh `reviewer`. The replacement receives the original task contract, prior
+findings, and latest remediation artifacts through the durable file handoff. Workspace isolation
+remains intact.
+- **T-3 remediation round 1 reviewer fallback:** the original reviewer was dispatched through a
+foreground harness call that returned no resumable session id. The conductor recorded the fallback
+before dispatching the pinned `reviewer` replacement. The replacement receives the original task
+contract, initial findings, initial review diff, remediation report, and remediation diff through
+the durable file handoff. Workspace isolation remains intact.
 - **T-1 continuation fallback:** the initial implementer ran through a foreground dispatch whose
   returned status did not expose a resumable session id. Before remediation round 1, the conductor
   announced the fallback and dispatched the pinned `implementer` with the durable brief, report,

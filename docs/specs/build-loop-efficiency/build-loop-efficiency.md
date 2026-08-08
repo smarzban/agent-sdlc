@@ -336,17 +336,61 @@ unrelated batching. Update the public pipeline description in the same vertical 
 
 *Advances:* AC-9, AC-10. *Component:* Task-sizing policy. *Deps:* T-1.
 
+<!-- source: mid-build amendment (repair review-confirmed snapshot protocol defects) · ingested 2026-08-08 -->
+
+**T-3: Harden task-scoped remediation snapshots (superseded by T-4 after terminal remediation block)**
+
+Modify `checker/build-remediation-contract.test.mjs` and
+`skills/build/reference/subagent-loop.md`.
+
+Write these failing tests first:
+
+- `build remediation contract confines snapshot paths and preserves deleted task files`
+- `build remediation contract refreshes task paths and initializes remediation trees`
+- `build remediation contract fails closed for unsafe artifacts and invalid snapshots`
+- `build remediation snapshot fixture preserves task scope and real-index isolation`
+
+Then validate task-derived paths as literal repository-relative files under their approved task
+roots, rejecting traversal, dot or directory paths, and Git magic pathspecs. Keep deleted tracked
+task files in temporary-index snapshots, stage their removals there, and refresh the validated path
+set after every remediation before diffing it. Initialize `previous_tree` from the initial snapshot.
+Fail closed before any reviewer dispatch when a snapshot, tree id, claimed fix, or conductor-owned
+artifact destination is unsafe or invalid. Add contract coverage for every failure branch and
+positive remediation-round recording, plus a throwaway-repository fixture proving task scope and
+real-index, HEAD, and worktree isolation.
+
+*Advances:* AC-1, AC-5, AC-7. *Component:* Build remediation protocol. *Deps:* T-1, T-2.
+
+<!-- source: mid-build amendment (follow-up after T-3 terminal remediation block) · ingested 2026-08-08 -->
+
+**T-4: Correct safe artifact destination handling**
+
+Modify `checker/build-remediation-contract.test.mjs` and
+`skills/build/reference/subagent-loop.md`.
+
+Write this failing test first:
+
+- `build remediation artifact helper accepts the normal task destination`
+
+Then correct the safe-artifact helper so it accepts the documented normal
+`.agent-sdlc/briefs/<feature>/T-N-…` destination while preserving descriptor-held ancestor
+resolution, no-follow leaf opening, and fail-closed rejection of unsafe paths. Make the test
+execute the helper against a normal destination and prove the artifact is written there. Retain all
+T-3 partial contract and fixture coverage in this one atomic successor task.
+
+*Advances:* AC-1, AC-5, AC-7. *Component:* Build remediation protocol. *Deps:* T-1, T-2.
+
 ### Task-to-criterion coverage map
 
 | Criterion | Advanced by |
 | --- | --- |
-| AC-1 | T-1 |
+| AC-1 | T-1, T-3, T-4 |
 | AC-2 | T-1 |
 | AC-3 | T-1 |
 | AC-4 | T-1 |
-| AC-5 | T-1 |
+| AC-5 | T-1, T-3, T-4 |
 | AC-6 | T-1 |
-| AC-7 | T-1 |
+| AC-7 | T-1, T-3, T-4 |
 | AC-8 | T-1 |
 | AC-9 | T-2 |
 | AC-10 | T-2 |
