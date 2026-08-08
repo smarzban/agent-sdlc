@@ -1,6 +1,6 @@
 # Verification report: build-loop-efficiency
 
-Ship stage · branch `feat/build-loop-efficiency` · 2026-08-07
+Ship stage · branch `feat/build-loop-efficiency` · repaired head pending push
 
 Fresh ship verification:
 
@@ -8,8 +8,8 @@ Fresh ship verification:
 $ node --check checker/sdlc-check.mjs
 exit 0
 $ node --test checker/*.test.mjs
-ℹ tests 292
-ℹ pass 292
+ℹ tests 303
+ℹ pass 303
 ℹ fail 0
 exit 0
 ```
@@ -18,11 +18,11 @@ exit 0
 
 | Criterion | Type | Proof |
 | --- | --- | --- |
-| AC-1 | test-backed | build remediation contract keeps the initial review complete |
+| AC-1 | test-backed | build remediation contract keeps the initial review complete, build remediation contract confines snapshot paths and preserves deleted task files |
 | AC-2 | test-backed | build remediation contract resumes the original agents for two finding-scoped rounds |
 | AC-3 | test-backed | build remediation contract resumes the original agents for two finding-scoped rounds |
 | AC-4 | test-backed | build remediation contract resumes the original agents for two finding-scoped rounds |
-| AC-5 | test-backed | build remediation contract resumes the original agents for two finding-scoped rounds |
+| AC-5 | test-backed | build remediation contract resumes the original agents for two finding-scoped rounds, build remediation contract refreshes task paths and initializes remediation trees |
 | AC-6 | test-backed | build remediation contract uses a fresh final round and then blocks |
 | AC-7 | test-backed | build remediation contract uses a fresh final round and then blocks |
 | AC-8 | test-backed | build remediation contract uses a fresh final round and then blocks |
@@ -37,5 +37,6 @@ exit 0
   scope or changing its schema.
 - NC-3 holds: no provider model name or capability-routing system was added; unavailable continuation
   has an announced file-based fallback.
-- NC-4 holds: the two gate-ratified tasks remained separate and each has its own task-scoped commit.
+- NC-4 holds: ratified tasks were not batched. T-3 reached its remediation limit and T-4 was planned,
+  gated, reviewed, and committed as its successor task.
 - NC-5 holds: implementation tasks ran sequentially.
