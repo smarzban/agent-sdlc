@@ -53,34 +53,32 @@ of dropping it from the review.
 
 Every tree, diff, findings, handoff, report, and other review artifact destination is validated as a
 literal repository-relative path below `.agent-sdlc/briefs/<feature>/` before it is opened. An
-existing destination must be a regular file. A new artifact leaf is safe only when it does not exist
-yet, is validated lexically, and every existing ancestor is a non-symlink directory under the
-approved artifact root. This creates the leaf atomically with no-follow and exclusive-create semantics,
-without following a symlink. Create the leaf without following a symlink. Validation and opening
-must be one helper operation, not validation followed
-by opening the destination pathname. The helper starts from a trusted repository-root directory
-handle. It opens and holds trusted artifact-root ancestors as directory handles with
-`O_DIRECTORY|O_NOFOLLOW`, and resolves every child component relative to the held parent handle,
-without following links. It keeps
-all ancestor handles open until the write finishes. It opens an existing final leaf relative to the
-held parent directory handle with `O_WRONLY|O_NOFOLLOW`, verifies the held descriptor is a regular
-file, then truncates that descriptor. It creates a new final leaf relative to the held parent with
-`O_CREAT|O_EXCL|O_NOFOLLOW`. Never use a path-based Node open after validation: Node's `openSync`
-receives a pathname, not a held parent directory handle. If the helper, `dir_fd`/`openat` operation,
-trusted root handle, or no-follow guarantee is unavailable, reject an unsafe artifact destination,
-fail closed, record the task failure, and stop reviewer dispatch. Do not let a destination, pathspec,
-symlink, or parent directory escape the approved artifact root.
+artifact destination must not exist yet. A new artifact leaf is safe only when it does not exist yet,
+is validated lexically, and every existing ancestor is a non-symlink directory under the approved
+artifact root. This creates the leaf atomically with no-follow and exclusive-create semantics, without
+following a symlink. Create the leaf without following a symlink. Validation and opening must be one
+helper operation, not validation followed by opening the destination pathname. The helper starts from
+a trusted repository-root directory handle. It opens and holds trusted artifact-root ancestors as
+directory handles with `O_DIRECTORY|O_NOFOLLOW`, and resolves every child component relative to the
+held parent handle, without following links. It keeps all ancestor handles open until the write
+finishes. Before opening the leaf, it rejects every pre-existing leaf, including regular files,
+symlinks, hard links, and special files. It creates only a missing final leaf relative to the held
+parent with `O_CREAT|O_EXCL|O_NOFOLLOW`. Never use a path-based Node open after validation: Node's
+`openSync` receives a pathname, not a held parent directory handle. If the helper, `dir_fd`/`openat`
+operation, trusted root handle, or no-follow guarantee is unavailable, reject an unsafe artifact
+destination, fail closed, record the task failure, and stop reviewer dispatch. Do not let a
+destination, pathspec, symlink, or parent directory escape the approved artifact root.
 
 The smallest concrete helper procedure is a POSIX directory-handle helper invoked from `write_artifact`.
 It rejects absolute paths, empty components, `.`, `..`, Git magic pathspecs, and destinations outside
 `.agent-sdlc/briefs/<feature>/`. Starting at the trusted repository-root handle, it runs
 `openat(parent_fd, component, O_RDONLY|O_DIRECTORY|O_NOFOLLOW)` for every root and child ancestor,
-retaining each returned descriptor. It then runs `openat(held_parent_fd, leaf, O_WRONLY|O_NOFOLLOW)`
-for an existing leaf, checks `fstat(fd)` for a regular file, and uses `ftruncate(fd, 0)` before copying
-the staged bytes to that descriptor. For a missing leaf it instead runs
-`openat(held_parent_fd, leaf, O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW, 0o600)`. It closes the leaf and
-all retained ancestor descriptors in `finally`. A helper without directory-relative open and held
-ancestor descriptors cannot provide this guarantee and must return failure before reviewer dispatch.
+retaining each returned descriptor. It first runs a no-follow `fstatat`-equivalent check for the leaf
+relative to the held parent, rejecting any existing leaf without opening it. For a missing leaf it
+runs `openat(held_parent_fd, leaf, O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW, 0o600)`, then checks the new
+held descriptor with `fstat` before copying the staged bytes. It closes the leaf and all retained
+ancestor descriptors in `finally`. A helper without directory-relative open and held ancestor
+descriptors cannot provide this guarantee and must return failure before reviewer dispatch.
 
 ### Initial full-review snapshot
 
@@ -162,21 +160,19 @@ try:
         )
         ancestor_fds.append(current_fd)
     try:
-        leaf_fd = os.open(
-            parts[-1],
-            os.O_WRONLY | os.O_NOFOLLOW,
-            dir_fd=current_fd,
-        )
-        if not stat.S_ISREG(os.fstat(leaf_fd).st_mode):
-            raise SystemExit('artifact destination is not a regular file')
-        os.ftruncate(leaf_fd, 0)
+        os.stat(parts[-1], dir_fd=current_fd, follow_symlinks=False)
     except FileNotFoundError:
-        leaf_fd = os.open(
-            parts[-1],
-            os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
-            0o600,
-            dir_fd=current_fd,
-        )
+        pass
+    else:
+        raise SystemExit('artifact destination already exists')
+    leaf_fd = os.open(
+        parts[-1],
+        os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+        0o600,
+        dir_fd=current_fd,
+    )
+    if not stat.S_ISREG(os.fstat(leaf_fd).st_mode):
+        raise SystemExit('artifact destination is not a regular file')
     with open(staged_output, 'rb') as source:
         while chunk := source.read(1024 * 1024):
             remaining = memoryview(chunk)
@@ -306,7 +302,9 @@ findings, prior review diff, and the latest remediation diff. The conductor does
 into a prompt. It writes a one-line prompt that names the round and tells the recipient to read that
 handoff.
 
-**Remediation rounds 1 and 2:** continue the exact original implementer session to address the
+#### Rounds 1 and 2: continue the original sessions
+
+For remediation rounds 1 and 2, continue the exact original implementer session to address the
 prior blocking findings. After each remediation, refresh and validate the task path set, snapshot
 its result, set `next_tree` from that snapshot, create the remediation-only diff from
 `previous_tree` to `next_tree`, and stop if the claimed fix is empty. For each successful round,
@@ -315,13 +313,17 @@ paths, tree ids, remediation-only diff destination, reviewer verdict, and Critic
 Minor counts. Then continue the exact original reviewer session for the finding-scoped re-review.
 After the review, set `previous_tree=$next_tree` before the next round.
 
+#### Announced continuation fallback
+
 If continuation is unavailable or a continued session is dead, announce a fresh-agent fallback in
 `build-report.md` before dispatch: identify the round, role, reason, and pinned replacement. The
 pinned fresh agent receives the same durable file handoff: brief, implementer report, findings, and
 diff files. This fallback is visible to the reviewer and human, not a silent substitution. A fresh
 fallback that dies after dispatch follows the subagent-death policy below.
 
-**Remediation round 3:** do not continue either original session. Dispatch a fresh fixer with the
+#### Round 3: fresh fixer and reviewer
+
+For remediation round 3, do not continue either original session. Dispatch a fresh fixer with the
 durable file handoff, refresh and validate the task path set, snapshot the result, create the
 remediation-only diff, then dispatch a fresh reviewer for the same finding-scoped contract. Record
 the successful remediation round with its round findings file, refreshed paths, tree ids, diff

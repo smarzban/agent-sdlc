@@ -6,9 +6,11 @@ import { execFileSync } from 'node:child_process';
 import {
   existsSync,
   mkdtempSync,
+  linkSync,
   mkdirSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
@@ -20,6 +22,9 @@ const repoFile = (relativePath) => fileURLToPath(new URL(`../${relativePath}`, i
 const buildSkill = readFileSync(repoFile('skills/build/SKILL.md'), 'utf8');
 const loopReference = readFileSync(repoFile('skills/build/reference/subagent-loop.md'), 'utf8');
 const pipeline = readFileSync(repoFile('docs/usage/pipeline.md'), 'utf8');
+const developmentGuide = readFileSync(repoFile('docs/development.md'), 'utf8');
+const contributingGuide = readFileSync(repoFile('CONTRIBUTING.md'), 'utf8');
+const packageManifest = readFileSync(repoFile('package.json'), 'utf8');
 
 test('build remediation contract keeps the initial review complete', () => {
   assert.match(
@@ -37,6 +42,31 @@ test('build remediation contract keeps the initial review complete', () => {
     /initial (?:independent\s+)?review[\s\S]*complete\s+task-scoped\s+diff/i,
     'the public pipeline must not describe remediation as the initial review',
   );
+});
+
+test('build remediation contract tests the authoritative remediation dispatch protocol', () => {
+  const remediationSection = loopReference.match(
+    /### Remediation dispatch\n([\s\S]*?)(?=\n### |\n## |$)/,
+  );
+  assert.ok(remediationSection, 'the authoritative loop must have a remediation dispatch section');
+  const section = remediationSection[1];
+  assert.match(section, /#### Rounds 1 and 2: continue the original sessions/i);
+  assert.match(
+    section,
+    /rounds? 1 and 2[\s\S]*continue the exact original implementer session/i,
+  );
+  assert.match(
+    section,
+    /rounds? 1 and 2[\s\S]*continue the exact original reviewer session/i,
+  );
+  assert.match(
+    section,
+    /continuation is unavailable[\s\S]*announce a fresh-agent fallback[\s\S]*before dispatch/i,
+  );
+  assert.match(section, /#### Round 3: fresh fixer and reviewer/i);
+  assert.match(section, /round 3[\s\S]*fresh fixer[\s\S]*fresh reviewer/i);
+  assert.match(section, /after round 3[\s\S]*blocked/i);
+  assert.match(section, /no fourth\s+remediation dispatch/i);
 });
 
 test('build remediation contract resumes the original agents for two finding-scoped rounds', () => {
@@ -280,6 +310,83 @@ test('build remediation artifact helper preserves all bytes and fails on a zero 
   } finally {
     rmSync(repo, { recursive: true, force: true });
   }
+});
+
+test('build remediation artifact helper rejects unsafe destinations and existing leaf types', () => {
+  const helper = artifactHelperSource();
+  const repo = mkdtempSync(path.join(tmpdir(), 'build-remediation-unsafe-artifact-'));
+  const artifactDirectory = path.join(
+    repo,
+    '.agent-sdlc',
+    'briefs',
+    'build-loop-efficiency',
+  );
+  const outsideDirectory = mkdtempSync(path.join(tmpdir(), 'build-remediation-outside-'));
+  const stagedOutput = path.join(repo, 'staged-artifact');
+  const runHelper = (destination, timeout = 2000) =>
+    execFileSync('python3', ['-', repo, destination, stagedOutput], {
+      cwd: repo,
+      input: helper,
+      encoding: 'utf8',
+      timeout,
+    });
+  const rejects = (destination, timeout = 2000) =>
+    assert.throws(
+      () => runHelper(destination, timeout),
+      `unsafe destination must be rejected: ${destination}`,
+    );
+  try {
+    mkdirSync(artifactDirectory, { recursive: true });
+    writeFileSync(stagedOutput, 'must not escape\n');
+
+    rejects('.agent-sdlc/briefs/build-loop-efficiency/../escape.md');
+    rejects('.agent-sdlc/briefs/build-loop-efficiency/:(glob)');
+    rejects('outside-artifact.md');
+
+    const regularLeaf = path.join(artifactDirectory, 'T-5-existing-regular.md');
+    writeFileSync(regularLeaf, 'keep regular\n');
+    rejects('.agent-sdlc/briefs/build-loop-efficiency/T-5-existing-regular.md');
+    assert.equal(readFileSync(regularLeaf, 'utf8'), 'keep regular\n');
+
+    const symlinkTarget = path.join(outsideDirectory, 'symlink-target');
+    const symlinkLeaf = path.join(artifactDirectory, 'T-5-existing-symlink.md');
+    writeFileSync(symlinkTarget, 'keep symlink target\n');
+    symlinkSync(symlinkTarget, symlinkLeaf);
+    rejects('.agent-sdlc/briefs/build-loop-efficiency/T-5-existing-symlink.md');
+    assert.equal(readFileSync(symlinkTarget, 'utf8'), 'keep symlink target\n');
+
+    const hardLinkTarget = path.join(outsideDirectory, 'hard-link-target');
+    const hardLinkLeaf = path.join(artifactDirectory, 'T-5-existing-hard-link.md');
+    writeFileSync(hardLinkTarget, 'keep hard link target\n');
+    linkSync(hardLinkTarget, hardLinkLeaf);
+    rejects('.agent-sdlc/briefs/build-loop-efficiency/T-5-existing-hard-link.md');
+    assert.equal(readFileSync(hardLinkTarget, 'utf8'), 'keep hard link target\n');
+
+    const fifoLeaf = path.join(artifactDirectory, 'T-5-existing-fifo');
+    execFileSync('mkfifo', [fifoLeaf], { cwd: repo });
+    rejects('.agent-sdlc/briefs/build-loop-efficiency/T-5-existing-fifo', 1000);
+
+    rmSync(artifactDirectory, { recursive: true, force: true });
+    symlinkSync(outsideDirectory, artifactDirectory);
+    rejects('.agent-sdlc/briefs/build-loop-efficiency/T-5-ancestor-symlink.md');
+    assert.equal(
+      existsSync(path.join(outsideDirectory, 'T-5-ancestor-symlink.md')),
+      false,
+      'an ancestor symlink must not receive an artifact',
+    );
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+    rmSync(outsideDirectory, { recursive: true, force: true });
+  }
+});
+
+test('build remediation contract declares the artifact helper runtime', () => {
+  assert.match(loopReference, /python3 - .*staged_output/i);
+  assert.match(developmentGuide, /build-host prerequisites.*Python 3/i);
+  assert.match(developmentGuide, /`python3`/i);
+  assert.match(contributingGuide, /build-host prerequisites.*Python 3/i);
+  assert.match(contributingGuide, /`python3`/i);
+  assert.doesNotMatch(packageManifest, /"(?:dependencies|devDependencies)"\s*:/i);
 });
 
 test('build remediation contract creates artifact leaves atomically without following symlinks', () => {

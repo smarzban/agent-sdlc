@@ -10,9 +10,10 @@ git clone https://github.com/smarzban/agent-sdlc.git
 cd agent-sdlc
 ```
 
-That's the whole setup. The repo is **zero-dependency by design** — there is no `package.json`, no
-install step, no build step. The skills are plain Markdown; the only executable code is the
-checker, a single ESM file run by bare **Node ≥ 22**.
+That's the whole setup. The repo has no package dependencies, install step, or build step. The
+skills are plain Markdown; the only executable code is the checker, a single ESM file run by bare
+**Node ≥ 22**. Build-host prerequisites are Node ≥ 22 and Python 3, available as `node` and
+`python3`; the artifact helper uses the Python 3 standard library at build runtime.
 
 ## Run the tests
 

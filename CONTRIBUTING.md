@@ -7,10 +7,13 @@ light — but the conventions below are real: the repo's own checker enforces so
 
 See [docs/development.md](docs/development.md). The short version:
 
+Build-host prerequisites are Node ≥ 22 and Python 3 as `node` and `python3`. Python 3 is used
+by the descriptor-held safe-artifact helper; the project keeps zero package dependencies.
+
 ```bash
 git clone https://github.com/smarzban/agent-sdlc.git
 cd agent-sdlc
-node --test checker/*.test.mjs   # Node >= 22; expect 153 passing
+node --test checker/*.test.mjs   # Node >= 22 and Python 3 (python3); expect 153 passing
 ```
 
 Before opening a PR, the suite must be green, and every shipped spec must still self-verify
