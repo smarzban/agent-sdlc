@@ -34,7 +34,7 @@ exit 0
 | T-1 | done | `4b1413f` | AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-7, AC-8 | initial review: 0 Critical, 1 Important, 2 Minor; finding-scoped remediation passed: 0 Critical, 0 Important, 1 new Minor; original implementer fallback recorded below |
 | T-2 | done | `ee0c5d5` | AC-9, AC-10 | initial review: 0 Critical, 2 Important, 1 Minor; finding-scoped remediation passed: 0 Critical, 0 Important, 0 Minor |
 | T-3 | blocked | — | AC-1, AC-5, AC-7 | initial review: 0 Critical, 3 Important, 0 Minor; round 1 re-review: 0 Critical, 1 Important, 0 Minor; round 2 re-review: 0 Critical, 1 Important, 0 Minor; fresh round 3 review: 0 Critical, 1 Important, 0 Minor; terminal per three-round limit |
-| T-4 | in progress | — | AC-1, AC-5, AC-7 | successor to blocked T-3; initial review: 0 Critical, 2 Important, 0 Minor; remediation round 1 re-review pending |
+| T-4 | done | `748bbc6` | AC-1, AC-5, AC-7 | successor to blocked T-3; initial review: 0 Critical, 2 Important, 0 Minor; finding-scoped remediation passed: 0 Critical, 0 Important, 0 Minor |
 
 ## Green-bar evidence
 
@@ -75,6 +75,32 @@ exit 0
 
 Verification form: exact commands above, each exit code read directly from its captured output;
 `node:test` machine summary reports 292 tests, 292 pass, 0 fail.
+
+### T-4 (@ `748bbc6`)
+
+```text
+$ node --check checker/sdlc-check.mjs
+exit 0
+$ node --test checker/*.test.mjs
+✔ build remediation contract confines snapshot paths and preserves deleted task files
+✔ build remediation contract permits safe new artifact leaves
+✔ build remediation artifact helper accepts the normal task destination
+✔ build remediation artifact helper anchors writes to the repository root from a nested CWD
+✔ build remediation artifact helper preserves all bytes and fails on a zero write
+✔ build remediation contract creates artifact leaves atomically without following symlinks
+✔ build remediation contract protects every artifact path component from replacement races
+✔ build remediation contract refreshes task paths and initializes remediation trees
+✔ build remediation contract guards every artifact write and diff command
+✔ build remediation contract fails closed for unsafe artifacts and invalid snapshots
+✔ build remediation snapshot fixture preserves task scope and real-index isolation
+ℹ tests 303
+ℹ pass 303
+ℹ fail 0
+exit 0
+```
+
+Verification form: exact commands above, each exit code read directly from captured output;
+`node:test` machine summary reports 303 tests, 303 pass, 0 fail.
 
 ## Deviations
 
@@ -133,6 +159,6 @@ $ node checker/sdlc-check.mjs docs/specs/build-loop-efficiency/build-loop-effici
 exit 0
 ```
 
-The checker reported all checks passed with 0 findings and 0 notes. Both tasks are complete with
-reachable task-scoped commits and conductor-captured evidence. Branch
-ready for ship.
+The checker reported all checks passed with 0 findings and 0 notes. T-1, T-2, and T-4 have
+reachable task-scoped commits and conductor-captured evidence. T-3 is terminally blocked and
+superseded by T-4. Branch ready for the user's requested next verification direction.
