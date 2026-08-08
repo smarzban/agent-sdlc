@@ -406,17 +406,40 @@ dependencies at zero.
 
 *Advances:* AC-1, AC-2, AC-3, AC-5, AC-6, AC-7, AC-8. *Component:* Build remediation protocol. *Deps:* T-4.
 
+<!-- source: mid-build amendment (repair final merge-gate findings) · ingested 2026-08-08 -->
+
+**T-6: Isolate remediation Git commands from untrusted repository configuration**
+
+Modify `checker/build-remediation-contract.test.mjs`,
+`skills/build/reference/subagent-loop.md`, `docs/development.md`, and `CONTRIBUTING.md`.
+
+Write these failing tests first:
+
+- `build remediation contract isolates Git snapshot and diff commands from repository execution hooks`
+- `build remediation snapshot fixture preserves pre-existing staged changes`
+- `build remediation artifact helper rejects special leaves without timing out`
+
+Then make every documented snapshot and diff Git invocation use a controlled environment that disables
+repository-selected filters, external diffs, text conversions, and other executable configuration.
+Use literal, validated task paths; root-level plan files authorize only themselves. Make artifact
+write failures terminal before any artifact is consumed or reviewer dispatched. Prove the fixture
+preserves a pre-existing staged unrelated change, and assert FIFO rejection is a normal nonzero
+failure rather than a timeout. Declare the POSIX shell, filesystem, Git, and Python requirements
+needed by the helper and its contract tests.
+
+*Advances:* AC-1, AC-5, AC-7. *Component:* Build remediation protocol. *Deps:* T-5.
+
 ### Task-to-criterion coverage map
 
 | Criterion | Advanced by |
 | --- | --- |
-| AC-1 | T-1, T-3, T-4, T-5 |
+| AC-1 | T-1, T-3, T-4, T-5, T-6 |
 | AC-2 | T-1, T-5 |
 | AC-3 | T-1, T-5 |
 | AC-4 | T-1 |
-| AC-5 | T-1, T-3, T-4, T-5 |
+| AC-5 | T-1, T-3, T-4, T-5, T-6 |
 | AC-6 | T-1, T-5 |
-| AC-7 | T-1, T-3, T-4, T-5 |
+| AC-7 | T-1, T-3, T-4, T-5, T-6 |
 | AC-8 | T-1, T-5 |
 | AC-9 | T-2 |
 | AC-10 | T-2 |

@@ -8,8 +8,8 @@ Fresh ship verification:
 $ node --check checker/sdlc-check.mjs
 exit 0
 $ node --test checker/*.test.mjs
-ℹ tests 306
-ℹ pass 306
+ℹ tests 311
+ℹ pass 311
 ℹ fail 0
 exit 0
 ```
@@ -22,9 +22,9 @@ exit 0
 | AC-2 | test-backed | build remediation contract resumes the original agents for two finding-scoped rounds, build remediation contract tests the authoritative remediation dispatch protocol |
 | AC-3 | test-backed | build remediation contract resumes the original agents for two finding-scoped rounds, build remediation contract tests the authoritative remediation dispatch protocol |
 | AC-4 | test-backed | build remediation contract resumes the original agents for two finding-scoped rounds |
-| AC-5 | test-backed | build remediation contract refreshes task paths and initializes remediation trees, build remediation artifact helper rejects unsafe destinations and existing leaf types |
+| AC-5 | test-backed | build remediation contract refreshes task paths and initializes remediation trees, build remediation artifact helper rejects unsafe destinations and existing leaf types, build remediation contract isolates Git snapshot and diff commands from repository execution hooks |
 | AC-6 | test-backed | build remediation contract uses a fresh final round and then blocks, build remediation contract tests the authoritative remediation dispatch protocol |
-| AC-7 | test-backed | build remediation contract uses a fresh final round and then blocks, build remediation contract tests the authoritative remediation dispatch protocol |
+| AC-7 | test-backed | build remediation contract uses a fresh final round and then blocks, build remediation contract tests the authoritative remediation dispatch protocol, build remediation artifact helper rejects special leaves without timing out |
 | AC-8 | test-backed | build remediation contract uses a fresh final round and then blocks, build remediation contract tests the authoritative remediation dispatch protocol |
 | AC-9 | test-backed | plan task bar requires independently reviewable vertical slices |
 | AC-10 | test-backed | plan task bar combines microtasks but preserves independent behavior boundaries |

@@ -36,6 +36,7 @@ exit 0
 | T-3 | superseded | — | AC-1, AC-5, AC-7 | terminal after three remediation dispatches, then superseded by T-4; no T-3 commit |
 | T-4 | done | `748bbc6` | AC-1, AC-5, AC-7 | successor to blocked T-3; initial review: 0 Critical, 2 Important, 0 Minor; finding-scoped remediation passed: 0 Critical, 0 Important, 0 Minor |
 | T-5 | done | `bbff089` | AC-1, AC-2, AC-3, AC-5, AC-6, AC-7, AC-8 | merge-gate corrective task; initial review: 0 Critical, 0 Important, 2 Minor; spec-met |
+| T-6 | done | `4af070e` | AC-1, AC-5, AC-7 | merge-gate corrective task; initial review: 0 Critical, 3 Important, 0 Minor; finding-scoped remediation passed: 0 Critical, 0 Important, 0 Minor |
 
 ## Green-bar evidence
 
@@ -121,6 +122,24 @@ exit 0
 Verification form: exact commands above, each exit code read directly from captured output;
 `node:test` machine summary reports 306 tests, 306 pass, 0 fail.
 
+### T-6 (@ `4af070e`)
+
+```text
+$ node --check checker/sdlc-check.mjs
+exit 0
+$ node --test checker/*.test.mjs
+✔ build remediation contract isolates Git snapshot and diff commands from repository execution hooks
+✔ build remediation artifact helper rejects special leaves without timing out
+✔ build remediation snapshot fixture preserves pre-existing staged changes
+ℹ tests 311
+ℹ pass 311
+ℹ fail 0
+exit 0
+```
+
+Verification form: exact commands above, each exit code read directly from captured output;
+`node:test` machine summary reports 311 tests, 311 pass, 0 fail.
+
 ## Deviations
 
 - **T-5 implementer recovery:** the initial `implementer` session exhausted its turn limit after
@@ -183,7 +202,7 @@ $ node checker/sdlc-check.mjs docs/specs/build-loop-efficiency/build-loop-effici
 exit 0
 ```
 
-The checker reported all checks passed with 0 findings and 0 notes. T-1, T-2, T-4, and T-5 have
+The checker reported all checks passed with 0 findings and 0 notes. T-1, T-2, T-4, T-5, and T-6 have
 reachable task-scoped commits and conductor-captured evidence. T-3 is terminally blocked and
-superseded by T-4. The build-complete green bar reported 306 tests, 306 pass, and 0 fail. Branch
+superseded by T-4. The build-complete green bar reported 311 tests, 311 pass, and 0 fail. Branch
 ready for ship verification and the requested corrective merge gate.
