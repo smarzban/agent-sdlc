@@ -33,7 +33,7 @@ exit 0
 | --- | --- | --- | --- | --- |
 | T-1 | done | `4b1413f` | AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-7, AC-8 | initial review: 0 Critical, 1 Important, 2 Minor; finding-scoped remediation passed: 0 Critical, 0 Important, 1 new Minor; original implementer fallback recorded below |
 | T-2 | done | `ee0c5d5` | AC-9, AC-10 | initial review: 0 Critical, 2 Important, 1 Minor; finding-scoped remediation passed: 0 Critical, 0 Important, 0 Minor |
-| T-3 | blocked | — | AC-1, AC-5, AC-7 | initial review: 0 Critical, 3 Important, 0 Minor; round 1 re-review: 0 Critical, 1 Important, 0 Minor; round 2 re-review: 0 Critical, 1 Important, 0 Minor; fresh round 3 review: 0 Critical, 1 Important, 0 Minor; terminal per three-round limit |
+| T-3 | superseded | — | AC-1, AC-5, AC-7 | terminal after three remediation dispatches, then superseded by T-4; no T-3 commit |
 | T-4 | done | `748bbc6` | AC-1, AC-5, AC-7 | successor to blocked T-3; initial review: 0 Critical, 2 Important, 0 Minor; finding-scoped remediation passed: 0 Critical, 0 Important, 0 Minor |
 
 ## Green-bar evidence
