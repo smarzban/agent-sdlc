@@ -16,9 +16,10 @@ In the repo you want to build in, just state what you want:
 
 > I want to add a feature: …
 
-The skills auto-activate on matching requests — `idea` picks this one up, grills the idea into a
-settled brief, and each stage hands off to the next: acceptance criteria → design → techstack →
-plan → gate → build → ship. You decide at every question; the agent recommends first.
+The skills auto-activate on matching requests. **Light is the default:** a small change goes
+`light -> gate -> build -> ship`. The full chain (`idea` through `plan`, then gate, build, ship)
+runs only when you ask for it or a trigger fires (new runtime dependency, new public API, new
+trust or process boundary). You decide at every question; the agent recommends first.
 
 Unsure where you are? Ask for the router explicitly:
 
@@ -36,7 +37,7 @@ A run leaves a committed spec chain in your repo and ends in a reviewed PR:
 
 ```
 docs/specs/<feature>/
-├── <feature>.md            ← the sectioned spec (Brief · AC · Design · Tech Stack · Plan)
+├── <feature>.md            ← Brief · AC · Plan (light); plus Design · Tech Stack on the full chain
 ├── gate-report.md          ← the pre-build readiness verdict
 ├── build-report.md         ← build's resumable task ledger
 └── verification-report.md  ← ship's AC -> proof map

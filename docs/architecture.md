@@ -11,7 +11,7 @@ agent-sdlc/                          ← repo root = the plugin AND its marketpl
 ├── .cursor-plugin/                  ← marketplace.json + plugin.json (Cursor)
 ├── .codex-plugin/ + .agents/plugins/ ← plugin.json + marketplace.json (OpenAI Codex)
 ├── package.json                     ← pi package manifest (pi.skills)
-├── skills/<name>/SKILL.md           ← the pipeline + doc skills (14), some with reference/ depth
+├── skills/<name>/SKILL.md           ← the pipeline + doc skills (16), some with reference/ depth
 ├── checker/sdlc-check.mjs           ← the enforcement spine (zero-dep Node ESM) + its test suites
 ├── bin/sdlc-check                   ← on-PATH launcher resolving the checker from anywhere
 └── docs/specs/                      ← the repo's own dogfood spec chains + living overview.md
@@ -21,16 +21,16 @@ agent-sdlc/                          ← repo root = the plugin AND its marketpl
 
 - **Instruction / enforcement split.** Skills are instructions an agent executes — powerful but
   unenforceable on their own. Guarantees that must hold mechanically are owned by trusted
-  committed code: [`sdlc-check`](usage/sdlc-check.md) for pipeline mechanics, the external
-  [Empanel](https://github.com/smarzban/empanel) spine for review verdicts.
+  committed code: [`sdlc-check`](usage/sdlc-check.md) for pipeline mechanics. Review at `ship`
+  is [Review panel](https://github.com/smarzban/pi-review-panel): a report, not a verdict.
 - **The committed-artifact pattern.** Anything executable ships committed and runnable as-is —
   bare `node` on the committed source, no install-time build, no dependencies. That's what lets
   the plugin work the moment it's installed.
 - **One plugin, self-hosted marketplace.** Each harness's manifest lists the same plugin at the
   repo root; skills are auto-discovered from `skills/`, so the manifests almost never change.
-- **Invoke-if-present cross-plugin contracts.** `ship` invokes the Empanel gate
-  (`/empanel:merge-gate`) when present and announces a loud degraded fallback (a dispatched reviewer
-  subagent) when not — never a silent skip. The checker follows the same rule when Node is absent.
+- **Invoke-if-present cross-plugin contracts.** `ship` invokes `review_panel` when present and
+  announces a loud degraded fallback (a dispatched reviewer subagent) when not — never a silent
+  skip. The checker follows the same rule when Node is absent.
 - **The spec tree is the memory.** Every feature of the pipeline shipped through the pipeline;
   `docs/specs/` holds the immutable per-feature chains and the living overview. The artifact model is
   described in [usage/pipeline.md](usage/pipeline.md).

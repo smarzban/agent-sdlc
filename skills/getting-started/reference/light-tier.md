@@ -11,15 +11,17 @@ you author*, never *what the gate and build verify* — the enforcement spine is
 A change that is **small and self-contained**:
 
 - **Size** — a bug fix, a small addition, a targeted edit; on the order of tens of lines across one
-  or a few files. If you cannot hold the whole change in your head, it is not light-tier.
-- **No new dependency** — nothing added to the dependency manifest.
-- **No new component** — it fits an existing component; it does not introduce a new kind of thing.
-- **No cross-cutting impact** — no change to a shared contract, data shape, or invariant that ripples
-  across the codebase.
+  or a few files.
+- **No new runtime dependency** — nothing added to the dependency manifest.
+- **No new public API** — no new exported surface callers outside this change must learn.
+- **No new trust or process boundary** — no new auth, sandbox, subprocess, or review/merge rule.
 
-Heuristic: **small + no new dependency + no new component + no cross-cutting change -> light tier.**
-Any one of those failing -> full tier. When unsure, use the full tier (or upgrade mid-flight — see
-below); the full chain is never wrong, only sometimes heavier than needed.
+Heuristic: **small + no new runtime dependency + no new public API + no new trust or process
+boundary -> light.** Any one of those failing -> full. **When unsure, stay light** and upgrade if
+a trigger fires. Full is the exception.
+
+Light is also a skill: `/agent-sdlc:light`. That is the default entry for small work. Do not start
+`idea` -> architecture -> techstack unless a trigger fired or the user asked for the full chain.
 
 ## The compressed pass
 
@@ -32,8 +34,9 @@ One short authoring pass writes three sections into the SAME sectioned spec file
 - **`## Plan`** — a short set of `T-N`, SAME grammar and SAME trace fields (`*Advances:*` an `AC-N`,
   `*Component:*` a component, `*Deps:*`), each naming its file(s) and its failing test.
 
-`## Design` and `## Tech Stack` are written **only when a trigger fires** — a **new dependency**, a
-**new component**, or a **cross-cutting change**. If none fire, there is no new product: the plan
+`## Design` and `## Tech Stack` are written **only when a trigger fires** — a **new runtime
+dependency**, a **new public API**, or a **new trust or process boundary**. If none fire, there is
+no new product: the plan
 traces `*Component:*` to an **existing** component (or `none` for a pure edit that advances a
 criterion without a distinct product), and the two sections are simply absent. Their absence is
 by-design for a light-tier spec, not a gap.
@@ -43,9 +46,11 @@ by-design for a light-tier spec, not a gap.
 The light tier compresses **authoring**, never **verification**. Everything downstream is byte-for-
 byte the normal pipeline:
 
-- The **`gate`** still walks the full chain (`AC-N -> C-N -> product -> T-N`) and flags any orphan,
-  gap, or unresolved placeholder before build.
+- The **`gate`** still walks the chain and flags any orphan, gap, or unresolved placeholder
+  before build. Missing Design/Tech Stack on a light spec is not a gap.
 - **`build`** still runs test-first, one atomic green commit per task, resumable from the ledger.
+  On a light spec it uses the **light build** path: no per-task reviewer. Whole-change review
+  happens at `ship` via Review panel.
 - The **green bar** still holds — no task lands red.
 - The **`sdlc-check`** checker runs unchanged: same sectioned file, same `AC-N`/`T-N` grammar, same
   trace fields, so every mechanical rule applies exactly as it does for a full-tier spec.
@@ -58,17 +63,16 @@ what the gate, the build discipline, and the checker enforce.
 The upgrade to the full tier is **always available**, and mid-flight discovery is expected. Upgrade
 when, at any point:
 
-- a **trigger fires** — a new dependency, a new component, or a cross-cutting need emerges; or
-- the change turns out **bigger** than judged (more files, more surface, more coupling than the
-  light-tier heuristic allows).
+- a **trigger fires** — a new runtime dependency, a new public API, or a new trust or process
+  boundary; or
+- the user asks for the full chain.
 
 To upgrade: author the missing `## Design`/`## Tech Stack` (and expand `## Acceptance Criteria`/
 `## Plan` as needed) **through the normal materialize path** — the sections land in the SAME spec
 file, exactly as `reference/input-resolution.md` describes. There is **no ephemeral or side mode**;
 an upgrade only adds sections to the one source of truth. Then continue the chain from where you are.
 
-**When unsure, upgrade.** The full tier is never wrong; the light tier is only a shortcut you take
-when you are confident the change is genuinely small and self-contained.
+**When unsure, stay light.** Upgrade when a trigger fires or the user asks for the full chain.
 
 ## Why it preserves the guarantees
 

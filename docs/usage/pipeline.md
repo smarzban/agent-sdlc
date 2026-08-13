@@ -3,19 +3,23 @@
 Idea to a reviewed pull request. The **front half** is five thinking stages plus a read-only gate:
 you own the thinking (intent, scope, criteria, shape, stack), the agent owns the breakdown (plan),
 and the gate confirms it all hangs together before any code is written. The **back half** is two
-agent-driven stages — `build` executes the plan test-first, `ship` opens the reviewed PR.
+agent-driven stages — `build` executes the plan test-first, `ship` opens the PR. The invoke is
+`ship`; the job is open the PR. It does not merge.
 
 ```
+light -> gate -> build -> ship
 idea -> acceptance-criteria -> architecture-design -> techstack -> plan -> gate -> build -> ship
 ```
 
-Each stage is a skill; [`getting-started`](../../skills/getting-started/SKILL.md) is the router
-that picks your entry stage and states the shared rules every stage obeys.
+The first line is the default for small work. The second runs only when the user asks or a
+narrow trigger fires. Each stage is a skill; [`getting-started`](../../skills/getting-started/SKILL.md)
+is the router that picks your entry stage and states the shared rules every stage obeys.
 
 ## The stages
 
 | # | Skill | Owner | Writes |
 | --- | --- | --- | --- |
+| 0 | [`light`](../../skills/light/SKILL.md) | you review | Brief + AC + Plan (default for small work) |
 | 1 | [`idea`](../../skills/idea/SKILL.md) | you | `## Brief` (feature) — or `## Overview` + feature list (project) |
 | 2 | [`acceptance-criteria`](../../skills/acceptance-criteria/SKILL.md) | you review | `## Acceptance Criteria` — the contract (`AC-N`) |
 | 3 | [`architecture-design`](../../skills/architecture-design/SKILL.md) | you, agent proposes | `## Design` (`C-N`) — feature; `## Architecture` — project |
@@ -23,7 +27,7 @@ that picks your entry stage and states the shared rules every stage obeys.
 | 5 | [`plan`](../../skills/plan/SKILL.md) | agent | `## Plan` with `T-N` tasks at independently reviewable vertical slice boundaries: useful, green tasks that can be accepted and reverted independently, each naming its files and failing test |
 | — | [`gate`](../../skills/gate/SKILL.md) | automated, read-only | `gate-report.md` — the ready-to-build verdict |
 | 6 | [`build`](../../skills/build/SKILL.md) | agent | product code (a green branch) + `build-report.md` |
-| 7 | [`ship`](../../skills/ship/SKILL.md) | agent | a reviewed PR + `verification-report.md` |
+| 7 | [`ship`](../../skills/ship/SKILL.md) | agent | an open PR + `verification-report.md` (does not merge) |
 
 ## The traceability spine
 
@@ -37,21 +41,15 @@ of the same promises, fail-closed. Anything unmapped surfaces before code, not d
 
 ## build and ship, briefly
 
-- **`build` is a conductor.** It never writes product code itself: per task it dispatches a fresh
-  implementer subagent (test-first) and reviewer. The initial independent review reads the complete
-  task-scoped diff. Blocking findings enter at most three remediation rounds: rounds one and two
-  continue the original sessions when supported, and are finding-scoped to prior blockers plus the
-  remediation diff; an unavailable or dead continuation visibly falls back to a fresh agent with
-  the file handoff. Round three uses a fresh fixer-reviewer pair, then remaining Critical or
-  Important findings block the task. Build still verifies the green bar itself, commits one atomic
-  `feat(T-N): …` commit per task, and records the run in `build-report.md`, the resumable ledger it
-  trusts over memory after a compaction. Disciplines (TDD, subagent loop, debugging, plan
-  amendments, plan ingestion) live in [`skills/build/reference/`](../../skills/build/reference/).
-- **`ship`** verifies green → writes, checker-verifies, and commits the `verification-report.md`
-  AC→proof map (all before any PR exists) → pushes → opens a PR synthesized from the spec → hands
-  the PR to the [Empanel](https://github.com/smarzban/empanel) gate (`/empanel:merge-gate`) when
-  installed, or a dispatched reviewer subagent when not. It stops-and-asks on a blocking verdict
-  and **never merges**.
+- **`build` is a conductor.** Light specs: the conductor (or one implementer) writes each task
+  test-first with **no per-task reviewer**. Full specs: one implementer plus one initial review
+  of the complete task-scoped diff; one remediations pass, then stop and ask. Build verifies the
+  green bar itself, commits one atomic `feat(T-N): …` commit per task, and records the run in
+  `build-report.md`. Disciplines live in [`skills/build/reference/`](../../skills/build/reference/).
+- **`ship`** (invoke name; the job is open the PR) verifies green → writes, checker-verifies, and
+  commits the `verification-report.md` AC→proof map (all before any PR exists) → pushes → opens a
+  PR synthesized from the spec → calls `review_panel` when installed, or a dispatched reviewer
+  subagent when not. The owner judges the report. ship **never merges**.
 
 ## The artifact model
 

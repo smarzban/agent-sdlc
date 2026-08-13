@@ -29,7 +29,6 @@ authoritative method.
 | [Handoff](usage/handoff.md) | `HANDOFF.md`, the working copy's live "where we left off" doc: scaffold, update, prune, ignored by default. |
 | [Documentation skills](usage/documentation-skills.md) | `writing-readmes`, `writing-repo-docs`, `writing-technical-docs` — the three standalone documentation skills outside the pipeline. |
 | [`repo-setup`](usage/repo-setup.md) | Take a repo — empty or existing — to an operational baseline: the agent-instruction split, gitignore/CI/templates/CODEOWNERS scaffolding, opt-in pipeline setup. Standalone like the three documentation skills above, but machinery, not prose. |
-| [Run-observability experiment](usage/experiment-run-observability.md) | *(EXPERIMENT: run-observability, removed with the rest of the experiment.)* Recording and summarizing what a pipeline run cost, for a handful of real runs, and how to remove the instrument completely. |
 
 ## Everything else
 

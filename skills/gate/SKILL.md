@@ -94,16 +94,6 @@ a verdict: ready to build, or not.
    did not fail (or its failure was explicitly overridden and the override is recorded).
 9. **Write `gate-report.md`** and stop. Do not fix anything. If Linear sync is enabled in
    `.agent-sdlc/config.json`, also post the gate's status update + report via the `linear-sync` skill.
-   **Experiment recording (`EXPERIMENT: run-observability`, removed with the rest of the experiment).**
-   Once the report is written, and only on this run's first gate pass (a re-run after a fix, or an
-   inline gate `build` triggers, does not record it again), invoke `bin/sdlc-record run-start --run
-   <feature>` (resolve it the same way as `sdlc-check`, per the checker-resolution rule; `<feature>`
-   is the run identity every stage derives the same way, see experiment-feedback's Run identity): it
-   marks the run's start boundary, which the summary later reads to tell a complete run from one
-   that never got this far. If the recorder is unavailable, or the call fails, announce it in the
-   report and proceed: the experiment never blocks a gate verdict. See
-   [experiment-feedback](../getting-started/reference/experiment-feedback.md) for the run identity
-   and for when this run also warrants a feedback note.
 
 ## Principles
 
@@ -177,7 +167,7 @@ a verdict: ready to build, or not.
   over every other artifact.
 - Run after the `## Plan` section exists and before build. Re-run after any fix until the verdict is clean.
 - Invokes `sdlc-check` (resolve per getting-started's checker-resolution rule; degrade only when no form resolves) after its own chain walk for
-  mechanical corroboration, mirroring the existing ship <-> Empanel contract: present and clean ->
+  mechanical corroboration, mirroring the existing ship <-> Review panel contract: present and clean ->
   corroborated; present and failing (or crashing) -> stop-and-ask, override recorded; absent -> an
   announced degraded fallback, never a silent skip. The checker is read-only, same as the gate itself.
 - May be invoked **inline by `build`** on a freshly materialized plan (build runs the gate itself when

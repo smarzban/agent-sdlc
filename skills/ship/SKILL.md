@@ -1,14 +1,14 @@
 ---
 name: ship
-description: "Turn a green, build-finished branch into a reviewed pull request: verify, push, open a PR built from the spec, and hand the PR to the Empanel review gate. Use AFTER build reports the branch ready. Triggers: 'ship', 'open the PR', 'raise the pull request', 'send for review', or a build-report.md with every task done. Scope: only within an Agent SDLC run (a spec chain exists), not on the bare word alone. Terminal stage of the build half; it does not merge."
+description: "Turn a green, build-finished branch into an open pull request and run Review panel on it. Verify, push, open the PR from the spec, call review_panel. Use AFTER build reports the branch ready. Triggers: 'ship', 'open the PR', 'open-pr', 'raise the pull request', 'send for review', or a build-report.md with every task done. Scope: only within an Agent SDLC run. Last pipeline stage. It does not merge. The invoke name is ship; the job is open the PR."
 ---
 
-# Ship: branch to reviewed PR
+# Ship: open the PR
 
-Take the branch `build` finished and open a pull request for it, reviewed. Verify the suite is green,
-push, synthesize the PR from the spec, and hand the open PR to the Empanel gate for the whole-PR
-merge review. The terminal artifact is a *reviewed* PR — ship does not merge; that stays with a human
-or the gate's own merge step, and promotion belongs to a later `deploy` stage.
+Take the branch `build` finished and open a pull request. Verify the suite is green, push,
+synthesize the PR from the spec, and run Review panel (`review_panel`) on it. The terminal
+artifact is an open PR plus a presentation-only review report. ship does not merge. The owner
+is the merge gate. The invoke stays `/agent-sdlc:ship` so existing runs keep working.
 
 <HARD-GATE>
 Precondition: a **green, build-finished branch with a clean working tree** — proven by
@@ -16,33 +16,19 @@ Precondition: a **green, build-finished branch with a clean working tree** — p
 or not; root `specs/` in a repo that already uses it — the back-compat rule in getting-started, so
 check the repo's actual spec tree before concluding "no ledger"), or, when no ledger exists because
 the branch was built **outside the pipeline**, by verifying
-the branch directly: the suite is green. On that no-ledger path the Empanel gate is the *sole* quality gate
-(no upstream spec-gate or per-task review ran) and completeness cannot be asserted from a ledger —
-lean on the spec coverage and the review, and say so. A tree dirtied only by a team-committed,
-hook-updated `HANDOFF.md` left uncommitted from a prior park (step 9) is the one sanctioned
-exception to "clean working tree": it does not fail this precondition, since that doc's own commit
-is a separate, later step by design. If a task is in-progress or blocked, STOP and
-route back to `/agent-sdlc:build`. Input is the green
-feature branch plus the spec (for the PR body). Output is a pushed branch, a written
-`docs/specs/<feature>/verification-report.md`, an open PR (body carrying the published AC → proof map),
-and a gate verdict. ship creates and reviews the PR; it does NOT merge. On a blocking verdict
-it stops and asks before changing anything — a PR is an outward artifact.
+the branch directly: the suite is green. On that no-ledger path Review panel is the *sole*
+quality review (no upstream spec-gate or per-task review ran) and completeness cannot be asserted
+from a ledger — lean on the spec coverage and the review, and say so. A tree dirtied only by a
+team-committed, hook-updated `HANDOFF.md` left uncommitted from a prior park (step 9) is the one
+sanctioned exception to "clean working tree". If a task is in-progress or blocked, STOP and
+route back to `/agent-sdlc:build`. Output is a pushed branch, a written
+`docs/specs/<feature>/verification-report.md`, an open PR (body carrying the published AC → proof
+map), and a Review panel report. ship creates the PR and runs the review; it does NOT merge.
+The owner judges the report. On findings the owner wants fixed, stop and ask before changing
+an outward PR.
 </HARD-GATE>
 
 ## The sequence
-
-**Experiment recording (`EXPERIMENT: run-observability`, removed with the rest of the experiment).**
-At whichever step closes this run, whether the pass/block/inconclusive verdict in step 8, an
-earlier stop at any step (a red precondition in step 1, a red suite in step 2, a failed checker
-check in step 3), or the park handoff (step 9), invoke `bin/sdlc-record run-end --run <feature>
---outcome <finished|failed|abandoned>` (resolve it the same way as `sdlc-check`, per the
-checker-resolution rule; `<feature>` is the run identity every stage derives the same way, see
-experiment-feedback's Run identity): `finished` for a completed pass, `failed` for a stop before the
-PR is safely open and reviewed, `abandoned` for a deliberate park with no further action taken here.
-If the recorder is unavailable, or the call fails, announce it and proceed: the experiment never
-blocks ship's outward artifacts. See
-[experiment-feedback](../getting-started/reference/experiment-feedback.md) for the run identity and
-for when this run also warrants a feedback note.
 
 1. **Precondition** a green build-finished branch with a clean working tree — `build-report.md`
    all-done, or (no ledger, a branch built outside the pipeline) verify the branch directly. A task
@@ -62,13 +48,13 @@ for when this run also warrants a feedback note.
    **No-ledger path** (a branch built outside the pipeline — the HARD-GATE's alternate precondition):
    there is no `build-report.md`, so drop `--require ledger` (run `sdlc-check … --require
    verification-report` only) and state in the verification report + PR body that ledger-backed proof-evidence
-   corroboration is unavailable — the direct suite verification (step 2) plus the gate panel
-   (step 7) are the quality gate, as the HARD-GATE says. Then **commit the verification report** so it
+   corroboration is unavailable — the direct suite verification (step 2) plus Review panel
+   (step 7) are the quality review, as the HARD-GATE says. Then **commit the verification report** so it
    rides the PR: `git add docs/specs/<feature>/verification-report.md && git commit` (a sibling of the
    already-committed `gate-report.md`/`build-report.md`; without this the pushed branch omits it and
    the worktree is left dirty). This all runs *before* `gh pr create`, distinct from the *post-PR*
-   gate panel (step 7): sdlc-check is the mechanical spine, Empanel is the judgment panel,
-   both are real gates. **Read [reference/finishing.md](reference/finishing.md) now, before writing
+   Review panel (step 7): sdlc-check is the mechanical spine, Review panel is the presentation-only
+   review. **Read [reference/finishing.md](reference/finishing.md) now, before writing
    the verification report and opening the PR** — it is the load-bearing finishing contract: the PR
    mechanics and the verification-report row grammar the checker parses.
 4. **Push** push the feature branch to the remote.
@@ -83,18 +69,14 @@ for when this run also warrants a feedback note.
 6. **Linear** if sync is enabled in `.agent-sdlc/config.json`, attach the PR url to the feature's
    issues and post a project status update — via the `linear-sync` skill. The project stays In
    Progress (Linear projects have no In-Review state — mapping.md, ship row).
-7. **Review** invoke the Empanel merge gate (`/empanel:merge-gate`) on the open PR, passing it the
-   spec explicitly (the `## Acceptance Criteria` and the design) because its reviewers explore the
-   committed worktree, where a gitignored or uncommitted spec is invisible and the conformance lens
-   would otherwise check against nothing. It diffs the PR against the base, reviews, posts a verdict
-   comment, and returns **pass**, **block**, or **inconclusive**. If the gate skill is not installed
-   (or the `@empanel/cli` runtime is missing), fall back to a dispatched whole-PR reviewer subagent
-   and say so (the PR is still created and reviewed, by the portable path).
-8. **Verdict** **pass** → report "PR ready, gate ✅" with the URL. **block** → surface the
-   blocking findings and recommended fixes, then STOP and ask whether to dispatch fixers and
-   re-push, or hand it back. Do not auto-loop on an outward artifact. **inconclusive** → the panel
-   did not review enough of the change to judge it; report it as unreviewed (never as ready, never
-   as a block to fix) and ask to re-run with a fuller panel or a working scanner tier.
+7. **Review** call `review_panel` (`action: review`) on the open PR's base and head. Pass the
+   `## Acceptance Criteria` (and the design, if any) in `scopingNote` so a spec lens has something
+   to check. The tool writes a presentation-only report. It does not merge and it does not
+   compute a verdict. You judge: keep, skip, or ask the owner. If `review_panel` is not installed,
+   fall back to a dispatched whole-PR reviewer subagent and say so.
+8. **Report** give the PR URL and the Review panel keep/skip list (or the fallback findings).
+   Do not treat the tool report as a merge decision. If the owner wants fixes, STOP and ask
+   before rewriting an open PR. A dead seat is lost coverage, named, never a silent empty review.
 9. **Park with the reviewed head visible** when the merge is someone else's call (an overseer's or
    maintainer's review — parking the PR instead of finishing): before declaring it parked, the branch
    is **pushed** and the **PR head equals the local reviewed head** — `git rev-parse HEAD` ==
@@ -122,20 +104,18 @@ for when this run also warrants a feedback note.
 
 ## Principles
 
-- **A reviewed PR is the finish line.** Not a merge. ship hands off a PR that has passed (or
-  explicitly deferred) review; the merge decision is someone else's.
-- **PR first, then review.** Empanel is a post-PR merge gate — it operates on an existing PR and
-  comments on it. Create the PR, then hand it over.
+- **An open PR plus a review report is the finish line.** Not a merge. The owner is the merge gate.
+- **PR first, then review.** Create the PR, then call `review_panel` on that base and head.
 - **Never push or PR a red branch.** Re-run the suite at ship and read the output. The branch was
   green at build; confirm it still is before going outward.
-- **Stop before mutating outward.** A blocking verdict is a checkpoint, not a loop. Surface it and
-  ask. Re-pushing fixes to an open PR is a real, visible change.
+- **Stop before mutating outward.** A keep-list the owner wants fixed is a checkpoint, not a loop.
+  Surface it and ask.
 - **Build the PR from the spec, not from memory.** The Brief, the criteria, and the coverage map are
   the truthful description of what shipped. Synthesize the body from them.
 - **Settle every AC mechanically before going outward.** The proof map plus `sdlc-check
   --require verification-report` is the terminal mechanical settle of "every AC met" against
   captured reality — a second, automated witness, sequenced before the PR exists at all, distinct
-  from the gate's post-PR judgment panel.
+  from Review panel's post-PR report.
 - **A proof map that isn't in the PR body doesn't count.** Writing `verification-report.md` alone
   satisfies neither the contract nor the reviewer who never opens the spec tree — copy the map into the PR
   body every time.
@@ -147,10 +127,10 @@ for when this run also warrants a feedback note.
 | Excuse | Rebuttal |
 | --- | --- |
 | "build said green, no need to re-verify." | Verify at the boundary. The cost of one suite run is nothing against pushing a red branch. |
-| "Review the branch, then open the PR." | The gate reviews an existing PR and comments on it. PR first, then review. |
-| "It blocked, I'll just fix and re-push." | A PR is outward. Surface the findings and ask first — do not silently rewrite an open PR. |
-| "Merge it, the review passed." | ship's finish line is a *reviewed* PR. Merging is a human's or the gate's call, not ship's. |
-| "The gate isn't installed, skip the review." | Degrade to the portable reviewer subagent. A PR ships reviewed, one way or another. |
+| "Review the branch, then open the PR." | Open the PR first, then call `review_panel` on that range. |
+| "It found things, I'll just fix and re-push." | A PR is outward. Surface the keep list and ask first. |
+| "Merge it, the review looked clean." | ship does not merge. The owner is the merge gate. |
+| "review_panel isn't installed, skip the review." | Degrade to the portable reviewer subagent and say so. |
 | "Write the proof map after the PR is up, or skip it — build already proved things." | Sequenced pre-PR, before `gh pr create`. The report settles proof-map completeness and evidence linkage mechanically against the ledger's captured evidence; a PR opened first is a PR opened unproven. |
 | "sdlc-check isn't installed here, skip verification." | `node` absent is a degraded fallback, announced — not a silent skip. |
 | "The checker failed but the branch looks fine, open the PR anyway." | A failed checker run is a failed check — stop-and-ask. Proceeding needs an explicit human override, and it must be recorded in the PR body, not just said aloud. |
@@ -161,9 +141,9 @@ for when this run also warrants a feedback note.
 
 - A branch pushed or a PR opened without re-running the suite at ship.
 - A PR body written from memory instead of synthesized from the spec.
-- Auto-looping fixes onto an open PR after a blocking verdict without asking.
+- Auto-looping fixes onto an open PR after a keep list without asking.
 - ship merging the PR.
-- The review step silently skipped because the gate was absent (degrade instead).
+- The review step silently skipped because `review_panel` was absent (degrade instead).
 - The workspace cleaned up while the PR is still open.
 - A PR opened while `sdlc-check --require verification-report` failed, with no override recorded in
   the PR body.
@@ -185,9 +165,8 @@ for when this run also warrants a feedback note.
 - A PR is open with a body synthesized from the spec (Brief, `AC-N` list, coverage, spec link), the
   published AC → proof map, plus any `SHORTCUT(T-N)` ceilings recorded in `build-report.md` and, when
   the plan was ingested, its provenance + the gate's mid-chain-entry / `untraced` note.
-- The gate (or the fallback reviewer) has returned a verdict, posted on the PR.
-- On pass: the PR URL and the ✅ verdict are reported. On block: findings surfaced and the user asked.
-  On inconclusive: reported as unreviewed, with a re-run on a fuller panel offered.
+- Review panel (or the fallback reviewer) has produced a report. You judged keep vs skip and
+  named lost coverage. The owner still decides whether to merge.
 - If the PR is parked / handed off for review rather than finished: the branch is pushed, the PR head
   equals the local reviewed head (`git rev-parse HEAD` == the PR's `headRefOid`), and the handoff
   message states that SHA; every post-open fix round re-pushed before re-parking.
@@ -199,7 +178,7 @@ for when this run also warrants a feedback note.
   (root `specs/` in a repo that already uses it — the back-compat rule in getting-started) —
   the AC → proof map, a sibling of `gate-report.md` / `build-report.md` (process state beside the spec).
 - An open pull request with the spec-derived description (including the published proof map) and a
-  gate verdict comment.
+  Review panel report.
 - No other new files in the repo; ship's remaining output is the PR and the review, not a document.
 
 ## Checker grammar (what `sdlc-check` parses — emit exactly this)
@@ -223,7 +202,7 @@ are in [reference/finishing.md](reference/finishing.md)):
   contract: present and clean → corroborated, proceed; present and failing (or crashing) →
   stop-and-ask, override recorded in the PR body; absent → an announced degraded fallback, never a
   silent skip.
-- Invokes `/empanel:merge-gate` (the Empanel plugin, repo `smarzban/empanel`) for the whole-PR
-  review, with a portable reviewer-subagent fallback when it is absent.
+- Invokes `review_panel` (pi-review-panel) for the whole-PR review, with a portable
+  reviewer-subagent fallback when it is absent.
 - Does not merge and does not clean the worktree on the PR path.
-- Downstream consumer: a human or the gate merges; a later `deploy` stage owns promotion.
+- Downstream consumer: the owner merges.

@@ -38,13 +38,14 @@ agent-sdlc/ (repo root = the plugin AND its marketplace)
 └── docs/specs/       ← the dogfood spec tree (exemplar chains + a living overview.md)
 ```
 
-The pipeline: `idea → acceptance-criteria → architecture-design → techstack → plan → gate → build
-→ ship`, entered at any stage from any source (start-anywhere, materialized with provenance).
-Traceability spine `AC-N → C-N → product → T-N`; the read-only gate walks the chain; `build` is a
-subagent-per-task TDD conductor with harness-captured per-test green-bar evidence; `ship` writes
-the AC→proof `verification-report.md`, runs `sdlc-check` fail-closed, opens the PR, and hands it to
-the Empanel review gate (`/empanel:merge-gate`; a portable multi-lens reviewer-subagent fallback
-runs when the gate is absent). A light tier compresses small changes (same gate/build/checker).
+The default path for small work is `light → gate → build → ship`. The full chain
+(`idea → acceptance-criteria → architecture-design → techstack → plan → gate → build → ship`)
+runs only when the user asks or a narrow trigger fires (new runtime dependency, new public API,
+new trust or process boundary). When unsure, stay light. Traceability spine `AC-N → C-N →
+product → T-N`; the read-only gate walks the chain; light `build` has no per-task reviewer;
+full `build` has one initial review and at most one remediations pass; `ship` writes the
+AC→proof `verification-report.md`, runs `sdlc-check` fail-closed, opens the PR, and calls
+`review_panel` (portable reviewer fallback when absent). The owner is the merge gate.
 `linear-sync` (off by default) mirrors stages into Linear.
 
 ## Build / test / verify
@@ -101,5 +102,6 @@ Zero runtime dependencies; Node ≥22, ESM.
   **Cursor** imports the repo URL as a team marketplace (re-import to refresh); **Codex** `codex
   plugin marketplace add smarzban/agent-sdlc` + `codex plugin add agent-sdlc@agent-sdlc`; **pi**
   `pi install git:github.com/smarzban/agent-sdlc`. Full walkthrough in `docs/install.md`.
-- Review rounds run through the Empanel gate; a portable multi-lens reviewer-subagent fallback runs
-  when the gate is absent. Suite verdicts via a machine-readable reporter; exit codes read directly.
+- Review at `ship` runs through Review panel (`review_panel`); a portable reviewer-subagent
+  fallback runs when it is absent. The owner judges the report. Suite verdicts via a
+  machine-readable reporter; exit codes read directly.

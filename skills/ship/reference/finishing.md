@@ -40,8 +40,8 @@ sdlc-check docs/specs/<feature>/<feature>.md --require ledger \
   --require verification-report
 ```
 
-Sequence this **before** `gh pr create` — it is the mechanical spine gate; the post-PR
-`/empanel:merge-gate` panel (below) is the separate judgment gate. Runtime present → run,
+Sequence this **before** `gh pr create` — it is the mechanical spine; the post-PR
+`review_panel` run (below) is the presentation-only review. Runtime present → run,
 interpret the exit code: 0 = corroborated, proceed to push/PR. Nonzero, or the checker crashing, is
 itself a failed check (fail-closed) → **stop-and-ask**: do not open the PR, or if one is already open
 do not treat it as shipped. Any human override to proceed past a failed check must be **recorded in
@@ -96,55 +96,25 @@ gh pr create --base <base> --head <branch> --title "<title>" --body-file <genera
 
 Write the body to a file and pass `--body-file` — it keeps newlines and markdown intact.
 
-## Gate invocation contract (the Empanel gate)
+## Review invocation (Review panel)
 
-The gate is a **post-PR merge gate**. It checks out the PR branch in its own worktree, diffs
-against the base, runs its reviewers, and returns a deterministic verdict:
+After the PR exists, run Review panel. It is a presentation-only review, not a merge gate.
 
-- Invoke: `/empanel:merge-gate` against the open PR (the skill is named `merge-gate`; on a harness
-  that namespaces by skill rather than by plugin, e.g. pi, the same skill is `/skill:merge-gate`).
-- **Supply the spec explicitly.** The gate's reviewers explore the checked-out worktree; a spec
-  that is gitignored or uncommitted is *absent* there, and the conformance (`lens-spec`) pass then
-  has nothing to check and silently returns empty. Pass the feature's `## Acceptance Criteria` (and
-  the design / ADRs) into the invocation so the contract review is real, not blind — never assume the
-  worktree contains the spec.
-- **Verdict vocabulary:** `pass` (no blocking findings), `block` (blocking findings must be
-  resolved or justified), or `inconclusive` (the panel did not review enough of the change to judge
-  it: too few models or families voted, or the scanner tier did not positively run clean).
-- **Severity:** `critical` · `high` gate (block); `medium` gates only when adjudicated. A lone,
-  unconfirmed single-model contested medium is advisory by default (the spine itself excludes it
-  from the blocking set); `low` · `info` are advisory.
-- It posts the verdict as a PR comment.
+- Invoke `review_panel` with `action: review`, the PR repository, `base`, and `head`.
+- Put the feature's `## Acceptance Criteria` (and design / ADRs if any) in `scopingNote`.
+- The tool writes a report. It does not merge and it does not compute a verdict.
+- You judge keep vs skip. Name lost coverage. The owner is the merge gate.
+- ship never merges.
 
-**Branch on the verdict, not on memory:** treat only an explicit `pass` as ready. On `block`, surface
-the blocking findings to the user and ask before any fix-and-re-push. ship never merges — even on a
-clean pass, the merge is a human's or the gate's own step.
+## Portable fallback (`review_panel` absent)
 
-**`inconclusive` is not a block, and never a pass.** It says nothing about the code, so there is
-nothing to fix. Read the gate's own Coverage line first, it names what was lost. An unchanged
-re-run is the right, cheapest remedy when the loss was a transient non-vote (a model returning a
-pure-prose non-vote is routine and intermittent; Empanel's own guard prescribes a plain re-run, or a
-swap to a different roster model, before anything more expensive). Reach for a fuller or more
-diverse panel, or a working scanner tier, only when the Coverage line shows a structurally thin
-panel, not a transient one. Never report it as ready, never "fix" findings in response to it, and
-never spin the same degraded configuration hoping the next run gets lucky. Surface it and say what
-is missing.
-
-The gate depends on Node plus the `@empanel/cli` npm package (the skills invoke it via
-`npx @empanel/cli@0`, so a network-reachable npm registry or a global install suffices) and at
-least one connected model provider. It runs where those are present.
-
-## Portable fallback (the gate absent)
-
-If the gate skill is not installed or its prerequisites are missing, do not skip the review —
-dispatch a **whole-PR reviewer subagent**:
+If Review panel is not installed, do not skip the review. Dispatch a **whole-PR reviewer
+subagent**:
 
 - Brief: the PR diff (base..head), the feature's `## Acceptance Criteria`, and the global
   constraints.
 - It reviews across correctness, the criteria, security, and quality; returns findings by severity.
-- Map its result to the same pass/block decision: the portable path has no coverage floor, so it
-  cannot structurally return `inconclusive`, only `pass` or `block`. Report which reviewer ran. Say
-  plainly that the portable path was used.
+- You still judge. Say plainly that the portable path was used.
 
 ## Parking / handing off for review (the PR must show the reviewed head)
 

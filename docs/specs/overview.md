@@ -56,16 +56,9 @@ lists, so a parenthetical annotates instead of fabricating a link, which forced 
 weaker relations explicitly is the recorded follow-up, rejected for scope and not on merit
 (`adr/ADR-0002`).
 
-`run-observability` shipped 2026-07-29, and is **deliberately temporary**: an experiment, carrying a greppable
-removal marker in every file it touches, that records what a run costs (stage and
-task and review-round boundaries, findings by severity, changes between boundaries) to a local file
-outside the repository, and renders it as a table. It exists to answer one question on a handful of
-real runs, whether elapsed time goes to task size or to review rounds, and is then deleted by the
-procedure in `docs/usage/experiment-run-observability.md`. Its design is shaped by what it must not
-do: failed runs record an explicit outcome so they cannot vanish from an aggregate, every rendered
-column is marked measured or claimed, and the summary states on its face that wall clock includes
-idleness. Two pre-build consultations cut it from a durable product to this after finding that the
-larger design would have shipped and produced a confidently wrong conclusion.
+`run-observability` shipped 2026-07-29 as a temporary experiment and has been removed from the
+runtime (scripts, checker, and usage doc). The spec chain remains in `docs/specs/run-observability/`
+as the record of what was tried.
 
 `build-loop-efficiency` is in progress: a focused reduction in repeated model work during planning
 and task remediation, preserving every existing verification and traceability boundary.
@@ -98,10 +91,11 @@ The repo's shape, as it exists:
   pattern.
 - **The instruction/enforcement split.** Skills are untrusted-in-principle instructions executed
   by an agent; guarantees that must hold mechanically are owned by trusted committed code (the
-  enforcement spine for pipeline mechanics; the external Empanel spine for review verdicts).
-- **Cross-plugin contracts are invoke-if-present.** ship invokes the external Empanel gate
-  (`/empanel:merge-gate`) when present and announces a loud degraded fallback (a dispatched reviewer
-  subagent) when absent — never a silent skip.
+  enforcement spine for pipeline mechanics). Review at `ship` is Review panel: a presentation-only
+  report, never a verdict.
+- **Cross-plugin contracts are invoke-if-present.** ship invokes `review_panel` when present and
+  announces a loud degraded fallback (a dispatched reviewer subagent) when absent — never a silent
+  skip.
 - **Spec chains live in `docs/specs/`** per the consolidated artifact model (one sectioned spec per
   feature; process reports beside the spec, never inside it); a repo that already has a root
   `specs/` tree keeps it (the back-compat rule in getting-started).
@@ -113,5 +107,5 @@ Cross-cutting reality:
 - **agent-sdlc** — Markdown skills (no runtime). Executable additions are zero-dependency,
   committed, bare-`node` ESM (floor ≥ 22, checked 2026-07-02); tests via stdlib `node:test`.
   **Green bar:** `node --check checker/sdlc-check.mjs` + `node --test checker/*.test.mjs`.
-- **The Empanel gate** (external) — consumed as a product via `/empanel:merge-gate` +
-  `@empanel/cli`; its stack is its own repo's concern.
+- **Review panel** (external) — consumed as a product via `review_panel`; its stack is its own
+  repo's concern. It writes a report. It does not merge.
