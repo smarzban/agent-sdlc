@@ -22,12 +22,12 @@ Canonical vocabulary for this repo's spec chain. Glossary only, no implementatio
 - **sdlc-check**: the dependency-free checker script committed inside the agent-sdlc plugin;
   parses the consolidated spec and verifies trace, coverage, ledger-vs-git, green-bar evidence,
   and provenance markers. Reports; never edits.
-- **AC → proof map**: the ship-produced table mapping each acceptance criterion to the named
+- **AC → proof map**: the pr-review-produced table mapping each acceptance criterion to the named
   passing test(s) or the answered reviewer check that proves it; published in the PR body.
 - **green-bar evidence**: captured output of the declared green-bar command proving it ran and
   passed, as opposed to a ledger assertion that it did; captured as a fenced command + output
   block in the build ledger.
-- **verification report**: the ship-written report file beside the spec
+- **verification report**: the pr-review-written report file beside the spec
   (`docs/specs/<feature>/verification-report.md`) holding the AC → proof map; validated by
   `sdlc-check`, copied into the PR body.
 - **public agent file**: the committed `AGENTS.md` at a repo's root: harness-neutral agent
@@ -68,24 +68,6 @@ Canonical vocabulary for this repo's spec chain. Glossary only, no implementatio
   carrying the supporting work needed only by that slice.
 - **microtask**: a proposed task with no useful independent review boundary, split from an adjacent
   task only by file, layer, setup step, or another implementation detail.
-<!-- EXPERIMENT: run-observability. The four glossary entries below (run record, stage boundary,
-     harvested signal, feedback item) are this experiment's throwaway vocabulary, not permanent
-     terms. Delete all four when the experiment is removed. -->
-- **run record**: the structured, append-only account of what a pipeline run cost and what that cost
-  bought, one entry per stage boundary and per task. Written by committed code, stored outside the
-  repository, and never transmitted anywhere. Distinct from the spec chain, which records what a run
-  PRODUCED: the run record is the only place its cost is visible at all.
-- **stage boundary**: the point a pipeline stage starts or finishes, and the only place a run record
-  is written. Boundaries are where a clock can be trusted: everything between them is model inference
-  the pipeline cannot observe directly.
-- **harvested signal**: a fact the pipeline already writes into its own artifacts (a deviation, a
-  fired tripwire, a review round) collected into the run record automatically rather than re-typed. A
-  signal that must be restated by hand is a signal that will be dropped.
-- **feedback item**: an evidence-bound report about the PIPELINE ITSELF, not about the work it was
-  used on: a command that failed, a documented step that had to be worked around, a doc that
-  contradicts the tool. Rare by design, cites the command or the quoted line or it is not written at
-  all, and silence is the expected outcome of a run.
-<!-- end EXPERIMENT: run-observability -->
 - **handoff doc**: the repo-root "where we left off" document the next agent reads to resume, holding
   live state rather than standing rules. Ignored by default (per working copy, so it can be written
   frankly), and distinct from the spec chain: the chain hands a FEATURE forward, the handoff doc hands

@@ -82,7 +82,7 @@ gate is a bug, exactly as a build off an unvetted plan is.
 ## Why it preserves the guarantees
 
 Materializing the amendment (rather than adapting in context) is what keeps build's promises intact:
-the materialized `## Plan` stays the **single source of truth** the gate re-walks and `ship` synthesizes
+the materialized `## Plan` stays the **single source of truth** the gate re-walks and `pr-review` synthesizes
 the PR from; the ledger + `git log` stay **compaction-proof** (a resumed run reads the amended plan and
 the recorded amendment, never a lost in-context edit); and the inline gate has a **real chain to
 re-walk** for the delta. An in-context-only adaptation would satisfy none of these — which is why the

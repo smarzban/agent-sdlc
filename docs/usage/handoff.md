@@ -41,5 +41,5 @@ needs to resume without re-deriving context from the git log alone. Ask for it d
 come up naturally at the end of a working session.
 
 Two pipeline stages also update it automatically when it already exists: `build`, before
-dispatching the first task, and `ship`, at its park step. Neither stage ever creates it; presence
+dispatching the first task, and `pr-review`, at its park step. Neither stage ever creates it; presence
 is the only opt-in.

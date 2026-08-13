@@ -36,7 +36,7 @@ Before opening a PR, the suite must be green, and every shipped spec must still 
 Conventional Commits with an area scope, as in the existing `git log`:
 
 - `feat(<area>): …` / `fix(<area>): …` / `docs(<area>): …` / `chore(release): …` — areas are the
-  thing touched: a skill name (`fix(ship): …`), `checker`, `marketplace`, `agent-sdlc` for
+  thing touched: a skill name (`fix(pr-review): …`), `checker`, `marketplace`, `agent-sdlc` for
   cross-cutting docs.
 - During a pipeline build, task commits use the task scope: `feat(T-N): …` — the checker matches
   that scope position against the build ledger.

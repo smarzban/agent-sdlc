@@ -8,37 +8,39 @@ description: "Entry point and operating rules for Agent SDLC, the pipeline that 
 Agent SDLC takes an idea to a reviewed pull request. The **front half** is five thinking stages plus
 a read-only gate: you own the thinking (intent, scope, criteria, shape, stack), the agent owns the
 breakdown (plan), and the gate confirms it all hangs together before any code is written. The **back
-half** is two agent-driven stages — `build` executes the plan test-first, `ship` opens the reviewed
+half** is two agent-driven stages — `build` executes the plan test-first, `pr-review` opens the reviewed
 PR. (Test and deploy are later additions to the same chain.)
 
 ## The stages
 
 | # | Skill | Invoke | Owner | Reads | Writes |
 | --- | --- | --- | --- | --- | --- |
+| 0 | `light` | `/agent-sdlc:light` | you review | a small change | Brief + AC + Plan (default) |
 | 1 | `idea` | `/agent-sdlc:idea` | you | the idea | `## Brief` (feature) — or `## Overview` + feature list (project) |
 | 2 | `acceptance-criteria` | `/agent-sdlc:acceptance-criteria` | you review | `## Brief` | `## Acceptance Criteria` — the contract (`AC-N`) |
 | 3 | `architecture-design` | `/agent-sdlc:architecture-design` | you (agent proposes) | `## Brief`, `## Acceptance Criteria` | `## Design` (`C-N`) — feature; `## Architecture` — project |
 | 4 | `techstack` | `/agent-sdlc:techstack` | you (agent proposes) | `## Design`, `## Acceptance Criteria` | `## Tech Stack` (products per kind) |
 | 5 | `plan` | `/agent-sdlc:plan` | agent | `## Acceptance Criteria`, `## Design`, `## Tech Stack` | `## Plan` — atomic tasks (`T-N`) |
 | 6 | `build` | `/agent-sdlc:build` | agent | `## Plan`, `gate-report.md` | product code (a green branch) + `build-report.md` |
-| 7 | `ship` | `/agent-sdlc:ship` | agent | `build-report.md`, the spec | a reviewed PR (invokes the Empanel gate) |
+| 7 | `pr-review` | `/agent-sdlc:pr-review` | agent | `build-report.md`, the spec | an open PR + Review panel report |
 
 Feature-tier sections live in `docs/specs/<feature>/<feature>.md`; project-tier sections (`## Overview`,
 `## Architecture`, `## Tech Stack`) live in `docs/specs/overview.md`. Stages 1–5 each own and edit only
-their own section; `build` writes product code + `build-report.md`, and `ship` opens the PR — neither
+their own section; `build` writes product code + `build-report.md`, and `pr-review` opens the PR — neither
 edits the spec.
 
 Cross-cutting: **`constitution.md`** (standing guardrails, seeded by `idea`, checked at design and
 plan) and the **`gate`** (`/agent-sdlc:gate`; read-only; walks the chain and writes
 `gate-report.md`). The gate stands between plan and build: build runs only on a clean verdict.
 
-The flow: `idea -> acceptance-criteria -> architecture-design -> techstack -> plan -> gate -> build -> ship`.
+The default flow for small work: `light -> gate -> build -> pr-review`.
+The full flow: `idea -> acceptance-criteria -> architecture-design -> techstack -> plan -> gate -> build -> pr-review`.
 
 ## Optional: Linear sync
 
 If enabled in `.agent-sdlc/config.json` (`linear.enabled: true`), each stage mirrors its output into
 Linear at its hand-off — initiative (product) → project (feature) → milestone (build phase) → issue
-(task). `build` and `ship` transition those milestones and issues as code lands and the PR opens
+(task). `build` and `pr-review` transition those milestones and issues as code lands and the PR opens
 (Backlog → In Progress → In Review → Done, plus PR attachment). The mechanics live in the
 `linear-sync` skill; with the Linear MCP absent (e.g. headless runs) the steps are skipped. Off by
 default — Agent SDLC runs identically without it.
@@ -49,7 +51,7 @@ Stated once here; the stage skills reference them by name rather than restating.
 
 - **Recommend, don't just ask.** Every stage leads with the agent's recommended answer and the
   alternatives it considered with tradeoffs. You decide. This holds at every question in every
-  stage. (The agent-driven stages — `plan`, `build`, `ship` — run autonomously; they stop and ask
+  stage. (The agent-driven stages — `plan`, `build`, `pr-review` — run autonomously; they stop and ask
   only at a genuine blocker.)
 - **One question at a time.** Multiple-choice where possible. Walk the decision tree, do not dump.
 - **Code over questions.** If the repo answers it, go read it instead of asking.
@@ -66,7 +68,7 @@ Stated once here; the stage skills reference them by name rather than restating.
 - **YAGNI throughout.** Build only what the criteria need, at every stage: no aspirational
   criteria, no speculative components, no needless dependencies, no gold-plated tasks.
 - **Stay in your stage.** Tech-agnostic until design; product-free until techstack; no code until
-  build; no PR until ship. Each stage names the next thing down, not all of them.
+  build; no PR until pr-review. Each stage names the next thing down, not all of them.
 - **Test-first in build.** Every task names its failing test in the plan; build writes that test
   before any code and keeps the repo green between tasks.
 - **Ground in live docs over memory**, at techstack and again in build: verify current versions and
@@ -105,27 +107,20 @@ Decide the level the way `idea` does, and carry it through.
   fitting the existing `overview.md` architecture and stack, justifying any deviation with an ADR
   in `docs/specs/adr/`.
 
-## Routing: light tier vs full chain (by size)
+## Routing: light vs full (ask this first)
 
-After the level, decide the **tier** by size. The full chain is right for a feature and heavy for a
-30-line fix — routing only by entry point lets small work bypass the discipline, so route by size too.
+**Light is the default.** Full is the exception. Ask size before starting `idea`.
 
-- **Small and self-contained** (a bug fix, a small addition, a ~tens-of-lines change) with **no new
-  dependency, no new component, and no cross-cutting change** -> the **light tier**: brief + AC + plan
-  folded into one short authoring pass in the same sectioned spec file; `## Design`/`## Tech Stack`
-  only when a trigger fires. **If light tier: read [reference/light-tier.md](reference/light-tier.md)
-  now** — it is the load-bearing compressed-pass contract (what to author, the triggers, the
-  same-verification invariant).
-- **A feature**, or any change where an **escalation trigger** fires — a **new dependency**, a **new
-  component**, or a **cross-cutting change** — -> the **full chain**. Those three triggers force the
-  full tier; when unsure, choose the full chain.
+- **Small and self-contained** (a bug fix, a targeted edit, tens of lines, a few files) with **no
+  new runtime dependency, no new public API, and no new trust or process boundary** -> **light**.
+  Invoke `/agent-sdlc:light`. **Read [reference/light-tier.md](reference/light-tier.md) now.**
+  Gate still runs. Build uses the light path (no per-task reviewer). `pr-review` runs Review panel.
+- **Full chain** only if the user asks for it, or a **narrow trigger** fires: new runtime
+  dependency, new public API, or new trust/process boundary. Then start at `idea`.
 
-The light tier compresses **authoring only, never verification**: same gate, same test-first build
-with one atomic green commit per task, same `sdlc-check` checker (same sectioned file + grammar). A
-**mid-flight tier upgrade** (a trigger fires or the change turns out bigger than judged) authors the
-missing `## Design`/`## Tech Stack` **through the normal materialize path** — the same one
-[reference/input-resolution.md](reference/input-resolution.md) describes, landing in the one spec
-file, **no ephemeral mode**. The upgrade is always available; when unsure, upgrade.
+**When unsure, stay light.** Upgrade mid-flight if a trigger appears: author the missing
+`## Design`/`## Tech Stack` through the normal materialize path
+([input-resolution](reference/input-resolution.md)) into the same spec file.
 
 ## Visual aids: idea and architecture-design only
 
@@ -149,7 +144,7 @@ discipline (the visual test, the two kinds of visual aid, and the consent protoc
             ├── <feature>.md           ← feature tier: ## Brief · ## Acceptance Criteria · ## Design · ## Tech Stack · ## Plan
             ├── gate-report.md         ← gate output (read-only)
             ├── build-report.md        ← build output (the resumable ledger)
-            └── verification-report.md ← ship output (the AC → proof map)
+            └── verification-report.md ← pr-review output (the AC → proof map)
 ```
 
 **Back-compat rule (the authoritative statement — the other skills reference it rather than
@@ -160,7 +155,7 @@ a repo across both locations, and never auto-migrate a user's repo. New spec tre
 ### Spec lifecycle
 
 A **feature spec** (`docs/specs/<feature>/<feature>.md`) is an **immutable snapshot** — once shipped it is
-not edited; `ship` stamps a one-line **status header** at the top (status · version · date) recording
+not edited; `pr-review` stamps a one-line **status header** at the top (status · version · date) recording
 what was built. `docs/specs/overview.md` is **living** — its project-tier `## Overview` · `## Architecture`
 · `## Tech Stack` are updated as the project evolves. Each feature's **design stage owns updating
 `## Architecture`** (in `overview.md`) on a material change: a new feature that reshapes the north-star
@@ -170,15 +165,14 @@ faithful snapshot of what was built.
 
 ## Where to start
 
+- A small, self-contained change: **`light`**. This is the default.
 - A new app, vague idea: start at **`idea`**, project level.
-- A new feature on an existing app: start at **`idea`**, feature level (often a light pass).
-- A small, self-contained change (bug fix / small addition, no new dependency/component/cross-cutting
-  impact): take the **light tier** — read [reference/light-tier.md](reference/light-tier.md) and fold
-  brief + AC + plan into one short pass, then run **`gate`** -> **`build`** as usual.
+- A new feature with a new public API, new runtime dependency, or new trust boundary: **`idea`**,
+  feature level, full chain.
 - You already have a settled problem and scope: start at **`acceptance-criteria`**.
 - You have approved criteria: **`architecture-design`**, then **`techstack`**, then **`plan`**.
 - A `## Plan` section exists in `<feature>.md`: run **`gate`**, then **`build`**.
-- The branch is built and green (`build-report.md` all done): run **`ship`** to open the reviewed PR.
+- The branch is built and green (`build-report.md` all done): run **`pr-review`** to open the reviewed PR.
 
 Starting from outside the spec chain — a prompt, a doc, or Linear — any stage can still run (it
 resolves and materializes its input first; see [reference/input-resolution.md](reference/input-resolution.md)):
@@ -186,11 +180,11 @@ resolves and materializes its input first; see [reference/input-resolution.md](r
 - Intent lives in a prompt or doc, no spec yet: start at **`idea`** (or **`acceptance-criteria`** if
   the problem is already settled), ingesting the source as the `## Brief`.
 - A plan already lives in Linear or a doc: run **`build`** — it ingests the plan (materializes
-  `## Plan`), runs the **`gate`** inline, then builds with the full per-task loop. You do not have to
+  `## Plan`), runs the **`gate`** inline, then builds (light or full per the spec). You do not have to
   hand-run the front half first.
 - Any single stage on its own ("just write the criteria", "just plan this"): invoke that stage; it
   resolves its input from the source you give it. **Single-stage** mode produces just that section;
-  **resume-to-ship** mode backfills only the minimum upstream the gates require, marking genuinely
+  **resume-to-pr-review** mode backfills only the minimum upstream the gates require, marking genuinely
   absent links untraced rather than inventing them.
 
 If you are unsure which stage you are in, you are probably one stage earlier than you think. The

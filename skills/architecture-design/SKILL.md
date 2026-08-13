@@ -147,14 +147,14 @@ No concrete stack, no plan, no tasks. Those are later stages.
 
 ## Checker grammar (what `sdlc-check` parses — emit exactly this)
 
-The gate/build/ship checker resolves the criterion -> component chain by parsing this section
+The gate/build/pr-review checker resolves the criterion -> component chain by parsing this section
 literally. Emit these exact shapes or the links parse as zero:
 
 - **Components are a numbered, bold-lead list** under a `### Components` subheading (the exact word;
   `### Component` also matches): `1. **Name** — responsibility.` A *bulleted* list (`- **Name**`)
   parses as **zero** components — the leading number is load-bearing. Each entry's ordinal becomes
   its `C-N` id.
-- **Components that change but aren't numbered here** (e.g. a `gate`/`build`/`ship` skill text) go
+- **Components that change but aren't numbered here** (e.g. a `gate`/`build`/`pr-review` skill text) go
   under a `### Outside the checker` subheading (matched `/outside the checker/i`; a trailing
   parenthetical like "(changed components)" is fine) as the same numbered bold-lead list — its
   entries become real external components (`C-ext-N`), resolvable by name. There is **no string
@@ -197,4 +197,4 @@ deviation from existing patterns as an ADR.
   tradeoff).
 - Downstream consumers: the techstack stage (picks a product per component), the plan stage (built
   against this shape), the verify gate (checks the criterion -> component -> task chain), and the
-  the Empanel gate (Architecture and Spec Conformance axes).
+  Review panel (Architecture and Spec Conformance axes).

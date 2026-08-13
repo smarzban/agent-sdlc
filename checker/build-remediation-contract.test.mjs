@@ -29,7 +29,7 @@ const packageManifest = readFileSync(repoFile('package.json'), 'utf8');
 test('build remediation contract keeps the initial review complete', () => {
   assert.match(
     buildSkill,
-    /initial full-review snapshot[\s\S]*complete\s+task-scoped\s+(?:review\s+)?diff/i,
+    /one initial reviewer[\s\S]*complete\s+task-scoped\s+diff/i,
     'the first review must retain the complete task-scoped change',
   );
   assert.match(
@@ -50,35 +50,30 @@ test('build remediation contract tests the authoritative remediation dispatch pr
   );
   assert.ok(remediationSection, 'the authoritative loop must have a remediation dispatch section');
   const section = remediationSection[1];
-  assert.match(section, /#### Rounds 1 and 2: continue the original sessions/i);
-  assert.match(
-    section,
-    /rounds? 1 and 2[\s\S]*continue the exact original implementer session/i,
-  );
-  assert.match(
-    section,
-    /rounds? 1 and 2[\s\S]*continue the exact original reviewer session/i,
-  );
+  assert.match(section, /#### One remediations pass: continue the original implementer/i);
+  assert.match(section, /at most one remediations pass/i);
+  assert.match(section, /continue the exact original implementer session/i);
+  assert.match(section, /continue the exact original reviewer session/i);
   assert.match(
     section,
     /continuation is unavailable[\s\S]*announce a fresh-agent fallback[\s\S]*before dispatch/i,
   );
-  assert.match(section, /#### Round 3: fresh fixer and reviewer/i);
-  assert.match(section, /round 3[\s\S]*fresh fixer[\s\S]*fresh reviewer/i);
-  assert.match(section, /after round 3[\s\S]*blocked/i);
-  assert.match(section, /no fourth\s+remediation dispatch/i);
+  assert.match(section, /#### After the remediations pass: stop and ask/i);
+  assert.match(section, /no second remediations dispatch/i);
+  assert.doesNotMatch(section, /#### Rounds 1 and 2/i);
+  assert.doesNotMatch(section, /#### Round 3: fresh fixer and reviewer/i);
 });
 
-test('build remediation contract resumes the original agents for two finding-scoped rounds', () => {
+test('build remediation contract resumes the original agents for one finding-scoped remediations pass', () => {
   assert.match(
     buildSkill,
-    /remediation\s+rounds?\s+1\s+and\s+2[\s\S]*continue\s+the\s+original\s+implementer\s+session/i,
-    'rounds one and two must continue the original implementer session when available',
+    /one remediations pass[\s\S]*same implementer/i,
+    'the remediations pass must continue the original implementer when available',
   );
   assert.match(
     buildSkill,
-    /remediation\s+rounds?\s+1\s+and\s+2[\s\S]*continue\s+the\s+original\s+reviewer\s+session/i,
-    'rounds one and two must continue the original reviewer session when available',
+    /stop and ask/i,
+    'a remaining blocker after one remediations pass must stop and ask',
   );
   assert.match(loopReference, /finding-scoped re-review/i, 'later reviews must be finding-scoped');
   assert.match(loopReference, /each prior blocking finding[\s\S]*`ADDRESSED`[\s\S]*`NOT ADDRESSED`/i);
@@ -86,16 +81,16 @@ test('build remediation contract resumes the original agents for two finding-sco
   assert.match(loopReference, /outside (?:the )?remediation diff[\s\S]*non-blocking/i);
 });
 
-test('build remediation contract uses a fresh final round and then blocks', () => {
+test('build remediation contract stops after one remediations pass', () => {
   assert.match(
     buildSkill,
-    /remediation round 3[\s\S]*fresh fixer[\s\S]*fresh reviewer/i,
-    'the final round must use a fresh fixer-reviewer pair',
+    /one remediations pass[\s\S]*stop and ask/i,
+    'one remediations pass then stop and ask',
   );
   assert.match(
     buildSkill,
-    /after remediation round 3[\s\S]*(?:Critical|Important)[\s\S]*blocked[\s\S]*without (?:a )?fourth dispatch/i,
-    'open blocking findings after round three must terminate the task',
+    /No third reviewer round/i,
+    'there is no third reviewer round',
   );
   assert.match(
     loopReference,
@@ -185,7 +180,7 @@ test('build remediation contract removes the stale bounded fix-cycle pointer', (
   assert.doesNotMatch(
     buildSkill,
     /bounded fix cycle/i,
-    'the reference pointer must name the three-round remediation protocol',
+    'the reference pointer must name the remediations-pass protocol',
   );
 });
 

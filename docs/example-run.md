@@ -89,9 +89,9 @@ ok 2 - prunes entries older than 15 minutes
 ```
 ````
 
-## 4. Ship (proof map, checker, PR, review)
+## 4. PR-review (proof map, checker, PR, review)
 
-`ship` re-runs the suite, writes `verification-report.md`, and the checker corroborates it pre-PR
+`pr-review` re-runs the suite, writes `verification-report.md`, and the checker corroborates it pre-PR
 (every cited test name must appear in the captured evidence — T-2's block is elided from the excerpt above for brevity):
 
 ```markdown
@@ -101,7 +101,7 @@ ok 2 - prunes entries older than 15 minutes
 | AC-2 | test-backed | resets the count on successful login |
 ```
 
-Then it pushes, opens the PR with the proof map in the body, and hands the PR to the review gate.
+Then it pushes, opens the PR with the proof map in the body, and calls Review panel.
 The finish line is a **reviewed PR** — merging is a human's call.
 
 ## Try it

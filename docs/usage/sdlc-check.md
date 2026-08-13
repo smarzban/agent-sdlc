@@ -1,7 +1,7 @@
 # sdlc-check — the enforcement-spine checker
 
 A deterministic checker for the pipeline's mechanically-decidable promises. `gate`, `build`, and
-`ship` invoke it at their checkpoints, but it is equally a standalone tool: point it at any
+`pr-review` invoke it at their checkpoints, but it is equally a standalone tool: point it at any
 sectioned spec and it verifies the chain. Single zero-dependency ESM file
 ([`checker/sdlc-check.mjs`](../../checker/sdlc-check.mjs)), bare Node ≥ 22, no build step.
 
@@ -24,7 +24,7 @@ sdlc-check docs/specs/<feature>/<feature>.md --require ledger
 sdlc-check docs/specs/<feature>/<feature>.md --require verification-report
 ```
 
-(`ship`'s standard pre-PR invocation requires both — `--require ledger --require
+(`pr-review`'s standard pre-PR invocation requires both — `--require ledger --require
 verification-report` — dropping `--require ledger` only on the no-ledger ingested-branch path.)
 
 ## Output and exit code

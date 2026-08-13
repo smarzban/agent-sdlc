@@ -24,11 +24,13 @@ step.
 1. **Explore context** files, docs, recent commits, and whether this is an existing project: look
    for `docs/specs/overview.md` (or root `specs/overview.md` — an existing root tree stays in use,
    the back-compat rule in getting-started), a `constitution.md`, and a `CONTEXT.md`.
-2. **Set level and depth** *level*: **project** (clean repo, no overview/constitution, so you are
-   shaping a whole app) or **feature** (existing project, so you are shaping one piece); *depth*:
-   vague idea (diverge first) or specific (converge fast). Level decides what you produce and where
-   it lands (see Two levels); depth scales step 4. A specific-sounding ask still gets a short pass
-   to pressure-test scope.
+2. **Set level, then tier.** *level*: **project** (clean repo, no overview/constitution, so you are
+   shaping a whole app) or **feature** (existing project, so you are shaping one piece). Then
+   **tier**: if this is a small self-contained change (tens of lines, no new runtime dependency,
+   no new public API, no new trust or process boundary), **stop and run `/agent-sdlc:light`
+   instead**. Do not continue this skill. Full chain only if the user asked for it or a trigger
+   fired. When unsure, hand off to light. *depth* (vague vs specific) scales step 4 only when you
+   stay on the full chain.
 3. **Scope-check / decompose** if the ask spans several independent pieces, flag it and decompose.
    At project level this decomposition is a main output (the feature list). At feature level, if it
    is really several features, split and shape the first.

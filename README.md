@@ -3,8 +3,8 @@
 A pipeline for AI coding agents that takes an idea to a reviewed pull request. The front half
 settles intent, a checkable contract, a sound architecture, a grounded stack, and an atomic task
 plan, with a read-only gate that confirms it all hangs together before a line of code is written.
-The back half executes it: `build` runs the plan test-first — one fresh subagent per task, green
-between each — and `ship` opens the reviewed PR.
+The back half executes it: `build` runs the plan test-first (light: no per-task reviewer; full:
+one initial review), and `pr-review` opens the PR and runs Review panel.
 
 Test and deploy are the next stages downstream, extending the same chain.
 
@@ -12,8 +12,8 @@ Test and deploy are the next stages downstream, extending the same chain.
   recommendation and alternatives, and you decide.
 - **A traceability spine** (`criterion -> component -> product -> task`) runs the whole pipeline;
   a read-only gate walks it before any code exists.
-- **Test-first, subagent-driven build** — one fresh implementer per task, one atomic green commit
-  per task, resumable from a committed ledger.
+- **Test-first build** — one atomic green commit per task, resumable from a committed ledger.
+  Light skips the per-task reviewer; full reviews once, then one remediations pass.
 - **A deterministic checker** ([`sdlc-check`](docs/usage/sdlc-check.md), zero-dep Node) enforces
   the mechanically-decidable promises — coverage, trace integrity, ledger↔git, proof maps —
   fail-closed.
@@ -29,11 +29,9 @@ is its own single-plugin marketplace**, `agent-sdlc`), and installable as a pack
 [pi](https://pi.dev). The skills are plain Markdown to the open `SKILL.md` standard, portable to any
 agent that reads instruction files.
 
-> **Pairs with [Empanel](https://github.com/smarzban/empanel)** — a multi-model code-review gate
-> + whole-repo audit. `ship` hands the open PR to its gate skill (`/empanel:merge-gate`) when
-> installed, and degrades to a portable reviewer subagent when it isn't. Empanel ships as its
-> own plugin marketplace plus the [`@empanel/cli`](https://www.npmjs.com/package/@empanel/cli)
-> npm package.
+> **Pairs with [Review panel](https://github.com/smarzban/pi-review-panel)** — multi-model
+> review that writes a report and does not merge. `pr-review` calls `review_panel` when installed,
+> and degrades to a portable reviewer subagent when it isn't. The owner is the merge gate.
 
 **Contents:** [Quickstart](#quickstart) · [The idea](#the-idea) · [Stages](#stages) ·
 [Standalone skills](#standalone-skills) · [Install](#install) · [Layout](#layout) ·
@@ -47,7 +45,8 @@ agent that reads instruction files.
 ```
 
 Then, in the repo you want to build in, state what you want — *"I want to add a feature: …"* —
-and the pipeline picks it up at `idea`, or ask `/agent-sdlc:getting-started` to route you.
+and the pipeline picks it up at `light` (the default for small work) or `idea` when a full-chain
+trigger fires. Or ask `/agent-sdlc:getting-started` to route you.
 A run leaves a committed spec chain in `docs/specs/<feature>/` and ends in a reviewed PR.
 Full walkthrough: [docs/quickstart.md](docs/quickstart.md).
 
@@ -67,17 +66,19 @@ code rather than during it.
 
 | Skill | Invoke explicitly | Owner | Output |
 | --- | --- | --- | --- |
-| `idea` | `/agent-sdlc:idea` | you | `## Brief` (problem + scope) |
+| `light` | `/agent-sdlc:light` | you review | Brief + AC + Plan in one pass (default for small work) |
+| `idea` | `/agent-sdlc:idea` | you | `## Brief` (problem + scope); full chain only |
 | `acceptance-criteria` | `/agent-sdlc:acceptance-criteria` | you review | `## Acceptance Criteria` (the contract) |
 | `architecture-design` | `/agent-sdlc:architecture-design` | you, agent proposes | `## Design` (`## Architecture` at project level) |
 | `techstack` | `/agent-sdlc:techstack` | you, agent proposes | `## Tech Stack` |
 | `plan` | `/agent-sdlc:plan` | agent | `## Plan` (atomic tasks) |
 | `gate` | `/agent-sdlc:gate` | automated (read-only) | `gate-report.md` |
 | `build` | `/agent-sdlc:build` | agent | product code (a green branch) + `build-report.md` |
-| `ship` | `/agent-sdlc:ship` | agent | a reviewed PR (hands it to the Empanel gate) |
+| `pr-review` | `/agent-sdlc:pr-review` | agent | an open PR + Review panel report (does not merge) |
 | `getting-started` | auto / `/agent-sdlc:getting-started` | router | this is the entry point |
 
-Start with `getting-started`; it routes you to the right stage and states the shared rules.
+Start with `getting-started`; it routes you. **Light is the default.** Full chain only on a
+narrow trigger or when you ask for it.
 
 **Start anywhere.** Run the whole chain, or invoke any stage on its own — each resolves its input
 from whatever you give it (the spec, a prompt, a doc, a Linear issue set, a repo artifact),
@@ -105,7 +106,7 @@ internals. `repo-setup` sits alongside them — not a documentation skill but it
 counterpart: it stubs a repo's operational baseline (the agent-instruction split, CI/templates/
 CODEOWNERS scaffolding, and a seeded `HANDOFF.md`) for these three to later fill with prose.
 `handoff` scaffolds, updates, and prunes `HANDOFF.md` itself, and two pipeline stages (`build`,
-`ship`) update it automatically when it already exists.
+`pr-review`) update it automatically when it already exists.
 
 | Skill | What it does |
 | --- | --- |
@@ -156,6 +157,7 @@ agent-sdlc/                          ← repo root = the plugin AND its marketpl
 ├── bin/sdlc-check                   ← on-PATH launcher for the checker
 ├── checker/sdlc-check.mjs           ← the enforcement-spine checker (zero-dep Node, + tests)
 ├── skills/
+│   ├── light/SKILL.md               ← default small-change authoring
 │   ├── idea/SKILL.md
 │   ├── acceptance-criteria/SKILL.md
 │   ├── architecture-design/SKILL.md
@@ -163,7 +165,7 @@ agent-sdlc/                          ← repo root = the plugin AND its marketpl
 │   ├── plan/SKILL.md
 │   ├── gate/SKILL.md
 │   ├── build/                       ← SKILL.md + reference/ (subagent-loop · tdd · source-driven · simplicity · debugging · plan-amendments · ingesting-plans)
-│   ├── ship/                        ← SKILL.md + reference/finishing.md
+│   ├── pr-review/                   ← SKILL.md + reference/finishing.md
 │   ├── getting-started/             ← SKILL.md + reference/ (input-resolution · light-tier)
 │   ├── linear-sync/                 ← SKILL.md + reference/mapping.md (optional engine)
 │   ├── writing-readmes/             ← documentation skill (front door) + reference/
@@ -181,21 +183,21 @@ docs/specs/<feature>/
 ├── <feature>.md            ← ## Brief · ## Acceptance Criteria · ## Design · ## Tech Stack · ## Plan
 ├── gate-report.md          ← gate output (read-only)
 ├── build-report.md         ← build output (the resumable task ledger)
-└── verification-report.md  ← ship's AC → proof map (checker-verified pre-PR)
+└── verification-report.md  ← pr-review's AC → proof map (checker-verified pre-PR)
 ```
 
 plus, at project level, `docs/specs/overview.md` (`## Overview` · `## Architecture` · `## Tech Stack`)
 and `docs/specs/adr/` for decision records, and root-level `constitution.md` + `CONTEXT.md` (glossary).
 (A repo that already has a spec tree at root `specs/` keeps using it — the back-compat rule in the
 getting-started skill; new spec trees are created at `docs/specs/`.)
-`build` then lands the code on a feature branch and `ship` opens the reviewed PR — neither edits the
+`build` then lands the code on a feature branch and `pr-review` opens the reviewed PR — neither edits the
 spec.
 
 ## Linear sync (optional)
 
 Agent SDLC can mirror each stage into [Linear](https://linear.app) as you go — initiative (product)
 → project (feature) → milestone (build phase) → issue (task) — and advance the `T-N` issues as you
-build and ship. **Off by default**; enabled via `.agent-sdlc/config.json`, and skipped cleanly when
+build and pr-review. **Off by default**; enabled via `.agent-sdlc/config.json`, and skipped cleanly when
 the Linear MCP isn't connected. Setup + mapping: [docs/usage/linear-sync.md](docs/usage/linear-sync.md).
 
 ## Documentation

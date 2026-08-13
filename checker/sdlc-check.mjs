@@ -78,6 +78,7 @@ export async function run(argv) {
 
   const results = [
     ...checkTraceIntegrity(model),
+    ...checkLightExistingComponents(model),
     ...checkForwardCoverage(model),
     ...checkBackwardCoverage(model),
     ...checkProvenanceMarkers(model),
@@ -268,7 +269,7 @@ export async function run(argv) {
 //   success: { ok: true, rows }
 //   failure: { ok: false, error: { file, problem } }
 //   rows — one per criterion row in the "Criterion | Type | Proof" table (the grammar this task
-//          designs from the `## Design` data contract — ship writes this file at T-12; no example
+//          designs from the `## Design` data contract — pr-review writes this file at T-12; no example
 //          exists yet): { criterion, type, proof, line }. `type` normalizes to 'test-backed' /
 //          'reviewer-checked' when the cell says so (case/spacing-tolerant), else the raw cell
 //          text verbatim. `proof` is the named test identifier(s) (test-backed) or the answered
@@ -369,7 +370,9 @@ export function parseSpec(text, file = '<unknown spec file>') {
   const untraced = extractUntracedMarkers(sections);
   const acVerification = extractAcVerification(sections);
 
-  return { ok: true, sections, ids, components, traces, provenance, untraced, acVerification };
+  const model = { ok: true, sections, ids, components, traces, provenance, untraced, acVerification };
+  adoptLightExistingComponents(model);
+  return model;
 }
 
 // SMA-465a — per-AC verification type: classify each defined AC by the verification-type of its OWN
@@ -382,7 +385,7 @@ export function parseSpec(text, file = '<unknown spec file>') {
 // e.g. `*(Reviewer-checked — axis …)*`). Pure over `sections`, never throws: ragged/empty input just
 // yields fewer (or no) entries. Returns Map<acId, 'reviewer-checked'|'test-backed'|null> — first
 // definition site wins; `null` when a block states neither type. Read at gate/build time by
-// checkForwardCoverage (D2: the report is ship's artifact and often absent, so the type is read from
+// checkForwardCoverage (D2: the report is pr-review's artifact and often absent, so the type is read from
 // the AC block's own declaration/keyword text — available whenever the rule runs).
 export function extractAcVerification(sections) {
   const types = new Map();
@@ -433,7 +436,7 @@ function extractSections(lines) {
 //   - `### Components` — the exact grammar of `## Design`'s "1. **CLI shell** — ..." list; entries
 //     get `C-N` ids from their own ordinal ('inside' mode).
 //   - `### Outside the checker (…)` — the structured declaration (SMA-419) of components that change
-//     but are not numbered `### Components` (e.g. the `gate`/`build`/`ship` skill texts); entries
+//     but are not numbered `### Components` (e.g. the `gate`/`build`/`pr-review` skill texts); entries
 //     get `C-ext-N` ids from their own ordinal ('outside' mode), a distinct namespace so an external
 //     list starting at `1.` never collides with an inside `C-1`.
 // A non-matching `###` subheading resets the mode to null, so a later unrelated subheading never
@@ -633,14 +636,60 @@ function splitOwnedBlocks(bodyLines) {
 
 // A *Component:* field value of `none` is the field's established null marker (mirrors
 // *Advances:*/*Deps:* fields, which are silently empty of refs the same way) — not a dangling
-// citation. This is the ONLY non-dangling value: a "component outside the numbered `### Components`
-// list" (e.g. a `gate`/`build`/`ship` skill text) is no longer a string escape hatch here — it must
+// citation. On a full spec (a `## Design` or `## Tech Stack` section is present) this is the ONLY
+// non-dangling value without a defined component: a "component outside the numbered `### Components`
+// list" (e.g. a `gate`/`build`/`pr-review` skill text) is no longer a string escape hatch here — it must
 // be declared as a real component under a `### Outside the checker (…)` subheading, which
 // extractComponents parses into a resolvable `C-ext-N` component (SMA-419 dropped the former
 // `/\bskill texts?\b/` allowlist). Any other name that resolves to no defined component (numbered
-// or external) is a genuine dangling citation.
+// or external) is a genuine dangling citation. On a light spec (no Design, no Tech Stack) a named
+// *Component:* citation is an implicit existing component (`C-exist-N`), so the name stays
+// meaningful instead of being forced to `none`.
 function isNonDanglingComponentValue(raw) {
   return raw.toLowerCase() === 'none';
+}
+
+function isLightSpec(sections) {
+  return !sections.some((section) => /^(design|tech stack)$/i.test(section.name));
+}
+
+// Light specs have no Design list. A *Component:* name that is not `none` is an implicit
+// existing-component citation: keep the name as C-exist-N so the trace stays meaningful, and
+// do not treat it as dangling. Full specs (Design or Tech Stack present) are unchanged.
+function adoptLightExistingComponents(model) {
+  if (!isLightSpec(model.sections)) return;
+  const byName = new Map();
+  for (const trace of model.traces) {
+    const raw = trace.unresolvedComponent;
+    if (!raw) continue;
+    const key = raw.toLowerCase();
+    let id = byName.get(key);
+    if (!id) {
+      id = `C-exist-${byName.size + 1}`;
+      byName.set(key, id);
+      model.components.push({ id, name: raw, section: 'Plan', line: trace.line });
+      model.ids.push({ id, kind: 'C', section: 'Plan', line: trace.line, text: raw });
+    }
+    if (!trace.refs.includes(id)) trace.refs.push(id);
+    trace.unresolvedComponent = null;
+  }
+}
+
+// A note, never a finding: light specs cannot verify a named *Component:* against a Design list,
+// so a typo or a mid-chain spec without Design would otherwise pass silently. Exit code unchanged.
+export function checkLightExistingComponents(model) {
+  const implicit = model.components.filter((component) => component.id.startsWith('C-exist-'));
+  if (implicit.length === 0) return [];
+  const names = implicit.map((component) => component.name).join(', ');
+  const noun = implicit.length === 1 ? 'component' : 'components';
+  return [
+    {
+      type: 'note',
+      rule: 'light-existing-components',
+      message: `light spec: ${implicit.length} implicit existing ${noun} (${names}), unverified against a Design list`,
+      ids: implicit.map((component) => component.id),
+    },
+  ];
 }
 
 function extractFieldTraces(section, componentsByName) {
@@ -965,7 +1014,7 @@ function extractCommandLines(blockText) {
 
 // --- Verification report parser: AC → proof-map rows ----------------------------------
 //
-// No verification-report.md exists yet (ship writes it at T-12) — this grammar is designed from
+// No verification-report.md exists yet (pr-review writes it at T-12) — this grammar is designed from
 // the `## Design` data contract + AC-13/14 wording: a "Criterion | Type | Proof" table, one row
 // per criterion.
 
@@ -1519,7 +1568,7 @@ export function checkLedgerVsGit(ledger, subjectsBySha, opts = {}) {
 // per-row proof-map data contract and every criterion list in `enforcement-spine.md` name the
 // artifact "AC -> proof map" (never "AC/NC -> proof map"), and the Task-to-criterion coverage map
 // treats NC-1/NC-2 as riding on AC-11/AC-12's own oracle (no row of their own expected) and
-// NC-3/NC-4 as "reviewed at ship" (a whole-PR judgment, not a per-criterion recorded row).
+// NC-3/NC-4 as "reviewed at pr-review" (a whole-PR judgment, not a per-criterion recorded row).
 // `parseVerificationReport` still ACCEPTS an `NC-\d+` criterion cell (it does not reject one an
 // author chooses to add), but nothing here requires one to exist.
 export function checkProofMapCompleteness(model, verificationReport) {

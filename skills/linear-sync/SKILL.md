@@ -107,7 +107,7 @@ of Linear, not a write — the only write is to the spec file, stamped with a pr
 
 At its hand-off, each pipeline stage performs its Linear action AFTER writing its `##` section — the
 document content IS that section. The full stage -> Linear action table (`idea`,
-`acceptance-criteria`, `architecture-design`, `techstack`, `plan`, `gate`, `build`, `ship`) is in
-[reference/mapping.md](reference/mapping.md). `build` and `ship` only **transition** the milestones
+`acceptance-criteria`, `architecture-design`, `techstack`, `plan`, `gate`, `build`, `pr-review`) is in
+[reference/mapping.md](reference/mapping.md). `build` and `pr-review` only **transition** the milestones
 and `T-N` issues that `plan` already created (Backlog → In Progress → In Review → Done, plus PR
 attachment) — they never create entities.
