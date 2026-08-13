@@ -4,7 +4,7 @@ A pipeline for AI coding agents that takes an idea to a reviewed pull request. T
 settles intent, a checkable contract, a sound architecture, a grounded stack, and an atomic task
 plan, with a read-only gate that confirms it all hangs together before a line of code is written.
 The back half executes it: `build` runs the plan test-first (light: no per-task reviewer; full:
-one initial review), and `ship` opens the PR. The invoke is `ship`; the job is open the PR.
+one initial review), and `pr-review` opens the PR and runs Review panel.
 
 Test and deploy are the next stages downstream, extending the same chain.
 
@@ -30,7 +30,7 @@ is its own single-plugin marketplace**, `agent-sdlc`), and installable as a pack
 agent that reads instruction files.
 
 > **Pairs with [Review panel](https://github.com/smarzban/pi-review-panel)** — multi-model
-> review that writes a report and does not merge. `ship` calls `review_panel` when installed,
+> review that writes a report and does not merge. `pr-review` calls `review_panel` when installed,
 > and degrades to a portable reviewer subagent when it isn't. The owner is the merge gate.
 
 **Contents:** [Quickstart](#quickstart) · [The idea](#the-idea) · [Stages](#stages) ·
@@ -74,7 +74,7 @@ code rather than during it.
 | `plan` | `/agent-sdlc:plan` | agent | `## Plan` (atomic tasks) |
 | `gate` | `/agent-sdlc:gate` | automated (read-only) | `gate-report.md` |
 | `build` | `/agent-sdlc:build` | agent | product code (a green branch) + `build-report.md` |
-| `ship` | `/agent-sdlc:ship` | agent | an open PR + Review panel report (does not merge) |
+| `pr-review` | `/agent-sdlc:pr-review` | agent | an open PR + Review panel report (does not merge) |
 | `getting-started` | auto / `/agent-sdlc:getting-started` | router | this is the entry point |
 
 Start with `getting-started`; it routes you. **Light is the default.** Full chain only on a
@@ -106,7 +106,7 @@ internals. `repo-setup` sits alongside them — not a documentation skill but it
 counterpart: it stubs a repo's operational baseline (the agent-instruction split, CI/templates/
 CODEOWNERS scaffolding, and a seeded `HANDOFF.md`) for these three to later fill with prose.
 `handoff` scaffolds, updates, and prunes `HANDOFF.md` itself, and two pipeline stages (`build`,
-`ship`) update it automatically when it already exists.
+`pr-review`) update it automatically when it already exists.
 
 | Skill | What it does |
 | --- | --- |
@@ -165,7 +165,7 @@ agent-sdlc/                          ← repo root = the plugin AND its marketpl
 │   ├── plan/SKILL.md
 │   ├── gate/SKILL.md
 │   ├── build/                       ← SKILL.md + reference/ (subagent-loop · tdd · source-driven · simplicity · debugging · plan-amendments · ingesting-plans)
-│   ├── ship/                        ← SKILL.md + reference/finishing.md
+│   ├── pr-review/                   ← SKILL.md + reference/finishing.md
 │   ├── getting-started/             ← SKILL.md + reference/ (input-resolution · light-tier)
 │   ├── linear-sync/                 ← SKILL.md + reference/mapping.md (optional engine)
 │   ├── writing-readmes/             ← documentation skill (front door) + reference/
@@ -183,21 +183,21 @@ docs/specs/<feature>/
 ├── <feature>.md            ← ## Brief · ## Acceptance Criteria · ## Design · ## Tech Stack · ## Plan
 ├── gate-report.md          ← gate output (read-only)
 ├── build-report.md         ← build output (the resumable task ledger)
-└── verification-report.md  ← ship's AC → proof map (checker-verified pre-PR)
+└── verification-report.md  ← pr-review's AC → proof map (checker-verified pre-PR)
 ```
 
 plus, at project level, `docs/specs/overview.md` (`## Overview` · `## Architecture` · `## Tech Stack`)
 and `docs/specs/adr/` for decision records, and root-level `constitution.md` + `CONTEXT.md` (glossary).
 (A repo that already has a spec tree at root `specs/` keeps using it — the back-compat rule in the
 getting-started skill; new spec trees are created at `docs/specs/`.)
-`build` then lands the code on a feature branch and `ship` opens the reviewed PR — neither edits the
+`build` then lands the code on a feature branch and `pr-review` opens the reviewed PR — neither edits the
 spec.
 
 ## Linear sync (optional)
 
 Agent SDLC can mirror each stage into [Linear](https://linear.app) as you go — initiative (product)
 → project (feature) → milestone (build phase) → issue (task) — and advance the `T-N` issues as you
-build and ship. **Off by default**; enabled via `.agent-sdlc/config.json`, and skipped cleanly when
+build and pr-review. **Off by default**; enabled via `.agent-sdlc/config.json`, and skipped cleanly when
 the Linear MCP isn't connected. Setup + mapping: [docs/usage/linear-sync.md](docs/usage/linear-sync.md).
 
 ## Documentation

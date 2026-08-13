@@ -21,7 +21,7 @@ authoritative method.
 
 | Page | Covers |
 | --- | --- |
-| [The pipeline](usage/pipeline.md) | The stage chain `idea -> … -> gate -> build -> ship`, who owns each stage, and the spec artifacts a run produces. |
+| [The pipeline](usage/pipeline.md) | The stage chain `idea -> … -> gate -> build -> pr-review`, who owns each stage, and the spec artifacts a run produces. |
 | [Start anywhere](usage/start-anywhere.md) | Entering the pipeline at any stage, from any source — a prompt, a doc, a Linear issue set, a repo artifact. |
 | [The light tier](usage/light-tier.md) | The compressed authoring pass for small, self-contained changes — same gate, build, and checker. |
 | [sdlc-check](usage/sdlc-check.md) | The enforcement-spine checker as a standalone tool: invocation, rules, exit codes. |

@@ -1,11 +1,11 @@
 # Finishing — push, PR, and gate invocation
 
-Mechanics for ship: the verification report + AC → proof map, synthesizing the PR from the spec, the
+Mechanics for pr-review: the verification report + AC → proof map, synthesizing the PR from the spec, the
 gate invocation contract, the portable fallback, and the worktree rule.
 
 ## Verification report + proof map (pre-PR)
 
-Before pushing or opening the PR, ship writes `docs/specs/<feature>/verification-report.md` — a sibling of
+Before pushing or opening the PR, pr-review writes `docs/specs/<feature>/verification-report.md` — a sibling of
 `gate-report.md`/`build-report.md` (process state kept beside the spec, per the artifact model) — and
 runs the checker against it. This is the terminal mechanical settle of "every AC met" against
 captured reality, distinct from the post-PR gate panel.
@@ -27,7 +27,7 @@ captured reality, distinct from the post-PR gate panel.
   actually captured running green.
 - **reviewer-checked rows** record the ANSWERED pass/fail question — the answer itself is the proof.
   The checker's `proof-map-completeness` rule only requires the `Proof` cell be non-empty; it does not, and cannot, judge
-  whether the answer is correct (not mechanically decidable). Ship supplies these answers
+  whether the answer is correct (not mechanically decidable). pr-review supplies these answers
   pre-PR from its own Spec-Conformance read of the skill/spec text, and may note where the post-PR
   review corroborates them.
 - **Every defined `AC-N` needs a row.** A missing row, or a row with an empty `Proof` cell, is a
@@ -78,7 +78,7 @@ Build the PR title and body from `docs/specs/<feature>/<feature>.md` (and the `S
   - **Coverage** — the task→criterion map from the `## Plan`: which `T-N` advanced which `AC-N`.
   - **Verification** — the full AC → proof map copied verbatim from
     `docs/specs/<feature>/verification-report.md` (it must appear here, not only in the spec
-    tree, so it is visible whenever ship completes) plus the checker corroboration result (pass, or
+    tree, so it is visible whenever pr-review completes) plus the checker corroboration result (pass, or
     stop-and-ask with the recorded human override, or an announced degraded fallback); if a checker
     failure was overridden, state the override and its justification explicitly in this section
     (the override lives in the PR body, not just in conversation).
@@ -104,7 +104,7 @@ After the PR exists, run Review panel. It is a presentation-only review, not a m
 - Put the feature's `## Acceptance Criteria` (and design / ADRs if any) in `scopingNote`.
 - The tool writes a report. It does not merge and it does not compute a verdict.
 - You judge keep vs skip. Name lost coverage. The owner is the merge gate.
-- ship never merges.
+- pr-review never merges.
 
 ## Portable fallback (`review_panel` absent)
 
@@ -118,7 +118,7 @@ subagent**:
 
 ## Parking / handing off for review (the PR must show the reviewed head)
 
-When the merge is someone else's call — an overseer's review, a maintainer's sign-off — ship *parks*
+When the merge is someone else's call — an overseer's review, a maintainer's sign-off — pr-review *parks*
 the PR for them instead of finishing. Parking is only honest if the **open PR shows the exact code
 that was reviewed**: gate comments and a proof map describe a head; the reviewer must be looking at
 that same head, not a stale one. So before declaring the PR parked / handed off:
@@ -143,4 +143,4 @@ easy to gate a new head locally and hand it off without re-pushing.
 
 On the PR path the workspace is **preserved** — the PR is open and may need fixes. Do not run
 `git worktree remove`. Only an explicitly-created worktree that is being merged or discarded gets
-cleaned up, and that is not ship's job (a later `deploy`/merge step or a human owns it).
+cleaned up, and that is not pr-review's job (a later `deploy`/merge step or a human owns it).

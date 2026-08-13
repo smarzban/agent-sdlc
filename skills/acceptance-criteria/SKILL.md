@@ -44,7 +44,7 @@ Tag each criterion as one of two, defaulting to test-backed:
 
 - **test-backed** name the *kind* of oracle only at this stage: unit / integration / property /
   e2e / manual. Do NOT name concrete tests; test identity is the plan stage's job once a design
-  exists. These feed the ship-stage terminal AC verification (the `verification-report.md` proof
+  exists. These feed the pr-review-stage terminal AC verification (the `verification-report.md` proof
   map, validated by `sdlc-check --require verification-report`): a test-backed criterion's proof is
   a named test that must appear in the captured green-bar evidence.
 - **reviewer-checked** name the review axis (e.g. Security, Spec Conformance, Architecture) and
@@ -162,7 +162,7 @@ No design, no stack, no tasks. Those are later stages.
 
 ## Checker grammar (what `sdlc-check` parses — emit exactly this)
 
-Downstream, the gate/ship checker parses this section literally:
+Downstream, the gate/pr-review checker parses this section literally:
 
 - **Each criterion id is defined at a bold-lead** — `**AC-1**`, `**AC-2**` — the same handle the
   design map, plan, and proof map cite. The checker parses **only `AC`/`C`/`T` prefixes** as ids: an
@@ -197,6 +197,6 @@ Downstream, the gate/ship checker parses this section literally:
 - Reads the `## Brief` section of the same file; resolves terms against root `CONTEXT.md` (or the
   right context if a `CONTEXT-MAP.md` exists).
 - Downstream consumers: the design stage (built against these criteria), the verify gate (checks
-  every criterion maps to a task), the ship-stage terminal AC verification (test-backed -> a named
+  every criterion maps to a task), the pr-review-stage terminal AC verification (test-backed -> a named
   test in the captured green-bar evidence, via the `verification-report.md` proof map + `sdlc-check
   --require verification-report`), and Review panel (reviewer-checked -> Spec Conformance).

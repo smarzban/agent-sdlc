@@ -69,5 +69,5 @@ in `docs/specs/<feature>/<feature>.md`. Terminal action: user approves the spec,
 ## Conventions
 
 - Same spec path and `AC-N`/`T-N` grammar as the full chain.
-- Downstream: `/agent-sdlc:gate`, then light `/agent-sdlc:build`, then `/agent-sdlc:ship`.
+- Downstream: `/agent-sdlc:gate`, then light `/agent-sdlc:build`, then `/agent-sdlc:pr-review`.
 - Load-bearing detail: [reference/light-tier.md](../getting-started/reference/light-tier.md).

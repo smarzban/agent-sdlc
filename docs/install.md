@@ -91,5 +91,5 @@ from any directory.
 - **`sdlc-check`:** Node ≥ 22 (no packages, no build). Without Node the pipeline still runs; the
   stages that invoke the checker announce a degraded fallback instead of failing silently.
 - **[Linear sync](usage/linear-sync.md):** optional; needs the Linear MCP and an explicit opt-in.
-- **[Review panel](https://github.com/smarzban/pi-review-panel):** optional; `ship` calls
+- **[Review panel](https://github.com/smarzban/pi-review-panel):** optional; `pr-review` calls
   `review_panel` when installed and falls back to a dispatched reviewer subagent when not.

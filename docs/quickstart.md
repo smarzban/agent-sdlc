@@ -17,7 +17,7 @@ In the repo you want to build in, just state what you want:
 > I want to add a feature: …
 
 The skills auto-activate on matching requests. **Light is the default:** a small change goes
-`light -> gate -> build -> ship`. The full chain (`idea` through `plan`, then gate, build, ship)
+`light -> gate -> build -> pr-review`. The full chain (`idea` through `plan`, then gate, build, pr-review)
 runs only when you ask for it or a trigger fires (new runtime dependency, new public API, new
 trust or process boundary). You decide at every question; the agent recommends first.
 
@@ -40,7 +40,7 @@ docs/specs/<feature>/
 ├── <feature>.md            ← Brief · AC · Plan (light); plus Design · Tech Stack on the full chain
 ├── gate-report.md          ← the pre-build readiness verdict
 ├── build-report.md         ← build's resumable task ledger
-└── verification-report.md  ← ship's AC -> proof map
+└── verification-report.md  ← pr-review's AC -> proof map
 ```
 
 Next: [the pipeline in full](usage/pipeline.md).

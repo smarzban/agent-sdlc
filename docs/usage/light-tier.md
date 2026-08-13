@@ -16,7 +16,7 @@ Small **and** self-contained — all four must hold:
 - **No new trust or process boundary.**
 
 Any one failing → the full chain. **When unsure, stay light.** Invoke `/agent-sdlc:light`.
-Build then skips the per-task reviewer; `ship` runs Review panel.
+Build then skips the per-task reviewer; `pr-review` runs Review panel.
 
 ## The compressed pass
 

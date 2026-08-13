@@ -16,7 +16,7 @@ conductor reads this; the disciplines the subagents follow are in the sibling re
    are **vacuously green**, not red — the full rule and the baseline-failure routing are normative
    in the SKILL body (step 2); do not re-derive them here.
 4. **Provenance for cleanup.** Note whether you created the worktree (`.worktrees/`) or inherited it.
-   ship preserves the worktree on the PR path; only an explicitly created, finished one is cleaned.
+   pr-review preserves the worktree on the PR path; only an explicitly created, finished one is cleaned.
 
 ## File hand-offs and review snapshots
 
@@ -583,7 +583,7 @@ the most expensive**, so on platforms with a per-dispatch model knob (e.g. Claud
 tool), specify it on every dispatch. Tiering: a task whose plan text contains the complete
 code/content to write is transcription — cheapest tier; a prose-spec or multi-file integration
 task — mid-tier; reviewers — mid-tier floor, scaled to the diff's size and risk; the whole-PR
-review is ship's Review panel call on the most capable model. Where the platform has no knob, dispatch
+review is pr-review's Review panel call on the most capable model. Where the platform has no knob, dispatch
 with the default model; the loop is unchanged.
 
 ## Ledger recovery (after a compaction or crash)
@@ -594,7 +594,7 @@ with the default model; the loop is unchanged.
 3. Resume at the first task not marked done. **Never re-run a done task.**
 4. **Invoke the checker before continuing** (the resume invocation point) — a second, mechanical
    witness to 1–3: `sdlc-check docs/specs/<feature>/<feature>.md --require
-   ledger` (never `--require verification-report` here — that artifact is ship's). Runtime present →
+   ledger` (never `--require verification-report` here — that artifact is pr-review's). Runtime present →
    interpret the exit code: 0 proceeds; nonzero, or the checker crashing, is a failed check
    (fail-closed) — **stop-and-ask**, do not resume task work, and record any human override in
    `build-report.md`. Runtime absent → write an announced degraded fallback line into

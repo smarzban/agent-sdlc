@@ -38,12 +38,12 @@ agent-sdlc/ (repo root = the plugin AND its marketplace)
 └── docs/specs/       ← the dogfood spec tree (exemplar chains + a living overview.md)
 ```
 
-The default path for small work is `light → gate → build → ship`. The full chain
-(`idea → acceptance-criteria → architecture-design → techstack → plan → gate → build → ship`)
+The default path for small work is `light → gate → build → pr-review`. The full chain
+(`idea → acceptance-criteria → architecture-design → techstack → plan → gate → build → pr-review`)
 runs only when the user asks or a narrow trigger fires (new runtime dependency, new public API,
 new trust or process boundary). When unsure, stay light. Traceability spine `AC-N → C-N →
 product → T-N`; the read-only gate walks the chain; light `build` has no per-task reviewer;
-full `build` has one initial review and at most one remediations pass; `ship` writes the
+full `build` has one initial review and at most one remediations pass; `pr-review` writes the
 AC→proof `verification-report.md`, runs `sdlc-check` fail-closed, opens the PR, and calls
 `review_panel` (portable reviewer fallback when absent). The owner is the merge gate.
 `linear-sync` (off by default) mirrors stages into Linear.
@@ -102,6 +102,6 @@ Zero runtime dependencies; Node ≥22, ESM.
   **Cursor** imports the repo URL as a team marketplace (re-import to refresh); **Codex** `codex
   plugin marketplace add smarzban/agent-sdlc` + `codex plugin add agent-sdlc@agent-sdlc`; **pi**
   `pi install git:github.com/smarzban/agent-sdlc`. Full walkthrough in `docs/install.md`.
-- Review at `ship` runs through Review panel (`review_panel`); a portable reviewer-subagent
+- Review at `pr-review` runs through Review panel (`review_panel`); a portable reviewer-subagent
   fallback runs when it is absent. The owner judges the report. Suite verdicts via a
   machine-readable reporter; exit codes read directly.

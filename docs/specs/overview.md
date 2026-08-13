@@ -18,7 +18,7 @@ single-plugin restructure.
 ### Features
 
 Each `docs/specs/<feature>/` chain shipped through the pipeline itself (spec → gate → build →
-ship → reviewed PR). Five are in-tree. Three are exemplars kept back at the 0.13.0 prune:
+pr-review → reviewed PR). Five are in-tree. Three are exemplars kept back at the 0.13.0 prune:
 `enforcement-spine` (0.7.0, the `sdlc-check` checker + terminal AC verification),
 `adoption-quickwins` (0.10.0), and `spec-location-under-docs` (0.12.0, the canonical spec tree
 moves under `docs/`); `repo-setup` and `visual-aids` shipped after it and sit beside them (how
@@ -68,7 +68,7 @@ the counterpart to the spec chain (a chain hands a FEATURE forward, `HANDOFF.md`
 COPY forward). Ignored by default so it can be written frankly, with one litmus deciding placement
 and a prune trigger that is mechanical rather than advisory: the doc this repo kept had bloated while
 already under an instruction to prune aggressively. Seeded by `repo-setup`, routed from
-`getting-started`, and updated by two hooks (`build` entry, `ship` park) that act only on an existing
+`getting-started`, and updated by two hooks (`build` entry, `pr-review` park) that act only on an existing
 doc. Both of the trigger's escape hatches are stamp-bound and expire, which took three review rounds:
 each round's finding was in the exception introduced by the previous round's fix.
 
@@ -91,9 +91,9 @@ The repo's shape, as it exists:
   pattern.
 - **The instruction/enforcement split.** Skills are untrusted-in-principle instructions executed
   by an agent; guarantees that must hold mechanically are owned by trusted committed code (the
-  enforcement spine for pipeline mechanics). Review at `ship` is Review panel: a presentation-only
+  enforcement spine for pipeline mechanics). Review at `pr-review` is Review panel: a presentation-only
   report, never a verdict.
-- **Cross-plugin contracts are invoke-if-present.** ship invokes `review_panel` when present and
+- **Cross-plugin contracts are invoke-if-present.** pr-review invokes `review_panel` when present and
   announces a loud degraded fallback (a dispatched reviewer subagent) when absent — never a silent
   skip.
 - **Spec chains live in `docs/specs/`** per the consolidated artifact model (one sectioned spec per

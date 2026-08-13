@@ -50,7 +50,7 @@ byte the normal pipeline:
   before build. Missing Design/Tech Stack on a light spec is not a gap.
 - **`build`** still runs test-first, one atomic green commit per task, resumable from the ledger.
   On a light spec it uses the **light build** path: no per-task reviewer. Whole-change review
-  happens at `ship` via Review panel.
+  happens at `pr-review` via Review panel.
 - The **green bar** still holds — no task lands red.
 - The **`sdlc-check`** checker runs unchanged: same sectioned file, same `AC-N`/`T-N` grammar, same
   trace fields, so every mechanical rule applies exactly as it does for a full-tier spec.

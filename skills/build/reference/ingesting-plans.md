@@ -52,6 +52,6 @@ Linear, a doc, or the request itself, or a `## Plan` exists but has no gate verd
 ## Why it preserves the guarantees
 
 Materializing first is what keeps build's promises intact: the gate has a real chain to walk, the
-ledger + `git log` remain the compaction-proof source of truth, and `ship` has a spec to synthesize
+ledger + `git log` remain the compaction-proof source of truth, and `pr-review` has a spec to synthesize
 the PR from. An in-context-only plan would satisfy none of these — which is why there is no ephemeral
 path, only this ingest-then-build one.

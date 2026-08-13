@@ -1,14 +1,14 @@
 ---
-name: ship
-description: "Turn a green, build-finished branch into an open pull request and run Review panel on it. Verify, push, open the PR from the spec, call review_panel. Use AFTER build reports the branch ready. Triggers: 'ship', 'open the PR', 'open-pr', 'raise the pull request', 'send for review', or a build-report.md with every task done. Scope: only within an Agent SDLC run. Last pipeline stage. It does not merge. The invoke name is ship; the job is open the PR."
+name: pr-review
+description: "Turn a green, build-finished branch into an open pull request and run Review panel on it. Verify, push, open the PR from the spec, call review_panel. Use AFTER build reports the branch ready. Triggers: 'pr-review', 'ship', 'open the PR', 'open-pr', 'raise the pull request', 'send for review', or a build-report.md with every task done. Scope: only within an Agent SDLC run. Last pipeline stage. It does not merge."
 ---
 
-# Ship: open the PR
+# PR-review: open the PR and review it
 
-Take the branch `build` finished and open a pull request. Verify the suite is green, push,
-synthesize the PR from the spec, and run Review panel (`review_panel`) on it. The terminal
-artifact is an open PR plus a presentation-only review report. ship does not merge. The owner
-is the merge gate. The invoke stays `/agent-sdlc:ship` so existing runs keep working.
+Take the branch `build` finished, open a pull request, and run Review panel on it. Verify the
+suite is green, push, synthesize the PR from the spec, and call `review_panel`. The terminal
+artifact is an open PR plus a presentation-only review report. pr-review does not merge. The
+owner is the merge gate. The old invoke `ship` still triggers this skill.
 
 <HARD-GATE>
 Precondition: a **green, build-finished branch with a clean working tree** — proven by
@@ -23,7 +23,7 @@ team-committed, hook-updated `HANDOFF.md` left uncommitted from a prior park (st
 sanctioned exception to "clean working tree". If a task is in-progress or blocked, STOP and
 route back to `/agent-sdlc:build`. Output is a pushed branch, a written
 `docs/specs/<feature>/verification-report.md`, an open PR (body carrying the published AC → proof
-map), and a Review panel report. ship creates the PR and runs the review; it does NOT merge.
+map), and a Review panel report. pr-review creates the PR and runs the review; it does NOT merge.
 The owner judges the report. On findings the owner wants fixed, stop and ask before changing
 an outward PR.
 </HARD-GATE>
@@ -68,7 +68,7 @@ an outward PR.
    [reference/finishing.md](reference/finishing.md).)
 6. **Linear** if sync is enabled in `.agent-sdlc/config.json`, attach the PR url to the feature's
    issues and post a project status update — via the `linear-sync` skill. The project stays In
-   Progress (Linear projects have no In-Review state — mapping.md, ship row).
+   Progress (Linear projects have no In-Review state — mapping.md, pr-review row).
 7. **Review** call `review_panel` (`action: review`) on the open PR's base and head. Pass the
    `## Acceptance Criteria` (and the design, if any) in `scopingNote` so a spec lens has something
    to check. The tool writes a presentation-only report. It does not merge and it does not
@@ -86,7 +86,7 @@ an outward PR.
    post-open fix round ends by pushing and re-syncing the PR head, never left behind after the first
    push. (Mechanics in [reference/finishing.md](reference/finishing.md).)
 
-   **Handoff, if present.** Runs on every ship completion, whether this step's park condition
+   **Handoff, if present.** Runs on every pr-review completion, whether this step's park condition
    applies or not. Check for `HANDOFF.md` at the root of the working copy this run belongs to, not
    the isolated workspace (resolve it with `git rev-parse --git-common-dir` and take its parent
    directory, the same linked-worktree mechanic build's isolation detection already relies on),
@@ -106,7 +106,7 @@ an outward PR.
 
 - **An open PR plus a review report is the finish line.** Not a merge. The owner is the merge gate.
 - **PR first, then review.** Create the PR, then call `review_panel` on that base and head.
-- **Never push or PR a red branch.** Re-run the suite at ship and read the output. The branch was
+- **Never push or PR a red branch.** Re-run the suite at pr-review and read the output. The branch was
   green at build; confirm it still is before going outward.
 - **Stop before mutating outward.** A keep-list the owner wants fixed is a checkpoint, not a loop.
   Surface it and ask.
@@ -119,7 +119,7 @@ an outward PR.
 - **A proof map that isn't in the PR body doesn't count.** Writing `verification-report.md` alone
   satisfies neither the contract nor the reviewer who never opens the spec tree — copy the map into the PR
   body every time.
-- **Degrade, never block.** No gate plugin, no Linear — ship still produces a PR. Optional
+- **Degrade, never block.** No gate plugin, no Linear — pr-review still produces a PR. Optional
   dependencies are optional; say what was skipped and carry on.
 
 ## Rationalizations (excuses to skip the bar, and the rebuttal)
@@ -129,7 +129,7 @@ an outward PR.
 | "build said green, no need to re-verify." | Verify at the boundary. The cost of one suite run is nothing against pushing a red branch. |
 | "Review the branch, then open the PR." | Open the PR first, then call `review_panel` on that range. |
 | "It found things, I'll just fix and re-push." | A PR is outward. Surface the keep list and ask first. |
-| "Merge it, the review looked clean." | ship does not merge. The owner is the merge gate. |
+| "Merge it, the review looked clean." | pr-review does not merge. The owner is the merge gate. |
 | "review_panel isn't installed, skip the review." | Degrade to the portable reviewer subagent and say so. |
 | "Write the proof map after the PR is up, or skip it — build already proved things." | Sequenced pre-PR, before `gh pr create`. The report settles proof-map completeness and evidence linkage mechanically against the ledger's captured evidence; a PR opened first is a PR opened unproven. |
 | "sdlc-check isn't installed here, skip verification." | `node` absent is a degraded fallback, announced — not a silent skip. |
@@ -139,10 +139,10 @@ an outward PR.
 
 ## Red flags (stop and fix)
 
-- A branch pushed or a PR opened without re-running the suite at ship.
+- A branch pushed or a PR opened without re-running the suite at pr-review.
 - A PR body written from memory instead of synthesized from the spec.
 - Auto-looping fixes onto an open PR after a keep list without asking.
-- ship merging the PR.
+- pr-review merging the PR.
 - The review step silently skipped because `review_panel` was absent (degrade instead).
 - The workspace cleaned up while the PR is still open.
 - A PR opened while `sdlc-check --require verification-report` failed, with no override recorded in
@@ -179,7 +179,7 @@ an outward PR.
   the AC → proof map, a sibling of `gate-report.md` / `build-report.md` (process state beside the spec).
 - An open pull request with the spec-derived description (including the published proof map) and a
   Review panel report.
-- No other new files in the repo; ship's remaining output is the PR and the review, not a document.
+- No other new files in the repo; pr-review's remaining output is the PR and the review, not a document.
 
 ## Checker grammar (what `sdlc-check` parses — emit exactly this)
 

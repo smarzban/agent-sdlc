@@ -278,7 +278,7 @@ verbatim at the moment they are written, so either can be checked against the cu
 stamp later: an overrun note as `_Overrun (size): keeping the full incident writeup one more
 update, stamp 2024-03-01 · by: fixer · main @ `a1b2c3d` (clean)._`, an owed-prune line as `_Prune
 owed: content leg fired, stamp 2024-03-01 · by: fixer · main @ `a1b2c3d` (clean), deferred by the
-ship hook._`. Neither is renewed under a fresh stamp: a note or marker still present at the next
+pr-review hook._`. Neither is renewed under a fresh stamp: a note or marker still present at the next
 update gets resolved (pruned inline, or the write skipped), not restated.
 
 On prune (standalone or inline inside an update), also: the trimmed result shown for confirmation

@@ -1,19 +1,19 @@
 ---
 name: build
-description: "Execute a gate-passed plan: test-first, one green commit per task, until the branch is ready for ship. Light specs: implement without a per-task reviewer. Full specs: one implementer plus one initial review. Use AFTER the gate verdict is ready to build and BEFORE ship. Triggers: 'build', 'implement the plan', 'execute the tasks', a clean gate-report.md with a settled Plan. Scope: only within an Agent SDLC run. Conductor: it dispatches and gates; it writes product code only on the light path or a recorded subagent death."
+description: "Execute a gate-passed plan: test-first, one green commit per task, until the branch is ready for pr-review. Light specs: implement without a per-task reviewer. Full specs: one implementer plus one initial review. Use AFTER the gate verdict is ready to build and BEFORE pr-review. Triggers: 'build', 'implement the plan', 'execute the tasks', a clean gate-report.md with a settled Plan. Scope: only within an Agent SDLC run. Conductor: it dispatches and gates; it writes product code only on the light path or a recorded subagent death."
 ---
 
 # Build: plan to a green branch
 
 Execute the `## Plan` test-first. Light specs skip the per-task reviewer; whole-change review is
-`ship`. Full specs keep one initial independent review per task. One remediations pass, then stop
+`pr-review`. Full specs keep one initial independent review per task. One remediations pass, then stop
 and ask. Do not open the PR.
 
 <HARD-GATE>
 Precondition: a **gate verdict of ready to build** for the plan in hand. Resolve the plan per
 input-resolution. If no verdict exists, run `/agent-sdlc:gate` inline and proceed only on a clean
 verdict. Output is product code on a feature branch, one atomic commit per task, and
-`docs/specs/<feature>/build-report.md`. Terminal action: green branch handed to `/agent-sdlc:ship`.
+`docs/specs/<feature>/build-report.md`. Terminal action: green branch handed to `/agent-sdlc:pr-review`.
 </HARD-GATE>
 
 ## Light or full
@@ -53,7 +53,7 @@ verdict. Output is product code on a feature branch, one atomic commit per task,
    amend through `plan`, gate the delta. Scope or AC change: stop and ask.
    Subagent death: capture -> retry once fresh -> only then conductor-takeover, recorded.
 5. **Hand off** when every task is done: `sdlc-check … --require ledger` again, then
-   "branch ready, run `/agent-sdlc:ship`".
+   "branch ready, run `/agent-sdlc:pr-review`".
 
 Disciplines for implementers: [tdd](reference/tdd.md), [source-driven](reference/source-driven.md),
 [simplicity](reference/simplicity.md), [debugging](reference/debugging.md).
@@ -68,7 +68,7 @@ Disciplines for implementers: [tdd](reference/tdd.md), [source-driven](reference
 
 ## Principles
 
-- **Light does not review per task.** `ship` runs Review panel on the whole change.
+- **Light does not review per task.** `pr-review` runs Review panel on the whole change.
 - **Full reviews once per task, not in a loop.** One remediations pass, then ask.
 - **Test-first.** The plan named the failing test; write it first.
 - **One task, one green commit.** The whole bar, isolated.
@@ -81,9 +81,9 @@ Disciplines for implementers: [tdd](reference/tdd.md), [source-driven](reference
 
 | Excuse | Rebuttal |
 | --- | --- |
-| "I'll add a reviewer on this light task, it's safer." | Light review is `ship`. A per-task reviewer is the cost we just removed. |
+| "I'll add a reviewer on this light task, it's safer." | Light review is `pr-review`. A per-task reviewer is the cost we just removed. |
 | "Write the code, test after." | The plan named the failing test. Write it first. |
-| "Skip the green bar, ship will catch it." | A red commit compounds. Verify now. |
+| "Skip the green bar, pr-review will catch it." | A red commit compounds. Verify now. |
 | "Another review round will finish it." | One remediations pass, then ask. Do not spin. |
 
 ## Red flags
@@ -101,7 +101,7 @@ Disciplines for implementers: [tdd](reference/tdd.md), [source-driven](reference
 - Light: no per-task reviewer ran. Full: one initial review per task, at most one remediations pass.
 - `build-report.md` has every task done with SHA, `AC-N`, and captured evidence.
 - Checker corroborated at resume (if any) and at hand-off, or an announced degrade is recorded.
-- Hand-off to `/agent-sdlc:ship` is stated.
+- Hand-off to `/agent-sdlc:pr-review` is stated.
 
 ## The artifact (output)
 
@@ -125,4 +125,4 @@ Disciplines for implementers: [tdd](reference/tdd.md), [source-driven](reference
 - Writes product code + `build-report.md`. Does not author front-half spec sections except
   materializing an ingested plan.
 - `sdlc-check … --require ledger` at resume and hand-off. Never `--require verification-report`.
-- Downstream: `/agent-sdlc:ship`.
+- Downstream: `/agent-sdlc:pr-review`.

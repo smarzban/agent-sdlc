@@ -39,7 +39,7 @@ section first, then run.** The stage proceeds exactly as if a human had authored
   `docs/specs/overview.md` (project); in a repo that already has a root `specs/` tree, materialize
   THERE (the back-compat rule in the getting-started SKILL — never split a repo across both
   locations). The spec files that appear are a feature, not litter: a durable,
-  reviewable record of what was built and where it came from, and the thing `ship` links from the PR.
+  reviewable record of what was built and where it came from, and the thing `pr-review` links from the PR.
 - **Idempotent.** Re-running reads the now-materialized section; it does not re-ingest the source or
   duplicate the section. Materialization writes once and is safe to repeat.
 - **Faithful, not creative.** Materializing transcribes the source into the section's shape (e.g. a
@@ -71,8 +71,8 @@ Entering mid-chain means upstream sections may be absent. Two modes, chosen by t
 - **Single-stage** — the request wants just this one stage's output ("write AC for this", "plan
   this"). Resolve and materialize *this* stage's input, run it, stop. Do not reconstruct the rest of
   the chain. The output is the one section, provenance-stamped.
-- **Resume-to-ship** — the request wants to go from here through to a PR ("build this Linear plan and
-  ship it"). Backfill the **minimum** upstream artifacts the spine and the quality gates require —
+- **Resume-to-pr-review** — the request wants to go from here through to a PR ("build this Linear plan and
+  open the PR"). Backfill the **minimum** upstream artifacts the spine and the quality gates require —
   no more. For entry at `build` that means: a `## Plan` (materialized) and a **gate verdict** (run
   the gate inline; see the gate skill). It does *not* mean back-writing a full `## Brief` /
   `## Acceptance Criteria` / `## Design` you do not have — those links are marked untraced instead.
@@ -83,7 +83,7 @@ When a trace link genuinely cannot be filled — e.g. a plan ingested with no up
 criteria — **mark it untraced; do not invent the upstream to fake a complete chain.** A task with no
 real `AC-N` records `AC: untraced (entered at build, no criteria in source)` rather than a fabricated
 `AC-7`. The gate renders these as a mid-chain-entry coverage note (visible, not a silent pass — the
-same instinct as never silently dropping review coverage), and `ship` surfaces them in the PR body so
+same instinct as never silently dropping review coverage), and `pr-review` surfaces them in the PR body so
 the reviewer knows what was not vetted upstream.
 
 ## Rules
@@ -93,7 +93,7 @@ the reviewer knows what was not vetted upstream.
 - **Never fabricate an upstream contract.** Missing input -> resolve or loop back. Never invent
   criteria/design/tasks to satisfy a gate.
 - **Never weaken a quality gate to enter mid-chain.** `build` still runs the gate (inline if needed)
-  and its full per-task loop; `ship` still reviews. Source-agnostic input changes *where the input
+  and its full per-task loop; `pr-review` still reviews. Source-agnostic input changes *where the input
   comes from*, never *what the gates check*.
 - **One source of truth.** Materialize into the committed spec; do not run off a shadow copy that can
   drift from Linear or the doc.
