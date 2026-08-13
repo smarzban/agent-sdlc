@@ -90,7 +90,7 @@ test('parses AC and T IDs wherever they are defined', () => {
   const result = parseSpec(spec, 'x.md');
   assert.equal(result.ok, true);
   const ids = result.ids.map((i) => i.id).sort();
-  assert.deepEqual(ids, ['AC-1', 'AC-2', 'T-1', 'T-2']);
+  assert.deepEqual(ids, ['AC-1', 'AC-2', 'C-exist-1', 'T-1', 'T-2']);
   assert.equal(result.ids.find((i) => i.id === 'T-2').kind, 'T');
 });
 

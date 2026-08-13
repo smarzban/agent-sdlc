@@ -3,7 +3,8 @@
 The full chain is right for a feature and heavy for a 30-line fix. The **light tier** compresses
 the authoring for small, self-contained work: brief + acceptance criteria + plan folded into one
 short pass in the same sectioned spec file. It compresses **how much you author, never what gets
-verified** — same gate, same test-first build, same [`sdlc-check`](sdlc-check.md). The full
+verified** — same gate (light shape: missing Design/Tech Stack is not a gap), same test-first
+build, same [`sdlc-check`](sdlc-check.md) (named existing components are `C-exist-N`). The full
 contract is [`skills/getting-started/reference/light-tier.md`](../../skills/getting-started/reference/light-tier.md).
 
 ## When it applies

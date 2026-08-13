@@ -28,9 +28,11 @@ verdict. Output is product code on a feature branch, one atomic commit per task,
 1. **Precondition** resolve the plan; ingest an external plan first if needed (read
    [ingesting-plans](reference/ingesting-plans.md) now). Confirm a ready-to-build verdict.
 2. **Isolate** worktree (existing isolation -> native tool -> `git worktree`). Run the green bar
-   from `## Tech Stack` once. Greenfield missing paths are vacuously green. An unrunnable declared
-   command is a techstack defect, not "red code". Pin implementer/reviewer types once; announce
-   substitutions once in the ledger.
+   from `## Tech Stack` once. On light, there is no feature `## Tech Stack`: take the green bar
+   from `docs/specs/overview.md` `## Tech Stack`, else the repo's existing declared commands
+   (`package.json` scripts, CI, `AGENTS.md`). Greenfield missing paths are vacuously green. An
+   unrunnable declared command is a techstack defect, not "red code". Pin implementer/reviewer
+   types once; announce substitutions once in the ledger.
 3. **Ledger** open `build-report.md` and resume from it plus `git log`. If a ledger already exists,
    run `sdlc-check docs/specs/<feature>/<feature>.md --require ledger` first (fail-closed; runtime
    absent -> announced degrade). If `HANDOFF.md` exists at the working-copy root, update it

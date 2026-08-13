@@ -14,7 +14,9 @@ everything and changes nothing, routing each fix to the stage that owns it.
 Reads the `## Brief`, `## Acceptance Criteria`, `## Design`, `## Tech Stack`, and `## Plan` sections
 of `docs/specs/<feature>/<feature>.md` (plus `docs/specs/overview.md` at project level), `constitution.md`,
 `CONTEXT.md`, and any probe-output artifact a `## Tech Stack` load-bearing claim references
-(read-only, for presence + shape only). A section may be materialized from a non-canonical source (a provenance marker on
+(read-only, for presence + shape only). **Light spec:** no `## Design` and no `## Tech Stack` is
+not a gap. Do not require those sections, do not invent them, and do not fail the walk for their
+absence. A section may be materialized from a non-canonical source (a provenance marker on
 its first line) and the chain may be entered mid-way (some upstream links marked `untraced`); the
 gate honours both — see [input-resolution](../getting-started/reference/input-resolution.md).
 Writes only `docs/specs/<feature>/gate-report.md`. Modifies NO other file, fixes
@@ -26,7 +28,9 @@ a verdict: ready to build, or not.
 ## The checks (walk all of them)
 
 1. **Coverage, both directions.** Every `AC-N` traces to a component (design), to a product where
-   one is needed (techstack), and to at least one task (plan). Flag any criterion with a gap, and
+   one is needed (techstack), and to at least one task (plan). **Light spec** (no `## Design`, no
+   `## Tech Stack`): the plan's `*Component:*` name (or `none`) is the component link; there is no
+   feature-level product link to walk. Missing Design/Tech Stack is not a gap. Flag any criterion with a gap, and
    any component, product, or task that no criterion justifies (orphan / gold-plating). **Mid-chain
    entry:** when the chain was entered below `idea` (e.g. a plan ingested from Linear with no upstream
    criteria), a task whose upstream link is explicitly `untraced` is **not** an orphan — record it in
@@ -45,9 +49,12 @@ a verdict: ready to build, or not.
 3. **Constitution.** Nothing across the spec violates a MUST principle.
 4. **Verification integrity.** Each test-backed criterion has a kind-of-oracle and a task;
    each reviewer-checked criterion has a named review axis; the design's criterion-to-component map
-   and the plan stage's task-to-criterion map are both complete. The project's **green bar** — the
+   and the plan stage's task-to-criterion map are both complete. **Light spec:** there is no
+   feature-level criterion-to-component map; the plan `*Component:*` field is enough. The project's **green bar** — the
    runnable commands that define a passing build (compile, test, lint, format-check) — is declared
-   and concrete (no placeholders), so build inherits one definition of "green". Concreteness is all
+   and concrete (no placeholders), so build inherits one definition of "green". On a light spec the
+   declaration lives on `docs/specs/overview.md` `## Tech Stack` or the repo's existing declared
+   commands, not on a feature `## Tech Stack`. Concreteness is all
    the gate checks here — *runnability* (does each declared command actually run?) is executed and
    diagnosed at the **build baseline** (build stage), where the workspace is isolated and side-effects
    are expected. The gate never executes declared commands: it stays read-only. **Load-bearing library
@@ -127,6 +134,8 @@ a verdict: ready to build, or not.
 - A criterion with no task passed as acceptable.
 - A "ready to build" verdict issued with a Critical or High finding open.
 - A "ready to build" verdict with no green bar declared — build then has no shared definition of "green".
+  On a light spec, look at `overview.md` or the repo's existing declared commands; missing feature
+  `## Tech Stack` is not this flag.
 - A "ready to build" verdict issued with a load-bearing library claim left `asserted` (or untagged) —
   an unprobed load-bearing claim passed off as settled.
 - Findings stated as impressions rather than located in a specific artifact.
@@ -137,7 +146,8 @@ a verdict: ready to build, or not.
 
 ## Done when
 
-- The full chain has been walked for every criterion.
+- The full chain has been walked for every criterion, or the light-spec walk (criterion -> named
+  existing component or `none` -> task) has, with missing Design/Tech Stack recorded as by-design.
 - Load-bearing library claims in `## Tech Stack` are each `verified-by-probe` (tag + referenced kept
   output present) or the `asserted` ones are surfaced as findings.
 - All six checks have run, including the checker's mechanical corroboration — or, when `node` was

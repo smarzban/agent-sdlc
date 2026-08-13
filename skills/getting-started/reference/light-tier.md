@@ -52,8 +52,8 @@ byte the normal pipeline:
   On a light spec it uses the **light build** path: no per-task reviewer. Whole-change review
   happens at `pr-review` via Review panel.
 - The **green bar** still holds — no task lands red.
-- The **`sdlc-check`** checker runs unchanged: same sectioned file, same `AC-N`/`T-N` grammar, same
-  trace fields, so every mechanical rule applies exactly as it does for a full-tier spec.
+- The **`sdlc-check`** checker uses the same `AC-N`/`T-N` grammar. On a light spec a named
+  `*Component:*` citation is an implicit existing component (`C-exist-N`), not a dangling name.
 
 The tier changes *how many sections you author and how long they are*. It changes **nothing** about
 what the gate, the build discipline, and the checker enforce.

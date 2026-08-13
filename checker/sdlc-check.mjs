@@ -369,7 +369,9 @@ export function parseSpec(text, file = '<unknown spec file>') {
   const untraced = extractUntracedMarkers(sections);
   const acVerification = extractAcVerification(sections);
 
-  return { ok: true, sections, ids, components, traces, provenance, untraced, acVerification };
+  const model = { ok: true, sections, ids, components, traces, provenance, untraced, acVerification };
+  adoptLightExistingComponents(model);
+  return model;
 }
 
 // SMA-465a — per-AC verification type: classify each defined AC by the verification-type of its OWN
@@ -382,7 +384,7 @@ export function parseSpec(text, file = '<unknown spec file>') {
 // e.g. `*(Reviewer-checked — axis …)*`). Pure over `sections`, never throws: ragged/empty input just
 // yields fewer (or no) entries. Returns Map<acId, 'reviewer-checked'|'test-backed'|null> — first
 // definition site wins; `null` when a block states neither type. Read at gate/build time by
-// checkForwardCoverage (D2: the report is ship's artifact and often absent, so the type is read from
+// checkForwardCoverage (D2: the report is pr-review's artifact and often absent, so the type is read from
 // the AC block's own declaration/keyword text — available whenever the rule runs).
 export function extractAcVerification(sections) {
   const types = new Map();
@@ -633,14 +635,43 @@ function splitOwnedBlocks(bodyLines) {
 
 // A *Component:* field value of `none` is the field's established null marker (mirrors
 // *Advances:*/*Deps:* fields, which are silently empty of refs the same way) — not a dangling
-// citation. This is the ONLY non-dangling value: a "component outside the numbered `### Components`
+// citation. On a full spec (a `## Design` or `## Tech Stack` section is present) this is the ONLY
+// non-dangling value without a defined component: a "component outside the numbered `### Components`
 // list" (e.g. a `gate`/`build`/`pr-review` skill text) is no longer a string escape hatch here — it must
 // be declared as a real component under a `### Outside the checker (…)` subheading, which
 // extractComponents parses into a resolvable `C-ext-N` component (SMA-419 dropped the former
 // `/\bskill texts?\b/` allowlist). Any other name that resolves to no defined component (numbered
-// or external) is a genuine dangling citation.
+// or external) is a genuine dangling citation. On a light spec (no Design, no Tech Stack) a named
+// *Component:* citation is an implicit existing component (`C-exist-N`), so the name stays
+// meaningful instead of being forced to `none`.
 function isNonDanglingComponentValue(raw) {
   return raw.toLowerCase() === 'none';
+}
+
+function isLightSpec(sections) {
+  return !sections.some((section) => /^(design|tech stack)$/i.test(section.name));
+}
+
+// Light specs have no Design list. A *Component:* name that is not `none` is an implicit
+// existing-component citation: keep the name as C-exist-N so the trace stays meaningful, and
+// do not treat it as dangling. Full specs (Design or Tech Stack present) are unchanged.
+function adoptLightExistingComponents(model) {
+  if (!isLightSpec(model.sections)) return;
+  const byName = new Map();
+  for (const trace of model.traces) {
+    const raw = trace.unresolvedComponent;
+    if (!raw) continue;
+    const key = raw.toLowerCase();
+    let id = byName.get(key);
+    if (!id) {
+      id = `C-exist-${byName.size + 1}`;
+      byName.set(key, id);
+      model.components.push({ id, name: raw, section: 'Plan', line: trace.line });
+      model.ids.push({ id, kind: 'C', section: 'Plan', line: trace.line, text: raw });
+    }
+    if (!trace.refs.includes(id)) trace.refs.push(id);
+    trace.unresolvedComponent = null;
+  }
 }
 
 function extractFieldTraces(section, componentsByName) {

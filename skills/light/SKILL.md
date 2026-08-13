@@ -26,10 +26,11 @@ in `docs/specs/<feature>/<feature>.md`. Terminal action: user approves the spec,
 3. **Write `## Acceptance Criteria`.** A handful of `AC-N`, same grammar and verification types
    as the full chain (test-backed / reviewer-checked). Compressed in count, not in rigor.
 4. **Write `## Plan`.** A short set of `T-N` with `*Advances:*`, `*Component:*` (an existing
-   component, or `none`), `*Deps:*`, files, and the failing test. Prefer one independently
-   reviewable slice over many microtasks.
+   component by name, or `none`), `*Deps:*`, files, and the failing test. Prefer one independently
+   reviewable slice over many microtasks. The checker keeps a named existing component as
+   `C-exist-N`; do not rewrite every light task to `none`.
 5. **Do not write `## Design` or `## Tech Stack`** unless a trigger fired mid-pass. Their absence
-   is by design. The plan traces to an existing component.
+   is by design. The plan traces to an existing component by name, or `none`.
 6. **Get approval**, then hand to `/agent-sdlc:gate`. After a clean gate, `/agent-sdlc:build`
    runs the **light build** path (no per-task reviewer). Do not start those yourself unless the
    user asked to continue.
