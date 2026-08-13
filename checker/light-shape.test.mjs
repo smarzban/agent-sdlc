@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { parseSpec, checkTraceIntegrity } from './sdlc-check.mjs';
+import { parseSpec, checkTraceIntegrity, checkLightExistingComponents } from './sdlc-check.mjs';
 
 const repoFile = (relativePath) => fileURLToPath(new URL(`../${relativePath}`, import.meta.url));
 const lightSkill = readFileSync(repoFile('skills/light/SKILL.md'), 'utf8');
@@ -44,6 +44,12 @@ test('a light spec may cite an existing component by name without a Design list'
   assert.ok(implicit, 'the name must stay in the model');
   assert.equal(implicit.id, componentTrace.refs.find((id) => id.startsWith('C-exist-')));
   assert.deepEqual(checkTraceIntegrity(m).filter((f) => f.type === 'finding'), []);
+  const notes = checkLightExistingComponents(m);
+  assert.equal(notes.length, 1);
+  assert.equal(notes[0].type, 'note');
+  assert.match(notes[0].message, /light spec: 1 implicit existing component/i);
+  assert.match(notes[0].message, /widget helper/);
+  assert.match(notes[0].message, /unverified/i);
 });
 
 test('a light spec still accepts *Component:* none', () => {
@@ -63,6 +69,7 @@ test('a light spec still accepts *Component:* none', () => {
   assert.equal(componentTrace.unresolvedComponent, null);
   assert.deepEqual(componentTrace.refs, []);
   assert.deepEqual(checkTraceIntegrity(m).filter((f) => f.type === 'finding'), []);
+  assert.deepEqual(checkLightExistingComponents(m), []);
 });
 
 test('two light tasks that cite the same existing name share one C-exist id', () => {
@@ -87,6 +94,9 @@ test('two light tasks that cite the same existing name share one C-exist id', ()
     .filter((t) => t.kind === 'component')
     .map((t) => t.refs.filter((id) => id.startsWith('C-exist-')));
   assert.deepEqual(refs, [[exist[0].id], [exist[0].id]]);
+  const notes = checkLightExistingComponents(m);
+  assert.equal(notes.length, 1);
+  assert.match(notes[0].message, /light spec: 1 implicit existing component/i);
 });
 
 test('a full spec with Design still flags a name that is not defined there', () => {
@@ -103,6 +113,7 @@ test('a full spec with Design still flags a name that is not defined there', () 
   const findings = checkTraceIntegrity(m).filter((f) => f.type === 'finding');
   assert.equal(findings.length, 1);
   assert.match(findings[0].message, /widget helper/);
+  assert.deepEqual(checkLightExistingComponents(m), []);
 });
 
 test('a spec that has Tech Stack is not light: an undefined component name still dangles', () => {

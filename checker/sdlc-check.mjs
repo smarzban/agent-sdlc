@@ -78,6 +78,7 @@ export async function run(argv) {
 
   const results = [
     ...checkTraceIntegrity(model),
+    ...checkLightExistingComponents(model),
     ...checkForwardCoverage(model),
     ...checkBackwardCoverage(model),
     ...checkProvenanceMarkers(model),
@@ -672,6 +673,23 @@ function adoptLightExistingComponents(model) {
     if (!trace.refs.includes(id)) trace.refs.push(id);
     trace.unresolvedComponent = null;
   }
+}
+
+// A note, never a finding: light specs cannot verify a named *Component:* against a Design list,
+// so a typo or a mid-chain spec without Design would otherwise pass silently. Exit code unchanged.
+export function checkLightExistingComponents(model) {
+  const implicit = model.components.filter((component) => component.id.startsWith('C-exist-'));
+  if (implicit.length === 0) return [];
+  const names = implicit.map((component) => component.name).join(', ');
+  const noun = implicit.length === 1 ? 'component' : 'components';
+  return [
+    {
+      type: 'note',
+      rule: 'light-existing-components',
+      message: `light spec: ${implicit.length} implicit existing ${noun} (${names}), unverified against a Design list`,
+      ids: implicit.map((component) => component.id),
+    },
+  ];
 }
 
 function extractFieldTraces(section, componentsByName) {
