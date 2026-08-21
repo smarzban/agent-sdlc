@@ -115,5 +115,5 @@ The request: "build ENG-328..348 on this branch." No spec tree exists yet.
    mid-chain-entry coverage note for the untraced links. Proceed only on a clean verdict.
 4. **Build normally** — the standard conductor loop: per-task implementer/reviewer/fixer, test-first,
    full green bar, commit-in-isolation, `build-report.md` ledger. Identical to an in-pipeline build.
-5. **Ship** — the PR body carries the provenance and the untraced note, so the reviewer sees the plan
-   came from Linear and what was not vetted upstream.
+5. **PR-review, after authorization** — the PR body carries the provenance and the untraced note,
+   so the reviewer sees the plan came from Linear and what was not vetted upstream.

@@ -13,7 +13,7 @@ and ask. Do not open the PR.
 Precondition: a **gate verdict of ready to build** for the plan in hand. Resolve the plan per
 input-resolution. If no verdict exists, run `/agent-sdlc:gate` inline and proceed only on a clean
 verdict. Output is product code on a feature branch, one atomic commit per task, and
-`docs/specs/<feature>/build-report.md`. Terminal action: green branch handed to `/agent-sdlc:pr-review`.
+`docs/specs/<feature>/build-report.md`. Terminal action: report the green branch, then ask whether to run `/agent-sdlc:pr-review`.
 </HARD-GATE>
 
 ## Light or full
@@ -54,8 +54,8 @@ verdict. Output is product code on a feature branch, one atomic commit per task,
    Plan/reality mismatch: read [plan-amendments](reference/plan-amendments.md), stop the task,
    amend through `plan`, gate the delta. Scope or AC change: stop and ask.
    Subagent death: capture -> retry once fresh -> only then conductor-takeover, recorded.
-5. **Hand off** when every task is done: `sdlc-check … --require ledger` again, then
-   "branch ready, run `/agent-sdlc:pr-review`".
+5. **Hand off** when every task is done: `sdlc-check … --require ledger` again, then ask:
+   "The branch is ready. Should I run `/agent-sdlc:pr-review`?" Stop there until the user answers.
 
 Disciplines for implementers: [tdd](reference/tdd.md), [source-driven](reference/source-driven.md),
 [simplicity](reference/simplicity.md), [debugging](reference/debugging.md).
@@ -103,7 +103,7 @@ Disciplines for implementers: [tdd](reference/tdd.md), [source-driven](reference
 - Light: no per-task reviewer ran. Full: one initial review per task, at most one remediations pass.
 - `build-report.md` has every task done with SHA, `AC-N`, and captured evidence.
 - Checker corroborated at resume (if any) and at hand-off, or an announced degrade is recorded.
-- Hand-off to `/agent-sdlc:pr-review` is stated.
+- The green branch is reported and the user is asked whether to run `/agent-sdlc:pr-review`.
 
 ## The artifact (output)
 
@@ -127,4 +127,4 @@ Disciplines for implementers: [tdd](reference/tdd.md), [source-driven](reference
 - Writes product code + `build-report.md`. Does not author front-half spec sections except
   materializing an ingested plan.
 - `sdlc-check … --require ledger` at resume and hand-off. Never `--require verification-report`.
-- Downstream: `/agent-sdlc:pr-review`.
+- Downstream: ask whether to run `/agent-sdlc:pr-review`; never start it from build alone.

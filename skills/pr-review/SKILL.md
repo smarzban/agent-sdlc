@@ -1,6 +1,6 @@
 ---
 name: pr-review
-description: "Turn a green, build-finished branch into an open pull request and run Review panel on it. Verify, push, open the PR from the spec, call review_panel. Use AFTER build reports the branch ready. Triggers: 'pr-review', 'ship', 'open the PR', 'open-pr', 'raise the pull request', 'send for review', or a build-report.md with every task done. Scope: only within an Agent SDLC run. Last pipeline stage. It does not merge."
+description: "Turn a green, build-finished branch into an open pull request and run Review panel on it. Verify, push, open the PR from the spec, call review_panel. Use AFTER build reports the branch ready and the user approves. Triggers: 'pr-review', 'open the PR', 'open-pr', 'raise the pull request', or 'send for review'. Scope: only within an Agent SDLC run. Last pipeline stage. It does not merge."
 ---
 
 # PR-review: open the PR and review it
@@ -8,10 +8,11 @@ description: "Turn a green, build-finished branch into an open pull request and 
 Take the branch `build` finished, open a pull request, and run Review panel on it. Verify the
 suite is green, push, synthesize the PR from the spec, and call `review_panel`. The terminal
 artifact is an open PR plus a presentation-only review report. pr-review does not merge. The
-owner is the merge gate. The old invoke `ship` still triggers this skill.
+owner is the merge gate.
 
 <HARD-GATE>
-Precondition: a **green, build-finished branch with a clean working tree** — proven by
+Authorization: the user has asked to run `pr-review` after build. A green branch alone never
+starts this stage. Precondition: a **green, build-finished branch with a clean working tree** — proven by
 `docs/specs/<feature>/build-report.md` (every task done; build always writes the ledger, ingested plan
 or not; root `specs/` in a repo that already uses it — the back-compat rule in getting-started, so
 check the repo's actual spec tree before concluding "no ledger"), or, when no ledger exists because

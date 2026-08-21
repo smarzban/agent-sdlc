@@ -8,8 +8,8 @@ description: "Entry point and operating rules for Agent SDLC, the pipeline that 
 Agent SDLC takes an idea to a reviewed pull request. The **front half** is five thinking stages plus
 a read-only gate: you own the thinking (intent, scope, criteria, shape, stack), the agent owns the
 breakdown (plan), and the gate confirms it all hangs together before any code is written. The **back
-half** is two agent-driven stages — `build` executes the plan test-first, `pr-review` opens the reviewed
-PR. (Test and deploy are later additions to the same chain.)
+half** is `build`, which executes the plan test-first, then an explicit user decision whether to start
+`pr-review`, which opens the reviewed PR. (Test and deploy are later additions to the same chain.)
 
 ## The stages
 
@@ -22,7 +22,7 @@ PR. (Test and deploy are later additions to the same chain.)
 | 4 | `techstack` | `/agent-sdlc:techstack` | you (agent proposes) | `## Design`, `## Acceptance Criteria` | `## Tech Stack` (products per kind) |
 | 5 | `plan` | `/agent-sdlc:plan` | agent | `## Acceptance Criteria`, `## Design`, `## Tech Stack` | `## Plan` — atomic tasks (`T-N`) |
 | 6 | `build` | `/agent-sdlc:build` | agent | `## Plan`, `gate-report.md` | product code (a green branch) + `build-report.md` |
-| 7 | `pr-review` | `/agent-sdlc:pr-review` | agent | `build-report.md`, the spec | an open PR + Review panel report |
+| 7 | `pr-review` | `/agent-sdlc:pr-review` | you authorize, agent runs | `build-report.md`, the spec | an open PR + Review panel report |
 
 Feature-tier sections live in `docs/specs/<feature>/<feature>.md`; project-tier sections (`## Overview`,
 `## Architecture`, `## Tech Stack`) live in `docs/specs/overview.md`. Stages 1–5 each own and edit only
@@ -50,9 +50,9 @@ default — Agent SDLC runs identically without it.
 Stated once here; the stage skills reference them by name rather than restating.
 
 - **Recommend, don't just ask.** Every stage leads with the agent's recommended answer and the
-  alternatives it considered with tradeoffs. You decide. This holds at every question in every
-  stage. (The agent-driven stages — `plan`, `build`, `pr-review` — run autonomously; they stop and ask
-  only at a genuine blocker.)
+  alternatives it considered with tradeoffs. You decide. `plan` and `build` run autonomously; after
+  build, the agent always asks whether to start `pr-review`. Once authorized, pr-review runs
+  autonomously and stops only at a genuine blocker.
 - **One question at a time.** Multiple-choice where possible. Walk the decision tree, do not dump.
 - **Code over questions.** If the repo answers it, go read it instead of asking.
 - **Resolve inputs from any source.** A stage's input can come from the canonical spec, a prompt, a
@@ -172,7 +172,7 @@ faithful snapshot of what was built.
 - You already have a settled problem and scope: start at **`acceptance-criteria`**.
 - You have approved criteria: **`architecture-design`**, then **`techstack`**, then **`plan`**.
 - A `## Plan` section exists in `<feature>.md`: run **`gate`**, then **`build`**.
-- The branch is built and green (`build-report.md` all done): run **`pr-review`** to open the reviewed PR.
+- The branch is built and green (`build-report.md` all done): ask whether to run **`pr-review`** to open the reviewed PR.
 
 Starting from outside the spec chain — a prompt, a doc, or Linear — any stage can still run (it
 resolves and materializes its input first; see [reference/input-resolution.md](reference/input-resolution.md)):

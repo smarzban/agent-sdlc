@@ -2,8 +2,8 @@
 
 Idea to a reviewed pull request. The **front half** is five thinking stages plus a read-only gate:
 you own the thinking (intent, scope, criteria, shape, stack), the agent owns the breakdown (plan),
-and the gate confirms it all hangs together before any code is written. The **back half** is two
-agent-driven stages — `build` executes the plan test-first, `pr-review` opens the PR and runs Review panel. It does not merge.
+and the gate confirms it all hangs together before any code is written. `build` executes the plan
+test-first, then asks whether to run `pr-review`, which opens the PR and runs Review panel. It does not merge.
 
 ```
 light -> gate -> build -> pr-review
@@ -26,7 +26,7 @@ is the router that picks your entry stage and states the shared rules every stag
 | 5 | [`plan`](../../skills/plan/SKILL.md) | agent | `## Plan` with `T-N` tasks at independently reviewable vertical slice boundaries: useful, green tasks that can be accepted and reverted independently, each naming its files and failing test |
 | — | [`gate`](../../skills/gate/SKILL.md) | automated, read-only | `gate-report.md` — the ready-to-build verdict |
 | 6 | [`build`](../../skills/build/SKILL.md) | agent | product code (a green branch) + `build-report.md` |
-| 7 | [`pr-review`](../../skills/pr-review/SKILL.md) | agent | an open PR + `verification-report.md` (does not merge) |
+| 7 | [`pr-review`](../../skills/pr-review/SKILL.md) | you authorize, agent runs | an open PR + `verification-report.md` (does not merge) |
 
 ## The traceability spine
 
@@ -43,8 +43,9 @@ of the same promises, fail-closed. Anything unmapped surfaces before code, not d
 - **`build` is a conductor.** Light specs: the conductor (or one implementer) writes each task
   test-first with **no per-task reviewer**. Full specs: one implementer plus one initial review
   of the complete task-scoped diff; one remediations pass, then stop and ask. Build verifies the
-  green bar itself, commits one atomic `feat(T-N): …` commit per task, and records the run in
-  `build-report.md`. Disciplines live in [`skills/build/reference/`](../../skills/build/reference/).
+  green bar itself, commits one atomic `feat(T-N): …` commit per task, records the run in
+  `build-report.md`, then asks whether to start `pr-review`. Disciplines live in
+  [`skills/build/reference/`](../../skills/build/reference/).
 - **`pr-review`** verifies green → writes, checker-verifies, and
   commits the `verification-report.md` AC→proof map (all before any PR exists) → pushes → opens a
   PR synthesized from the spec → calls `review_panel` when installed, or a dispatched reviewer

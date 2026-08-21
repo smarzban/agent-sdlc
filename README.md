@@ -4,7 +4,7 @@ A pipeline for AI coding agents that takes an idea to a reviewed pull request. T
 settles intent, a checkable contract, a sound architecture, a grounded stack, and an atomic task
 plan, with a read-only gate that confirms it all hangs together before a line of code is written.
 The back half executes it: `build` runs the plan test-first (light: no per-task reviewer; full:
-one initial review), and `pr-review` opens the PR and runs Review panel.
+one initial review), then asks whether to run `pr-review`, which opens the PR and runs Review panel.
 
 Test and deploy are the next stages downstream, extending the same chain.
 
@@ -74,7 +74,7 @@ code rather than during it.
 | `plan` | `/agent-sdlc:plan` | agent | `## Plan` (atomic tasks) |
 | `gate` | `/agent-sdlc:gate` | automated (read-only) | `gate-report.md` |
 | `build` | `/agent-sdlc:build` | agent | product code (a green branch) + `build-report.md` |
-| `pr-review` | `/agent-sdlc:pr-review` | agent | an open PR + Review panel report (does not merge) |
+| `pr-review` | `/agent-sdlc:pr-review` | you authorize, agent runs | an open PR + Review panel report (does not merge) |
 | `getting-started` | auto / `/agent-sdlc:getting-started` | router | this is the entry point |
 
 Start with `getting-started`; it routes you. **Light is the default.** Full chain only on a
