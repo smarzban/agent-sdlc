@@ -1,6 +1,6 @@
 {
   "name": "agent-sdlc",
-  "version": "0.20.0",
+  "version": "0.20.1",
   "private": true,
   "description": "Full-SDLC pipeline for AI coding agents: idea to a reviewed PR. Ships as skills to the open SKILL.md standard.",
   "license": "Apache-2.0",
